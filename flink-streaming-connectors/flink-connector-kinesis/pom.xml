@@ -35,7 +35,6 @@ under the License.
 	<properties>
 		<aws.sdk.version>1.10.71</aws.sdk.version>
 		<aws.kinesis-kcl.version>1.6.2</aws.kinesis-kcl.version>
-		<aws.kinesis-kpl.version>0.10.2</aws.kinesis-kpl.version>
 	</properties>
 
 	<packaging>jar</packaging>
@@ -78,12 +77,6 @@ under the License.
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-kinesis</artifactId>
 			<version>${aws.sdk.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>amazon-kinesis-producer</artifactId>
-			<version>${aws.kinesis-kpl.version}</version>
 		</dependency>
 
 		<dependency>

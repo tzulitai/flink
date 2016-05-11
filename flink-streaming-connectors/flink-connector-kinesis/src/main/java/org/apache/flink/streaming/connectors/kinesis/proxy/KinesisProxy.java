@@ -29,7 +29,10 @@ import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.Shard;
+import com.amazonaws.services.kinesis.model.PutRecordsRequest;
+import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import org.apache.flink.streaming.connectors.kinesis.config.KinesisConfigConstants;
+import org.apache.flink.streaming.connectors.kinesis.model.KinesisRecordEntry;
 import org.apache.flink.streaming.connectors.kinesis.model.KinesisStreamShard;
 import org.apache.flink.streaming.connectors.kinesis.util.AWSUtil;
 import org.slf4j.Logger;
@@ -157,6 +160,45 @@ public class KinesisProxy {
 	 */
 	public String getShardIterator(KinesisStreamShard shard, String shardIteratorType, String startingSeqNum) {
 		return kinesisClient.getShardIterator(shard.getStreamName(), shard.getShardId(), shardIteratorType, startingSeqNum).getShardIterator();
+	}
+
+	/**
+	 * Puts a batch of records to a Kinesis stream
+	 *
+	 * @param streamName the stream to put the records
+	 * @param records list of records
+	 * @return put records result containing status info of each put record
+	 */
+	public PutRecordsResult putRecords(String streamName, List<KinesisRecordEntry> records) {
+
+		final PutRecordsRequest putRecordsRequest = new PutRecordsRequest();
+		putRecordsRequest.setStreamName(streamName);
+		putRecordsRequest.setRecords(KinesisRecordEntry.convertAllToPutRecordsRequestEntry(records));
+
+		// we might fail if the stream has already exceeded its provisioned throughput
+		// for the current second and completely fail to get a PutRecordsResult at all,
+		// so we retry up to the configured operation retry times until we get a result
+		int operationThroughputExceededRetryTimes = 3;
+		long operationThroughputExceededBackoffMillis = 500L;
+
+		int attemptCount=0;
+		PutRecordsResult putRecordsResult = null;
+		while (attemptCount <= operationThroughputExceededRetryTimes && putRecordsResult == null) {
+			try {
+				putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+			} catch (ProvisionedThroughputExceededException ex) {
+				LOG.warn("Got ProvisionedThroughputExceededException. Backing off for "
+					+ operationThroughputExceededBackoffMillis + " millis.");
+				try {
+					Thread.sleep(operationThroughputExceededBackoffMillis);
+				} catch (InterruptedException interruptEx) {
+					//
+				}
+			}
+			attemptCount++;
+		}
+
+		return putRecordsResult;
 	}
 
 	/**

@@ -16,27 +16,20 @@
  */
 package org.apache.flink.streaming.connectors.kinesis;
 
-
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.services.kinesis.producer.Attempt;
-import com.amazonaws.services.kinesis.producer.KinesisProducer;
-import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
-import com.amazonaws.services.kinesis.producer.UserRecordFailedException;
-import com.amazonaws.services.kinesis.producer.UserRecordResult;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
+import org.apache.flink.streaming.connectors.kinesis.internals.KinesisRecordPublisher;
+import org.apache.flink.streaming.connectors.kinesis.model.KinesisRecordResult;
 import org.apache.flink.streaming.connectors.kinesis.serialization.KinesisSerializationSchema;
 import org.apache.flink.streaming.util.serialization.SerializationSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -75,10 +68,10 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> {
 
 
 	/* Our Kinesis instance for each parallel Flink sink */
-	private transient KinesisProducer producer;
+	private transient KinesisRecordPublisher recordPublisher;
 
 	/* Callback handling failures */
-	private transient FutureCallback<UserRecordResult> callback;
+	private transient FutureCallback<KinesisRecordResult> callback;
 
 	/* Field for async exception */
 	private transient volatile Throwable thrownException;
@@ -160,22 +153,14 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> {
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
 
-		KinesisProducerConfiguration config = new KinesisProducerConfiguration();
-		config.setRegion(this.region);
-		config.setCredentialsProvider(new StaticCredentialsProvider(new BasicAWSCredentials(this.accessKey, this.secretKey)));
-		producer = new KinesisProducer(config);
-		callback = new FutureCallback<UserRecordResult>() {
+		recordPublisher = new KinesisRecordPublisher(region, accessKey, secretKey, getRuntimeContext().getTaskName());
+		callback = new FutureCallback<KinesisRecordResult>() {
 			@Override
-			public void onSuccess(UserRecordResult result) {
-				if (!result.isSuccessful()) {
-					if(failOnError) {
-						thrownException = new RuntimeException("Record was not sent successful");
-					} else {
-						LOG.warn("Record was not sent successful");
-					}
-				}
+			public void onSuccess(KinesisRecordResult result) {
+				// if successful, simply ignore and continue
 			}
 
+			// if failed, the record publisher will throw a KinesisRecordFailedException
 			@Override
 			public void onFailure(Throwable t) {
 				if (failOnError) {
@@ -190,28 +175,21 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> {
 			this.customPartitioner.initialize(getRuntimeContext().getIndexOfThisSubtask(), getRuntimeContext().getNumberOfParallelSubtasks());
 		}
 
-		LOG.info("Started Kinesis producer instance for region '{}'", this.region);
+		LOG.info("Started Kinesis Record Publisher instance for region '{}'", this.region);
 	}
 
 	@Override
 	public void invoke(OUT value) throws Exception {
-		if (this.producer == null) {
-			throw new RuntimeException("Kinesis producer has been closed");
+
+		if (this.recordPublisher == null) {
+			throw new RuntimeException("Kinesis Record Publisher has been closed");
 		}
+
 		if (thrownException != null) {
-			String errorMessages = "";
-			if (thrownException instanceof UserRecordFailedException) {
-				List<Attempt> attempts = ((UserRecordFailedException) thrownException).getResult().getAttempts();
-				for (Attempt attempt: attempts) {
-					if (attempt.getErrorMessage() != null) {
-						errorMessages += attempt.getErrorMessage() +"\n";
-					}
-				}
-			}
 			if (failOnError) {
-				throw new RuntimeException("An exception was thrown while processing a record: " + errorMessages, thrownException);
+				throw new RuntimeException("An exception was thrown while processing a record: " + thrownException.getMessage(), thrownException);
 			} else {
-				LOG.warn("An exception was thrown while processing a record: {}", thrownException, errorMessages);
+				LOG.warn("An exception was thrown while processing a record: {}", thrownException.getMessage(), thrownException);
 				thrownException = null; // reset
 			}
 		}
@@ -243,7 +221,7 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> {
 			}
 		}
 
-		ListenableFuture<UserRecordResult> cb = producer.addUserRecord(stream, partition, explicitHashkey, serialized);
+		ListenableFuture<KinesisRecordResult> cb = recordPublisher.addRecordToPublish(stream, serialized, partition, explicitHashkey);
 		Futures.addCallback(cb, callback);
 	}
 
@@ -251,23 +229,30 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> {
 	public void close() throws Exception {
 		LOG.info("Closing producer");
 		super.close();
-		KinesisProducer kp = this.producer;
-		this.producer = null;
-		if (kp != null) {
-			LOG.info("Flushing outstanding {} records", kp.getOutstandingRecordsCount());
-			// try to flush all outstanding records
-			while (kp.getOutstandingRecordsCount() > 0) {
-				kp.flush();
+		KinesisRecordPublisher tmpRecordPublisher = this.recordPublisher;
+
+		// setting to null to forbid any new records to be added for publishing
+		this.recordPublisher = null;
+
+		if (tmpRecordPublisher != null) {
+
+			LOG.info("Shutting down record publisher instance.");
+			tmpRecordPublisher.shutdown();
+
+			LOG.info("Awaiting outstanding {} records to be published.", tmpRecordPublisher.getOutstandingRecordsCount());
+			// wait for all outstanding records to be published
+			while (tmpRecordPublisher.getOutstandingRecordsCount() > 0) {
 				try {
 					Thread.sleep(500);
 				} catch (InterruptedException e) {
-					LOG.warn("Flushing was interrupted.");
-					// stop the blocking flushing and destroy producer immediately
+					LOG.warn("Interrupted while waiting for remaining outstanding records to be published.");
+					// stop and destroy record publisher immediately
 					break;
 				}
 			}
-			LOG.info("Flushing done. Destroying producer instance.");
-			kp.destroy();
+
+			LOG.info("All outstanding records published. Destroying record publisher instance.");
+			tmpRecordPublisher.destroy();
 		}
 	}
 
