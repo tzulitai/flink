@@ -1,11 +1,11 @@
 ---
-title: "Streaming Connectors"
+title: "Supported Streaming Connectors"
 
 # Sub-level navigation
 sub-nav-group: streaming
 sub-nav-id: connectors
-sub-nav-pos: 6
-sub-nav-title: Connectors
+sub-nav-pos: 7
+sub-nav-title: Supported Connectors
 ---
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
