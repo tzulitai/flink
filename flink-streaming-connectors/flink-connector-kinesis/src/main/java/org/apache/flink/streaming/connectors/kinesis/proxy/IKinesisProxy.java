@@ -15,11 +15,17 @@
  * limitations under the License.
  */
 
-package org.apache.flink.streaming.connectors.kinesis.testutils;
+package org.apache.flink.streaming.connectors.kinesis.proxy;
 
-public class KinesisShardIdGenerator {
-	// Kinesis shards ids are in the form of: ^shardId-\d{12}
-	public static String generateFromShardOrder(int order) {
-		return String.format("shardId-%012d", order);
-	}
+import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import org.apache.flink.streaming.connectors.kinesis.model.KinesisStreamShard;
+
+import java.util.List;
+import java.util.Map;
+
+public interface IKinesisProxy {
+	GetRecordsResult getRecords(String shardIterator, int maxRecordsToGet) throws InterruptedException;
+	GetShardListResult getShardList(List<String> streamNames) throws InterruptedException;
+	GetShardListResult getShardList(Map<String,String> streamNamesWithLastSeenShardIds) throws InterruptedException;
+	String getShardIterator(KinesisStreamShard shard, String shardIteratorType, String startingSeqNum) throws InterruptedException;
 }

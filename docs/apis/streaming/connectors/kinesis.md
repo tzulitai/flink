@@ -56,10 +56,10 @@ See linking with them for cluster execution [here]({{site.baseurl}}/apis/cluster
 
 #### Usage of Consumer
 
-The `FlinkKinesisConsumer` can be used to pull data from multiple Kinesis streams within the same AWS region in parallel.
-It participates in Flink's distributed snapshot checkpointing and provides exactly-once processing guarantees. Note
-that the current version can not handle resharding of Kinesis streams. When Kinesis streams are resharded, the consumer
-will fail and the Flink streaming job must be resubmitted.
+The `FlinkKinesisConsumer` is an exactly-once parallel streaming data source that subscribes to multiple AWS Kinesis
+streams within the same AWS service region, and can handle resharding of streams. Each subtask of the consumer is
+responsible for fetching data records from multiple Kinesis shards. The number of shards fetched by each subtask will
+change as shards are closed and created by Kinesis.
 
 Before consuming data from Kinesis streams, make sure that all streams are created with the status "ACTIVE" in the AWS dashboard.
 

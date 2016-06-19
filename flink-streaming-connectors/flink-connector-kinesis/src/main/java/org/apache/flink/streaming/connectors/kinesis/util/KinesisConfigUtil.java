@@ -21,6 +21,7 @@ import com.amazonaws.regions.Regions;
 import org.apache.flink.streaming.connectors.kinesis.config.CredentialProviderType;
 import org.apache.flink.streaming.connectors.kinesis.config.InitialPosition;
 import org.apache.flink.streaming.connectors.kinesis.config.KinesisConfigConstants;
+import org.apache.flink.streaming.connectors.kinesis.model.SentinelSequenceNumber;
 
 import java.util.Properties;
 
@@ -98,20 +99,48 @@ public class KinesisConfigUtil {
 			}
 		}
 
-		validateOptionalIntProperty(config, KinesisConfigConstants.CONFIG_STREAM_DESCRIBE_RETRIES,
-				"Invalid value given for describeStream stream operation retry count. Must be a valid integer value.");
-
-		validateOptionalIntProperty(config, KinesisConfigConstants.CONFIG_SHARD_RECORDS_PER_GET,
+		validateOptionalIntProperty(config, KinesisConfigConstants.CONFIG_SHARD_GETRECORDS_MAX,
 				"Invalid value given for maximum records per getRecords shard operation. Must be a valid integer value.");
 
-		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_STREAM_DESCRIBE_BACKOFF,
-				"Invalid value given for describeStream stream operation backoff milliseconds. Must be a valid long value.");
+		validateOptionalIntProperty(config, KinesisConfigConstants.CONFIG_SHARD_GETRECORDS_RETRIES,
+				"Invalid value given for maximum retry attempts for getRecords shard operation. Must be a valid integer value.");
+
+		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_SHARD_GETRECORDS_BACKOFF_BASE,
+				"Invalid value given for get records operation base backoff milliseconds. Must be a valid long value");
+
+		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_SHARD_GETRECORDS_BACKOFF_MAX,
+				"Invalid value given for get records operation max backoff milliseconds. Must be a valid long value");
+
+		validateOptionalDoubleProperty(config, KinesisConfigConstants.CONFIG_SHARD_GETRECORDS_BACKOFF_EXPONENTIAL_CONSTANT,
+				"Invalid value given for get records operation backoff exponential constant. Must be a valid double value");
+
+		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_STREAM_DESCRIBE_BACKOFF_BASE,
+				"Invalid value given for describe stream operation base backoff milliseconds. Must be a valid long value");
+
+		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_STREAM_DESCRIBE_BACKOFF_MAX,
+				"Invalid value given for describe stream operation max backoff milliseconds. Must be a valid long value");
+
+		validateOptionalDoubleProperty(config, KinesisConfigConstants.CONFIG_STREAM_DESCRIBE_BACKOFF_EXPONENTIAL_CONSTANT,
+				"Invalid value given for describe stream operation backoff exponential constant. Must be a valid double value");
 
 		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_PRODUCER_COLLECTION_MAX_COUNT,
 				"Invalid value given for maximum number of items to pack into a PutRecords request. Must be a valid long value.");
 
 		validateOptionalLongProperty(config, KinesisConfigConstants.CONFIG_PRODUCER_AGGREGATION_MAX_COUNT,
 				"Invalid value given for maximum number of items to pack into an aggregated record. Must be a valid long value.");
+	}
+
+	public static SentinelSequenceNumber getInitialPositionAsSentinelSequenceNumber(Properties config) {
+		InitialPosition initialPosition = InitialPosition.valueOf(config.getProperty(
+			KinesisConfigConstants.CONFIG_STREAM_INIT_POSITION_TYPE, InitialPosition.LATEST.toString()));
+
+		switch (initialPosition) {
+			case TRIM_HORIZON:
+				return SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
+			case LATEST:
+			default:
+				return SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
+		}
 	}
 
 	private static void validateOptionalLongProperty(Properties config, String key, String message) {
@@ -128,6 +157,16 @@ public class KinesisConfigUtil {
 		if (config.containsKey(key)) {
 			try {
 				Integer.parseInt(config.getProperty(key));
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException(message);
+			}
+		}
+	}
+
+	private static void validateOptionalDoubleProperty(Properties config, String key, String message) {
+		if (config.containsKey(key)) {
+			try {
+				Double.parseDouble(config.getProperty(key));
 			} catch (NumberFormatException e) {
 				throw new IllegalArgumentException(message);
 			}
