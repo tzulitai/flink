@@ -54,5 +54,5 @@ public interface KinesisDeserializationSchema<T> extends Serializable, ResultTyp
 	 * @param nextElement the element to test for the end-of-stream signal
 	 * @return true if the element signals end of stream, false otherwise
 	 */
-	// TODO FLINK-4194 ADD SUPPORT FOR boolean isEndOfStream(T nextElement);
+	boolean isEndOfStream(T nextElement);
 }

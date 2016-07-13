@@ -199,7 +199,10 @@ public class ShardConsumer<T> implements Runnable {
 	 * Note that the server-side Kinesis timestamp is attached to the record when collected. When the
 	 * user programs uses {@link TimeCharacteristic#EventTime}, this timestamp will be used by default.
 	 *
-	 * @param record
+	 * If the supplied record is determined to be a stream-ending record by the deserialization schema,
+	 * the record will not be collected, and the fetcher will be called to shutdown.
+	 *
+	 * @param record record to deserialize and collect
 	 * @throws IOException
 	 */
 	private void deserializeRecordForCollectionAndUpdateState(UserRecord record)
@@ -222,18 +225,22 @@ public class ShardConsumer<T> implements Runnable {
 			subscribedShard.getStreamName(),
 			subscribedShard.getShard().getShardId());
 
-		if (record.isAggregated()) {
-			fetcherRef.emitRecordAndUpdateState(
-				value,
-				approxArrivalTimestamp,
-				subscribedShardStateIndex,
-				new SequenceNumber(record.getSequenceNumber(), record.getSubSequenceNumber()));
+		if (deserializer.isEndOfStream(value)) {
+			fetcherRef.shutdownFetcher();
 		} else {
-			fetcherRef.emitRecordAndUpdateState(
-				value,
-				approxArrivalTimestamp,
-				subscribedShardStateIndex,
-				new SequenceNumber(record.getSequenceNumber()));
+			if (record.isAggregated()) {
+				fetcherRef.emitRecordAndUpdateState(
+					value,
+					approxArrivalTimestamp,
+					subscribedShardStateIndex,
+					new SequenceNumber(record.getSequenceNumber(), record.getSubSequenceNumber()));
+			} else {
+				fetcherRef.emitRecordAndUpdateState(
+					value,
+					approxArrivalTimestamp,
+					subscribedShardStateIndex,
+					new SequenceNumber(record.getSequenceNumber()));
+			}
 		}
 	}
 
