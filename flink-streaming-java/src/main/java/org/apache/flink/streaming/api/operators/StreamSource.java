@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.lowwatermark.LowWatermarkProgressListener;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -101,6 +102,27 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		// the context may not be initialized if the source was never running.
 		if (ctx != null) {
 			ctx.close();
+		}
+	}
+
+	/**
+	 *
+	 */
+	public long getLastEmittedWatermark() {
+		if (ctx != null) {
+			if (ctx instanceof ManualWatermarkContext) {
+				return ((ManualWatermarkContext) ctx).getLastEmittedWatermark();
+			} else {
+				return Long.MIN_VALUE;
+			}
+		} else {
+			throw new IllegalStateException("Can not get the last emitted watermark from a not yet run StreamSource");
+		}
+	}
+
+	public void notifyNewLowWatermark(long newLowWatermark) {
+		if (userFunction instanceof LowWatermarkProgressListener) {
+			((LowWatermarkProgressListener) userFunction).notifyLowWatermarkProgress(newLowWatermark);
 		}
 	}
 
@@ -324,12 +346,20 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 		private final Object lockingObject;
 		private final Output<StreamRecord<T>> output;
 		private final StreamRecord<T> reuse;
+		private long lastEmittedWatermark;
 
 		public ManualWatermarkContext(StreamSource<?, ?> owner, Object lockingObject, Output<StreamRecord<T>> output) {
 			this.owner = owner;
 			this.lockingObject = lockingObject;
 			this.output = output;
 			this.reuse = new StreamRecord<T>(null);
+			this.lastEmittedWatermark = Long.MIN_VALUE;
+		}
+
+		public long getLastEmittedWatermark() {
+			synchronized (lockingObject) {
+				return lastEmittedWatermark;
+			}
 		}
 
 		@Override
@@ -356,6 +386,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			
 			synchronized (lockingObject) {
 				output.emitWatermark(mark);
+				lastEmittedWatermark = mark.getTimestamp();
 			}
 		}
 

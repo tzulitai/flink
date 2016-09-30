@@ -52,7 +52,7 @@ import org.apache.flink.runtime.executiongraph.restart.RestartStrategyFactory
 import org.apache.flink.runtime.executiongraph.{ExecutionGraph, ExecutionJobVertex, StatusListenerMessenger}
 import org.apache.flink.runtime.instance.{AkkaActorGateway, InstanceManager}
 import org.apache.flink.runtime.jobgraph.jsonplan.JsonPlanGenerator
-import org.apache.flink.runtime.jobgraph.{JobGraph, JobStatus, JobVertexID}
+import org.apache.flink.runtime.jobgraph.{JobGraph, JobStatus, JobVertex, JobVertexID}
 import org.apache.flink.runtime.jobmanager.SubmittedJobGraphStore.SubmittedJobGraphListener
 import org.apache.flink.runtime.jobmanager.scheduler.{Scheduler => FlinkScheduler}
 import org.apache.flink.runtime.leaderelection.{LeaderContender, LeaderElectionService, StandaloneLeaderElectionService}
@@ -65,6 +65,7 @@ import org.apache.flink.runtime.messages.TaskManagerMessages.{Heartbeat, SendSta
 import org.apache.flink.runtime.messages.TaskMessages.{PartitionState, UpdateTaskExecutionState}
 import org.apache.flink.runtime.messages.accumulators.{AccumulatorMessage, AccumulatorResultStringsFound, AccumulatorResultsErroneous, AccumulatorResultsFound, RequestAccumulatorResults, RequestAccumulatorResultsStringified}
 import org.apache.flink.runtime.messages.checkpoint.{AbstractCheckpointMessage, AcknowledgeCheckpoint, DeclineCheckpoint}
+import org.apache.flink.runtime.messages.lowwatermark.{AbstractLowWatermarkMessage, ReportLowWatermark}
 import org.apache.flink.runtime.messages.webmonitor.InfoMessage
 import org.apache.flink.runtime.messages.webmonitor._
 import org.apache.flink.runtime.metrics.{MetricRegistry => FlinkMetricRegistry}
@@ -759,6 +760,9 @@ class JobManager(
         }
       }(context.dispatcher)
 
+    case lowWatermarkMessage: AbstractLowWatermarkMessage =>
+      handleLowWatermarkMessage(lowWatermarkMessage)
+
     case JobStatusChanged(jobID, newJobStatus, timeStamp, error) =>
       currentJobs.get(jobID) match {
         case Some((executionGraph, jobInfo)) => executionGraph.getJobName
@@ -1268,6 +1272,15 @@ class JobManager(
             checkpointStatsTracker)
         }
 
+        // configure low watermark progression for input vertices if it is enabled
+        if (jobGraph.isInputVerticesLowWatermarkProgressionEnabled) {
+          val inputVertexIDs = jobGraph.getVerticesAsArray
+            .filter(v => v.isInputVertex)
+            .map(v => executionGraph.getJobVertex(v.getID)).toList
+
+          executionGraph.enableLowWatermarkProgression(inputVertexIDs.asJava)
+        }
+
         // get notified about job status changes
         executionGraph.registerJobStatusListener(
           new StatusListenerMessenger(self, leaderSessionID.orNull))
@@ -1532,7 +1545,48 @@ class JobManager(
       case _ => unhandled(actorMsg)
     }
   }
-  
+
+  /**
+    * Dedicated handler for low watermark messages.
+    *
+    * @param actorMessage The low watermark actor message.
+    */
+  private def handleLowWatermarkMessage(actorMessage: AbstractLowWatermarkMessage): Unit = {
+    actorMessage match {
+      case reportMessage: ReportLowWatermark =>
+        val jobID = reportMessage.getJob
+        currentJobs.get(jobID) match {
+          case Some((graph, _)) =>
+            val vertexID = reportMessage.getVertex
+            val lowWatermarkProgressor = graph.getLowWatermarkProgressorOfVertex(vertexID)
+
+            if (lowWatermarkProgressor != null) {
+              future {
+                try {
+                  if (!lowWatermarkProgressor.receiveLowWatermarkReportMessage(reportMessage)) {
+                    log.info("Received message for non-existing checkpoint ")
+                  }
+                }
+                catch {
+                  case t: Throwable =>
+                    log.error(s"Error in LowWatermarkProgressor while processing $reportMessage", t)
+                }
+              }(context.dispatcher)
+            }
+            else {
+              log.error(
+                s"Received ReportLowWatermark message for job $jobID with no " +
+                  s"CheckpointCoordinator")
+            }
+
+          case None => log.error(s"Received ReportLowWatermark message for unavailable job $jobID")
+        }
+
+      // unknown checkpoint message
+      case _ => unhandled(actorMessage)
+    }
+  }
+
   /**
    * Handle unmatched messages with an exception.
    */

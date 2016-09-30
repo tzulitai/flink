@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.runtime.tasks;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.jobgraph.tasks.LowWatermarkCooperatingTask;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.operators.StreamSource;
 
@@ -38,7 +39,7 @@ import org.apache.flink.streaming.api.operators.StreamSource;
  */
 @Internal
 public class SourceStreamTask<OUT, SRC extends SourceFunction<OUT>, OP extends StreamSource<OUT, SRC>>
-	extends StreamTask<OUT, OP> {
+	extends StreamTask<OUT, OP> implements LowWatermarkCooperatingTask {
 
 	@Override
 	protected void init() {
@@ -49,7 +50,17 @@ public class SourceStreamTask<OUT, SRC extends SourceFunction<OUT>, OP extends S
 	protected void cleanup() {
 		// does not hold any resources, so no cleanup needed
 	}
-	
+
+	@Override
+	public boolean triggerCurrentLowWatermarkRetrieval() throws Exception {
+		getEnvironment().reportLowWatermark(headOperator.getLastEmittedWatermark());
+		return true;
+	}
+
+	@Override
+	public void notifyNewLowWatermark(long newLowWatermark) throws Exception {
+		headOperator.notifyNewLowWatermark(newLowWatermark);
+	}
 
 	@Override
 	protected void run() throws Exception {

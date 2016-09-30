@@ -634,6 +634,7 @@ public class TaskTest {
 			new FiniteDuration(60, TimeUnit.SECONDS));
 
 		CheckpointResponder checkpointResponder = new ActorGatewayCheckpointResponder(jobManagerGateway);
+		LowWatermarkResponder lowWatermarkResponder = new ActorGatewayLowWatermarkResponder(jobManagerGateway);
 		
 		return new Task(
 			tdd,
@@ -645,6 +646,7 @@ public class TaskTest {
 			taskManagerConnection,
 			inputSplitProvider,
 			checkpointResponder,
+			lowWatermarkResponder,
 			libCache,
 			mock(FileCache.class),
 			new TaskManagerRuntimeInfo("localhost", new Configuration(), System.getProperty("java.io.tmpdir")),

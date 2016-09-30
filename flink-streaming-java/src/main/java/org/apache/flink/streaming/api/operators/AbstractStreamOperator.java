@@ -189,6 +189,9 @@ public abstract class AbstractStreamOperator<OUT>
 	@Override
 	public void notifyOfCompletedCheckpoint(long checkpointId) throws Exception {}
 
+	@Override
+	public void notifyNewLowWatermark(long newLowWatermark) {}
+
 	// ------------------------------------------------------------------------
 	//  Properties and Services
 	// ------------------------------------------------------------------------

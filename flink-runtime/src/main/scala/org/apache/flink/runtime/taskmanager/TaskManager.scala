@@ -66,6 +66,7 @@ import org.apache.flink.runtime.messages.StackTraceSampleMessages.{ResponseStack
 import org.apache.flink.runtime.messages.TaskManagerMessages._
 import org.apache.flink.runtime.messages.TaskMessages._
 import org.apache.flink.runtime.messages.checkpoint.{AbstractCheckpointMessage, NotifyCheckpointComplete, TriggerCheckpoint}
+import org.apache.flink.runtime.messages.lowwatermark.{AbstractLowWatermarkMessage, NotifyLowWatermarkProgress, RetrieveLowWatermark}
 import org.apache.flink.runtime.metrics.{MetricRegistry => FlinkMetricRegistry}
 import org.apache.flink.runtime.metrics.groups.TaskManagerMetricGroup
 import org.apache.flink.runtime.process.ProcessReaper
@@ -294,6 +295,8 @@ class TaskManager(
 
     // messages for coordinating checkpoints
     case message: AbstractCheckpointMessage => handleCheckpointingMessage(message)
+
+    case message: AbstractLowWatermarkMessage => handleLowWatermarkMessage(message)
 
     case JobManagerLeaderAddress(address, newLeaderSessionID) =>
       handleJobManagerLeaderAddress(address, newLeaderSessionID)
@@ -561,6 +564,34 @@ class TaskManager(
         } else {
           log.debug(
             s"TaskManager received a checkpoint confirmation for unknown task $taskExecutionId.")
+        }
+
+      // unknown checkpoint message
+      case _ => unhandled(actorMessage)
+    }
+  }
+
+  private def handleLowWatermarkMessage(actorMessage: AbstractLowWatermarkMessage): Unit = {
+
+    actorMessage match {
+      case retrieveMessage: RetrieveLowWatermark =>
+        val taskExecutionId = retrieveMessage.getTaskExecutionID
+
+        val task = runningTasks.get(taskExecutionId)
+        if (task != null) {
+          task.triggerCurrentLowWatermarkRetrieval()
+        } else {
+          log.debug("")
+        }
+
+      case notifyMessage: NotifyLowWatermarkProgress =>
+        val taskExecutionId = notifyMessage.getTaskExecutionID
+
+        val task = runningTasks.get(taskExecutionId)
+        if (task != null) {
+          task.notifyNewLowWatermark(notifyMessage.getNewLowWatermark)
+        } else {
+          log.debug("")
         }
 
       // unknown checkpoint message
@@ -1153,7 +1184,9 @@ class TaskManager(
         tdd.getExecutionId,
         config.timeout)
 
-      val checkpointResponder = new ActorGatewayCheckpointResponder(jobManagerGateway);
+      val checkpointResponder = new ActorGatewayCheckpointResponder(jobManagerGateway)
+
+      val lowWatermarkResponder = new ActorGatewayLowWatermarkResponder(jobManagerGateway)
 
       val taskManagerConnection = new ActorGatewayTaskManagerConnection(selfGateway)
 
@@ -1167,6 +1200,7 @@ class TaskManager(
         taskManagerConnection,
         inputSplitProvider,
         checkpointResponder,
+        lowWatermarkResponder,
         libCache,
         fileCache,
         runtimeInfo,

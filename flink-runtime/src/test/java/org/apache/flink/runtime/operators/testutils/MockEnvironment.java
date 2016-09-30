@@ -326,6 +326,11 @@ public class MockEnvironment implements Environment {
 	}
 
 	@Override
+	public void reportLowWatermark(long lowWatermark) {
+		throw new  UnsupportedOperationException();
+	}
+
+	@Override
 	public void failExternally(Throwable cause) {
 		throw new UnsupportedOperationException("MockEnvironment does not support external task failure.");
 	}

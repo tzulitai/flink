@@ -96,6 +96,8 @@ public class JobGraph implements Serializable {
 	/** The settings for asynchronous snapshots */
 	private JobSnapshottingSettings snapshotSettings;
 
+	private boolean isInputVerticesLowWatermarkProgressionEnabled;
+
 	/** List of classpaths required to run this job. */
 	private List<URL> classpaths = Collections.emptyList();
 
@@ -316,6 +318,22 @@ public class JobGraph implements Serializable {
 	 */
 	public JobSnapshottingSettings getSnapshotSettings() {
 		return snapshotSettings;
+	}
+
+	/**
+	 *
+	 * @param enabled
+	 */
+	public void enableLowWatermarkProgressionForInputVertices(boolean enabled) {
+		this.isInputVerticesLowWatermarkProgressionEnabled = enabled;
+	}
+
+	/**
+	 *
+	 * @return
+	 */
+	public boolean isInputVerticesLowWatermarkProgressionEnabled() {
+		return isInputVerticesLowWatermarkProgressionEnabled;
 	}
 
 	/**

@@ -129,6 +129,16 @@ public interface StreamOperator<OUT> extends Serializable {
 	void notifyOfCompletedCheckpoint(long checkpointId) throws Exception;
 
 	// ------------------------------------------------------------------------
+	//  low watermarks
+	// ------------------------------------------------------------------------
+
+	/**
+	 *
+	 * @param newLowWatermark
+	 */
+	void notifyNewLowWatermark(long newLowWatermark);
+
+	// ------------------------------------------------------------------------
 	//  miscellaneous
 	// ------------------------------------------------------------------------
 	

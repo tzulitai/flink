@@ -129,6 +129,8 @@ public class StreamingJobGraphGenerator {
 
 		configureCheckpointing();
 
+		enableLowWatermarkProgressionForSources();
+
 		// set the ExecutionConfig last when it has been finalized
 		jobGraph.setExecutionConfig(streamGraph.getExecutionConfig());
 
@@ -506,6 +508,10 @@ public class StreamingJobGraphGenerator {
 					RestartStrategies.fixedDelayRestart(Integer.MAX_VALUE, DEFAULT_RESTART_DELAY));
 			}
 		}
+	}
+
+	private void enableLowWatermarkProgressionForSources() {
+		jobGraph.enableLowWatermarkProgressionForInputVertices(true);
 	}
 
 	// ------------------------------------------------------------------------

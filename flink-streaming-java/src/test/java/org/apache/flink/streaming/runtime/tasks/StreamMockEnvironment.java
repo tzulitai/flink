@@ -315,7 +315,10 @@ public class StreamMockEnvironment implements Environment {
 	public void acknowledgeCheckpoint(long checkpointId,
 			ChainedStateHandle<StreamStateHandle> chainedStateHandle,
 			List<KeyGroupsStateHandle> keyGroupStateHandles) {
+	}
 
+	@Override
+	public void reportLowWatermark(long lowWatermark) {
 	}
 
 	@Override

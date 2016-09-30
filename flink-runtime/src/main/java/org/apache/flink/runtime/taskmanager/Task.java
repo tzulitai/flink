@@ -53,6 +53,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobgraph.tasks.StatefulTask;
 import org.apache.flink.runtime.jobgraph.tasks.StoppableTask;
+import org.apache.flink.runtime.jobgraph.tasks.LowWatermarkCooperatingTask;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.ChainedStateHandle;
@@ -176,6 +177,9 @@ public class Task implements Runnable {
 	/** Checkpoint notifier used to communicate with the CheckpointCoordinator */
 	private final CheckpointResponder checkpointResponder;
 
+	/** */
+	private final LowWatermarkResponder lowWatermarkResponder;
+
 	/** All listener that want to be notified about changes in the task's execution state */
 	private final List<TaskExecutionStateListener> taskExecutionStateListeners;
 
@@ -247,6 +251,7 @@ public class Task implements Runnable {
 		TaskManagerConnection taskManagerConnection,
 		InputSplitProvider inputSplitProvider,
 		CheckpointResponder checkpointResponder,
+		LowWatermarkResponder lowWatermarkResponder,
 		LibraryCacheManager libraryCache,
 		FileCache fileCache,
 		TaskManagerRuntimeInfo taskManagerConfig,
@@ -277,6 +282,7 @@ public class Task implements Runnable {
 
 		this.inputSplitProvider = checkNotNull(inputSplitProvider);
 		this.checkpointResponder = checkNotNull(checkpointResponder);
+		this.lowWatermarkResponder = checkNotNull(lowWatermarkResponder);
 		this.taskManagerConnection = checkNotNull(taskManagerConnection);
 
 		this.libraryCache = checkNotNull(libraryCache);
@@ -542,7 +548,7 @@ public class Task implements Runnable {
 				memoryManager, ioManager, broadcastVariableManager,
 				accumulatorRegistry, kvStateRegistry, inputSplitProvider,
 				distributedCacheEntries, writers, inputGates,
-				checkpointResponder, taskManagerConfig, metrics, this);
+				checkpointResponder, lowWatermarkResponder, taskManagerConfig, metrics, this);
 
 			// let the task code create its readers and writers
 			invokable.setEnvironment(env);
@@ -1000,6 +1006,82 @@ public class Task implements Runnable {
 			else {
 				LOG.error("Task received a checkpoint commit notification, but is not a checkpoint committing task - "
 						+ taskNameWithSubtask);
+			}
+		}
+		else {
+			LOG.debug("Ignoring checkpoint commit notification for non-running task.");
+		}
+	}
+
+	public void triggerCurrentLowWatermarkRetrieval() {
+		AbstractInvokable invokable = this.invokable;
+
+		if (executionState == ExecutionState.RUNNING && invokable != null) {
+			if (invokable instanceof LowWatermarkCooperatingTask) {
+
+				// build a local closure
+				final LowWatermarkCooperatingTask lowWatermarkCooperatingTask = (LowWatermarkCooperatingTask) invokable;
+				final String taskName = taskNameWithSubtask;
+
+				Runnable runnable = new Runnable() {
+					@Override
+					public void run() {
+						try {
+							lowWatermarkCooperatingTask.triggerCurrentLowWatermarkRetrieval();
+						}
+						catch (Throwable t) {
+							if (getExecutionState() == ExecutionState.RUNNING) {
+								// fail task if checkpoint confirmation failed.
+								failExternally(new RuntimeException(
+									"Error while confirming checkpoint",
+									t));
+							}
+						}
+					}
+				};
+				executeAsyncCallRunnable(runnable, "Checkpoint Confirmation for " + taskName);
+			}
+			else {
+				LOG.error("Task received a checkpoint commit notification, but is not a checkpoint committing task - "
+					+ taskNameWithSubtask);
+			}
+		}
+		else {
+			LOG.debug("Ignoring checkpoint commit notification for non-running task.");
+		}
+	}
+
+	public void notifyNewLowWatermark(final long newLowWatermark) {
+		AbstractInvokable invokable = this.invokable;
+
+		if (executionState == ExecutionState.RUNNING && invokable != null) {
+			if (invokable instanceof LowWatermarkCooperatingTask) {
+
+				// build a local closure
+				final LowWatermarkCooperatingTask lowWatermarkCooperatingTask = (LowWatermarkCooperatingTask) invokable;
+				final String taskName = taskNameWithSubtask;
+
+				Runnable runnable = new Runnable() {
+					@Override
+					public void run() {
+						try {
+							lowWatermarkCooperatingTask.notifyNewLowWatermark(newLowWatermark);
+						}
+						catch (Throwable t) {
+							if (getExecutionState() == ExecutionState.RUNNING) {
+								// fail task if checkpoint confirmation failed.
+								failExternally(new RuntimeException(
+									"Error while confirming checkpoint",
+									t));
+							}
+						}
+					}
+				};
+				executeAsyncCallRunnable(runnable, "Checkpoint Confirmation for " + taskName);
+			}
+			else {
+				LOG.error("Task received a checkpoint commit notification, but is not a checkpoint committing task - "
+					+ taskNameWithSubtask);
 			}
 		}
 		else {

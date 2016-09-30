@@ -74,6 +74,8 @@ public class RuntimeEnvironment implements Environment {
 	
 	private final CheckpointResponder checkpointResponder;
 
+	private final LowWatermarkResponder lowWatermarkResponder;
+
 	private final AccumulatorRegistry accumulatorRegistry;
 
 	private final TaskKvStateRegistry kvStateRegistry;
@@ -104,6 +106,7 @@ public class RuntimeEnvironment implements Environment {
 			ResultPartitionWriter[] writers,
 			InputGate[] inputGates,
 			CheckpointResponder checkpointResponder,
+			LowWatermarkResponder lowWatermarkResponder,
 			TaskManagerRuntimeInfo taskManagerInfo,
 			TaskMetricGroup metrics,
 			Task containingTask) {
@@ -126,6 +129,7 @@ public class RuntimeEnvironment implements Environment {
 		this.writers = checkNotNull(writers);
 		this.inputGates = checkNotNull(inputGates);
 		this.checkpointResponder = checkNotNull(checkpointResponder);
+		this.lowWatermarkResponder = checkNotNull(lowWatermarkResponder);
 		this.taskManagerInfo = checkNotNull(taskManagerInfo);
 		this.containingTask = containingTask;
 		this.metrics = metrics;
@@ -256,6 +260,11 @@ public class RuntimeEnvironment implements Environment {
 			checkpointId,
 			chainedStateHandle,
 			keyGroupStateHandles);
+	}
+
+	@Override
+	public void reportLowWatermark(long lowWatermark) {
+		lowWatermarkResponder.reportLowWatermark(jobId, jobVertexId, executionId, lowWatermark);
 	}
 
 	@Override

@@ -48,6 +48,7 @@ import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
+import org.apache.flink.runtime.lowwatermark.LowWatermarkProgressor;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.util.SerializableObject;
@@ -106,6 +107,8 @@ public class ExecutionGraph {
 
 	private static final AtomicReferenceFieldUpdater<ExecutionGraph, JobStatus> STATE_UPDATER =
 			AtomicReferenceFieldUpdater.newUpdater(ExecutionGraph.class, JobStatus.class, "state");
+
+	private static final long LOW_WATERMARK_PROGRESSION_TRIGGER_INTERVAL = 100L;
 
 	/** The log object used for debugging. */
 	static final Logger LOG = LoggerFactory.getLogger(ExecutionGraph.class);
@@ -212,6 +215,9 @@ public class ExecutionGraph {
 	/** Checkpoint stats tracker separate from the coordinator in order to be
 	 * available after archiving. */
 	private CheckpointStatsTracker checkpointStatsTracker;
+
+	/** */
+	private Map<JobVertexID, LowWatermarkProgressor> lowWatermarkProgressors;
 
 	/** The execution context which is used to execute futures. */
 	private ExecutionContext executionContext;
@@ -418,6 +424,28 @@ public class ExecutionGraph {
 
 	public CheckpointStatsTracker getCheckpointStatsTracker() {
 		return checkpointStatsTracker;
+	}
+
+	public void enableLowWatermarkProgression(List<ExecutionJobVertex> verticesToEnableProgression) {
+		lowWatermarkProgressors = new HashMap<>();
+		for (ExecutionJobVertex vertex : verticesToEnableProgression) {
+			if (vertex.getGraph() != this) {
+				throw new IllegalArgumentException("");
+			}
+
+			LowWatermarkProgressor lowWatermarkProgressor = new LowWatermarkProgressor(
+				jobID,
+				vertex.getJobVertexId(),
+				vertex.getTaskVertices(),
+				LOW_WATERMARK_PROGRESSION_TRIGGER_INTERVAL);
+
+			lowWatermarkProgressors.put(vertex.getJobVertexId(), lowWatermarkProgressor);
+			registerJobStatusListener(lowWatermarkProgressor.createActivatorDeactivator());
+		}
+	}
+
+	public LowWatermarkProgressor getLowWatermarkProgressorOfVertex(JobVertexID vertexID) {
+		return lowWatermarkProgressors.get(vertexID);
 	}
 
 	private ExecutionVertex[] collectExecutionVertices(List<ExecutionJobVertex> jobVertices) {

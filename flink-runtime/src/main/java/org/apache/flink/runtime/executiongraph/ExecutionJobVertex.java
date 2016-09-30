@@ -83,7 +83,7 @@ public class ExecutionJobVertex {
 	private final InputSplit[] inputSplits;
 
 	private InputSplitAssigner splitAssigner;
-	
+
 	public ExecutionJobVertex(
 		ExecutionGraph graph,
 		JobVertex jobVertex,
@@ -244,7 +244,7 @@ public class ExecutionJobVertex {
 	}
 	
 	//---------------------------------------------------------------------------------------------
-	
+
 	public void connectToPredecessors(Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets) throws JobException {
 		
 		List<JobEdge> inputs = jobVertex.getInputs();

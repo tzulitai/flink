@@ -175,6 +175,7 @@ public class TaskAsyncCallTest {
 			mock(TaskManagerConnection.class),
 			mock(InputSplitProvider.class),
 			mock(CheckpointResponder.class),
+			mock(LowWatermarkResponder.class),
 			libCache,
 			mock(FileCache.class),
 			new TaskManagerRuntimeInfo("localhost", new Configuration(), System.getProperty("java.io.tmpdir")),

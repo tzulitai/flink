@@ -164,6 +164,11 @@ public class DummyEnvironment implements Environment {
 	}
 
 	@Override
+	public void reportLowWatermark(long lowWatermark) {
+
+	}
+
+	@Override
 	public void failExternally(Throwable cause) {
 		throw new UnsupportedOperationException("DummyEnvironment does not support external task failure.");
 	}

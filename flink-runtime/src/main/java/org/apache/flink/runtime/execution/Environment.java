@@ -183,6 +183,12 @@ public interface Environment {
 			List<KeyGroupsStateHandle> keyGroupStateHandles);
 
 	/**
+	 *
+	 * @param lowWatermark
+	 */
+	void reportLowWatermark(long lowWatermark);
+
+	/**
 	 * Marks task execution failed for an external reason (a reason other than the task code itself
 	 * throwing an exception). If the task is already in a terminal state
 	 * (such as FINISHED, CANCELED, FAILED), or if the task is already canceling this does nothing.
