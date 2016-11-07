@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.watermark.WatermarkStatus;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
@@ -97,6 +98,16 @@ public class StreamSourceContexts {
 		}
 
 		@Override
+		public void emitWatermarkStatus(WatermarkStatus watermarkStatus) {
+			// do nothing
+		}
+
+		@Override
+		public WatermarkStatus getCurrentWatermarkStatus() {
+			return null;
+		}
+
+		@Override
 		public Object getCheckpointLock() {
 			return lock;
 		}
@@ -118,6 +129,8 @@ public class StreamSourceContexts {
 
 		private final long watermarkInterval;
 
+		private WatermarkStatus currentWatermarkStatus;
+
 		private volatile ScheduledFuture<?> nextWatermarkTimer;
 		private volatile long nextWatermarkTime;
 
@@ -133,6 +146,8 @@ public class StreamSourceContexts {
 
 			Preconditions.checkArgument(watermarkInterval >= 1L, "The watermark interval cannot be smaller than 1 ms.");
 			this.watermarkInterval = watermarkInterval;
+
+			this.currentWatermarkStatus = WatermarkStatus.ACTIVE;
 
 			this.reuse = new StreamRecord<>(null);
 
@@ -170,10 +185,15 @@ public class StreamSourceContexts {
 
 		@Override
 		public void emitWatermark(Watermark mark) {
-
 			if (mark.getTimestamp() == Long.MAX_VALUE) {
 				// allow it since this is the special end-watermark that for example the Kafka source emits
 				synchronized (lock) {
+					// make sure that the source is marked active at downstream operators,
+					// so that the max value watermark is accepted
+					if (currentWatermarkStatus.isIdle()) {
+						currentWatermarkStatus = WatermarkStatus.ACTIVE;
+						output.emitWatermarkStatus(currentWatermarkStatus);
+					}
 					nextWatermarkTime = Long.MAX_VALUE;
 					output.emitWatermark(mark);
 				}
@@ -183,6 +203,21 @@ public class StreamSourceContexts {
 				if (nextWatermarkTimer != null) {
 					nextWatermarkTimer.cancel(true);
 				}
+			}
+		}
+
+		@Override
+		public WatermarkStatus getCurrentWatermarkStatus() {
+			synchronized (lock) {
+				return currentWatermarkStatus;
+			}
+		}
+
+		@Override
+		public void emitWatermarkStatus(WatermarkStatus watermarkStatus) {
+			synchronized (lock) {
+				this.currentWatermarkStatus = watermarkStatus;
+				output.emitWatermarkStatus(watermarkStatus);
 			}
 		}
 
@@ -253,30 +288,60 @@ public class StreamSourceContexts {
 		private final Output<StreamRecord<T>> output;
 		private final StreamRecord<T> reuse;
 
+		private WatermarkStatus currentWatermarkStatus;
+
 		private ManualWatermarkContext(Object checkpointLock, Output<StreamRecord<T>> output) {
 			this.lock = Preconditions.checkNotNull(checkpointLock, "The checkpoint lock cannot be null.");
 			this.output = Preconditions.checkNotNull(output, "The output cannot be null.");
 			this.reuse = new StreamRecord<>(null);
+			this.currentWatermarkStatus = WatermarkStatus.ACTIVE;
 		}
 
 		@Override
 		public void collect(T element) {
 			synchronized (lock) {
-				output.collect(reuse.replace(element));
+				if (currentWatermarkStatus.isActive()) {
+					output.collect(reuse.replace(element));
+				} else {
+					throw new IllegalStateException("");
+				}
 			}
 		}
 
 		@Override
 		public void collectWithTimestamp(T element, long timestamp) {
 			synchronized (lock) {
-				output.collect(reuse.replace(element, timestamp));
+				if (currentWatermarkStatus.isActive()) {
+					output.collect(reuse.replace(element, timestamp));
+				} else {
+					throw new IllegalStateException("");
+				}
 			}
 		}
 
 		@Override
 		public void emitWatermark(Watermark mark) {
 			synchronized (lock) {
-				output.emitWatermark(mark);
+				if (currentWatermarkStatus.isActive()) {
+					output.emitWatermark(mark);
+				} else {
+					throw new IllegalStateException("");
+				}
+			}
+		}
+
+		@Override
+		public void emitWatermarkStatus(WatermarkStatus watermarkStatus) {
+			synchronized (lock) {
+				this.currentWatermarkStatus = watermarkStatus;
+				output.emitWatermarkStatus(watermarkStatus);
+			}
+		}
+
+		@Override
+		public WatermarkStatus getCurrentWatermarkStatus() {
+			synchronized (lock) {
+				return currentWatermarkStatus;
 			}
 		}
 

@@ -68,7 +68,7 @@ public class ManualExactlyOnceTest {
 		// wait until stream has been created
 		DescribeStreamResult status = client.describeStream(streamName);
 		LOG.info("status {}" ,status);
-		while(!status.getStreamDescription().getStreamStatus().equals("ACTIVE")) {
+		while(!status.getStreamDescription().getStreamStatus().equals("IDLE_STATUS")) {
 			status = client.describeStream(streamName);
 			LOG.info("Status of stream {}", status);
 			Thread.sleep(1000);

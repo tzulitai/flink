@@ -36,12 +36,12 @@ import org.apache.flink.runtime.plugable.DeserializationDelegate;
 import org.apache.flink.runtime.plugable.NonReusingDeserializationDelegate;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
+import org.apache.flink.streaming.api.watermark.WatermarkStatus;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElementSerializer;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -74,18 +74,20 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 	private final CheckpointBarrierHandler barrierHandler;
 
-	private final long[] watermarks1;
+	private final InputChannelStatus[] channelStatuses1;
 	private long lastEmittedWatermark1;
+	private WatermarkStatus currentWatermarkStatus1;
 
-	private final long[] watermarks2;
+	private final InputChannelStatus[] channelStatuses2;
 	private long lastEmittedWatermark2;
+	private WatermarkStatus currentWatermarkStatus2;
 
 	private final int numInputChannels1;
 
 	private final DeserializationDelegate<StreamElement> deserializationDelegate1;
 	private final DeserializationDelegate<StreamElement> deserializationDelegate2;
 
-	@SuppressWarnings({"unchecked", "rawtypes"})
+	@SuppressWarnings("unchecked")
 	public StreamTwoInputProcessor(
 			Collection<InputGate> inputGates1,
 			Collection<InputGate> inputGates2,
@@ -134,16 +136,22 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 		this.numInputChannels1 = numInputChannels1;
 		int numInputChannels2 = inputGate.getNumberOfInputChannels() - numInputChannels1;
 
-		watermarks1 = new long[numInputChannels1];
-		Arrays.fill(watermarks1, Long.MIN_VALUE);
+		channelStatuses1 = new InputChannelStatus[numInputChannels1];
+		for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
+			channelStatuses1[i] = new InputChannelStatus(Long.MIN_VALUE, WatermarkStatus.ACTIVE, true);
+		}
 		lastEmittedWatermark1 = Long.MIN_VALUE;
+		currentWatermarkStatus1 = WatermarkStatus.ACTIVE;
 
-		watermarks2 = new long[numInputChannels2];
-		Arrays.fill(watermarks2, Long.MIN_VALUE);
+		channelStatuses2 = new InputChannelStatus[numInputChannels2];
+		for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
+			channelStatuses2[i] = new InputChannelStatus(Long.MIN_VALUE, WatermarkStatus.ACTIVE, true);
+		}
 		lastEmittedWatermark2 = Long.MIN_VALUE;
+		currentWatermarkStatus2 = WatermarkStatus.ACTIVE;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 	public boolean processInput(TwoInputStreamOperator<IN1, IN2, ?> streamOperator, Object lock) throws Exception {
 		if (isFinished) {
 			return false;
@@ -170,6 +178,10 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 							handleWatermark(streamOperator, recordOrWatermark.asWatermark(), currentChannel, lock);
 							continue;
 						}
+						else if (recordOrWatermark.isWatermarkStatus()) {
+							handleWatermarkStatus(streamOperator, recordOrWatermark.asWatermarkStatus(), currentChannel, lock);
+							continue;
+						}
 						else if (recordOrWatermark.isLatencyMarker()) {
 							synchronized (lock) {
 								streamOperator.processLatencyMarker1(recordOrWatermark.asLatencyMarker());
@@ -189,6 +201,10 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 						StreamElement recordOrWatermark = deserializationDelegate2.getInstance();
 						if (recordOrWatermark.isWatermark()) {
 							handleWatermark(streamOperator, recordOrWatermark.asWatermark(), currentChannel, lock);
+							continue;
+						}
+						else if (recordOrWatermark.isWatermarkStatus()) {
+							handleWatermarkStatus(streamOperator, recordOrWatermark.asWatermarkStatus(), currentChannel, lock);
 							continue;
 						}
 						else if (recordOrWatermark.isLatencyMarker()) {
@@ -234,35 +250,152 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 		}
 	}
 
-	private void handleWatermark(TwoInputStreamOperator<IN1, IN2, ?> operator, Watermark mark, int channelIndex, Object lock) throws Exception {
+	@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+	private void handleWatermark(TwoInputStreamOperator<IN1, IN2, ?> operator,
+								 Watermark mark,
+								 int channelIndex,
+								 Object lock) throws Exception {
 		if (channelIndex < numInputChannels1) {
-			long watermarkMillis = mark.getTimestamp();
-			if (watermarkMillis > watermarks1[channelIndex]) {
-				watermarks1[channelIndex] = watermarkMillis;
-				long newMinWatermark = Long.MAX_VALUE;
-				for (long wm : watermarks1) {
-					newMinWatermark = Math.min(wm, newMinWatermark);
-				}
-				if (newMinWatermark > lastEmittedWatermark1) {
-					lastEmittedWatermark1 = newMinWatermark;
-					synchronized (lock) {
-						operator.processWatermark1(new Watermark(lastEmittedWatermark1));
+			// we should not be receiving watermarks if the overall watermark status is idle, or
+			// the input channel that propagated the watermark is idle
+			if (currentWatermarkStatus1.isIdle() || channelStatuses1[channelIndex].isWatermarkActive()) {
+				throw new IllegalStateException("Stream input processor received a watermark while " +
+					"overall / channel watermark status was marked as: " + currentWatermarkStatus1 + " / " +
+					channelStatuses1[channelIndex].getWatermarkStatus());
+			} else {
+				long watermarkMillis = mark.getTimestamp();
+				if (watermarkMillis > channelStatuses1[channelIndex].getWatermark()) {
+					channelStatuses1[channelIndex].setWatermark(watermarkMillis);
+
+					// previously unaligned channels are now aligned if its watermark has caught up
+					if (!channelStatuses1[channelIndex].isWatermarkAligned() &&
+						watermarkMillis >= lastEmittedWatermark1) {
+						channelStatuses1[channelIndex].setIsWatermarkAligned(true);
+					}
+
+					// advance overall watermark by considering only aligned channels across all channels
+					long newMinWatermark = Long.MAX_VALUE;
+					for (InputChannelStatus channelStatus : channelStatuses1) {
+						if (!channelStatus.isWatermarkAligned()) {
+							newMinWatermark = Math.min(channelStatus.getWatermark(), newMinWatermark);
+						}
+					}
+					if (newMinWatermark > lastEmittedWatermark1) {
+						lastEmittedWatermark1 = newMinWatermark;
+						synchronized (lock) {
+							operator.processWatermark1(new Watermark(lastEmittedWatermark1));
+						}
 					}
 				}
 			}
 		} else {
 			channelIndex = channelIndex - numInputChannels1;
-			long watermarkMillis = mark.getTimestamp();
-			if (watermarkMillis > watermarks2[channelIndex]) {
-				watermarks2[channelIndex] = watermarkMillis;
-				long newMinWatermark = Long.MAX_VALUE;
-				for (long wm : watermarks2) {
-					newMinWatermark = Math.min(wm, newMinWatermark);
+
+			// we should not be receiving watermarks if the overall watermark status is idle, or
+			// the input channel that propagated the watermark is idle
+			if (currentWatermarkStatus2.isIdle() || channelStatuses2[channelIndex].isWatermarkActive()) {
+				throw new IllegalStateException("Stream input processor received a watermark while " +
+					"overall / channel watermark status was marked as: " + currentWatermarkStatus2 + " / " +
+					channelStatuses2[channelIndex].getWatermarkStatus());
+			} else {
+				long watermarkMillis = mark.getTimestamp();
+				if (watermarkMillis > channelStatuses2[channelIndex].getWatermark()) {
+					channelStatuses2[channelIndex].setWatermark(watermarkMillis);
+
+					// previously unaligned channels are now aligned if its watermark has caught up
+					if (!channelStatuses2[channelIndex].isWatermarkAligned() &&
+						watermarkMillis >= lastEmittedWatermark2) {
+						channelStatuses2[channelIndex].setIsWatermarkAligned(true);
+					}
+
+					// advance overall watermark by considering only aligned channels across all channels
+					long newMinWatermark = Long.MAX_VALUE;
+					for (InputChannelStatus channelStatus : channelStatuses2) {
+						if (!channelStatus.isWatermarkAligned()) {
+							newMinWatermark = Math.min(channelStatus.getWatermark(), newMinWatermark);
+						}
+					}
+					if (newMinWatermark > lastEmittedWatermark2) {
+						lastEmittedWatermark2 = newMinWatermark;
+						synchronized (lock) {
+							operator.processWatermark2(new Watermark(lastEmittedWatermark2));
+						}
+					}
 				}
-				if (newMinWatermark > lastEmittedWatermark2) {
-					lastEmittedWatermark2 = newMinWatermark;
+			}
+		}
+	}
+
+	@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+	private void handleWatermarkStatus(TwoInputStreamOperator<IN1, IN2, ?> operator,
+									   WatermarkStatus watermarkStatus,
+									   int channelIndex,
+									   Object lock) throws Exception {
+		if (channelIndex < numInputChannels1) {
+			if (watermarkStatus.isIdle() && channelStatuses1[channelIndex].isWatermarkActive()) {
+				// handle watermark idle status
+				channelStatuses1[channelIndex].setWatermarkStatus(WatermarkStatus.IDLE);
+
+				// the channel is now idle, therefore not aligned
+				channelStatuses1[channelIndex].setIsWatermarkAligned(false);
+
+				if (!hasWatermarkActiveChannels(channelStatuses1)) {
+					currentWatermarkStatus1 = WatermarkStatus.IDLE;
 					synchronized (lock) {
-						operator.processWatermark2(new Watermark(lastEmittedWatermark2));
+						operator.processWatermarkStatus1(currentWatermarkStatus1);
+					}
+				}
+			} else if (watermarkStatus.isActive() && channelStatuses1[channelIndex].isWatermarkIdle()) {
+				// handle watermark active status
+				channelStatuses1[channelIndex].setWatermarkStatus(WatermarkStatus.ACTIVE);
+
+				// if the last watermark of the channel, before it was marked idle, is still
+				// larger than the overall last emitted watermark, then we can set the channel to
+				// be aligned already.
+				if (channelStatuses1[channelIndex].getWatermark() >= lastEmittedWatermark1) {
+					channelStatuses1[channelIndex].setIsWatermarkAligned(true);
+				}
+
+				// propagate active status if we are transisting back to active from idle
+				if (currentWatermarkStatus1.isIdle()) {
+					currentWatermarkStatus1 = WatermarkStatus.ACTIVE;
+					synchronized (lock) {
+						operator.processWatermarkStatus1(currentWatermarkStatus1);
+					}
+				}
+			}
+		} else {
+			channelIndex = channelIndex - numInputChannels1;
+
+			if (watermarkStatus.isIdle() && channelStatuses2[channelIndex].isWatermarkActive()) {
+				// handle watermark idle status
+				channelStatuses2[channelIndex].setWatermarkStatus(WatermarkStatus.IDLE);
+
+				// the channel is now idle, therefore not aligned
+				channelStatuses2[channelIndex].setIsWatermarkAligned(false);
+
+				if (!hasWatermarkActiveChannels(channelStatuses2)) {
+					currentWatermarkStatus2 = WatermarkStatus.IDLE;
+					synchronized (lock) {
+						operator.processWatermarkStatus2(currentWatermarkStatus2);
+					}
+				}
+			} else if (watermarkStatus.isActive() && channelStatuses2[channelIndex].isWatermarkIdle()) {
+				// handle watermark active status
+				channelStatuses2[channelIndex].setWatermarkStatus(WatermarkStatus.ACTIVE);
+
+				// if the last watermark of the channel, before it was marked idle, is still
+				// larger than the overall last emitted watermark, then we can set the channel to
+				// be aligned already.
+				if (channelStatuses2[channelIndex].getWatermark() >= lastEmittedWatermark2) {
+					channelStatuses2[channelIndex].setIsWatermarkAligned(true);
+				}
+
+				// propagate active status if we are transisting back to active from idle
+				if (currentWatermarkStatus2.isIdle()) {
+					currentWatermarkStatus2 = WatermarkStatus.ACTIVE;
+					synchronized (lock) {
+						operator.processWatermarkStatus2(currentWatermarkStatus2);
 					}
 				}
 			}
@@ -301,5 +434,14 @@ public class StreamTwoInputProcessor<IN1, IN2> {
 
 		// cleanup the barrier handler resources
 		barrierHandler.cleanup();
+	}
+
+	private static boolean hasWatermarkActiveChannels(InputChannelStatus[] statuses) {
+		for (InputChannelStatus status : statuses) {
+			if (status.isWatermarkActive()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

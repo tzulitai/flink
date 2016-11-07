@@ -80,7 +80,7 @@ public class ManualExactlyOnceWithStreamReshardingTest {
 		// wait until stream has been created
 		DescribeStreamResult status = client.describeStream(streamName);
 		LOG.info("status {}", status);
-		while(!status.getStreamDescription().getStreamStatus().equals("ACTIVE")) {
+		while(!status.getStreamDescription().getStreamStatus().equals("IDLE_STATUS")) {
 			status = client.describeStream(streamName);
 			LOG.info("Status of stream {}", status);
 			Thread.sleep(1000);
@@ -180,7 +180,7 @@ public class ManualExactlyOnceWithStreamReshardingTest {
 									Thread.sleep(rand.nextInt(1200));
 								}
 							}
-						} while (!status.getStreamDescription().getStreamStatus().equals("ACTIVE"));
+						} while (!status.getStreamDescription().getStreamStatus().equals("IDLE_STATUS"));
 
 						// then merge again
 						Thread.sleep(7000);

@@ -58,6 +58,8 @@ import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.watermark.WatermarkStatus;
+import org.apache.flink.streaming.runtime.io.InputChannelStatus;
 import org.apache.flink.streaming.runtime.tasks.OperatorStateHandles;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
@@ -143,14 +145,19 @@ public abstract class AbstractStreamOperator<OUT>
 	private transient Map<String, HeapInternalTimerService<?, ?>> timerServices;
 //	private transient Map<String, HeapInternalTimerService<?, ?>> restoredServices;
 
+	// ---------------- watermark status ------------------
 
-	// ---------------- two-input operator watermarks ------------------
+	// We keep track of the current watermark status (idle or active); whenever there is
+	// a status transition, the new status should be propagated to downstream operators
+	private WatermarkStatus currentWatermarkStatus = WatermarkStatus.ACTIVE;
+
+	// ---------------- two-input operator watermarks and watermark status ------------------
 
 	// We keep track of watermarks from both inputs, the combined input is the minimum
 	// Once the minimum advances we emit a new watermark for downstream operators
 	private long combinedWatermark = Long.MIN_VALUE;
-	private long input1Watermark = Long.MIN_VALUE;
-	private long input2Watermark = Long.MIN_VALUE;
+	private InputChannelStatus input1Status = new InputChannelStatus(Long.MIN_VALUE, WatermarkStatus.ACTIVE, true);
+	private InputChannelStatus input2Status = new InputChannelStatus(Long.MIN_VALUE, WatermarkStatus.ACTIVE, true);
 
 	// ------------------------------------------------------------------------
 	//  Life Cycle
@@ -736,6 +743,11 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 
 		@Override
+		public void emitWatermarkStatus(WatermarkStatus watermarkStatus) {
+			output.emitWatermarkStatus(watermarkStatus);
+		}
+
+		@Override
 		public void emitLatencyMarker(LatencyMarker latencyMarker) {
 			output.emitLatencyMarker(latencyMarker);
 		}
@@ -801,27 +813,109 @@ public abstract class AbstractStreamOperator<OUT>
 	}
 
 	public void processWatermark(Watermark mark) throws Exception {
-		for (HeapInternalTimerService<?, ?> service : timerServices.values()) {
-			service.advanceWatermark(mark.getTimestamp());
+		// watermarks should be processed only when our current watermark status is active;
+		// this needs to be checked since timestamp extractor operators may be generating watermarks in
+		// the middle of topologies regardless of watermark status changes propagated from sources
+		if (currentWatermarkStatus.isActive()) {
+			for (HeapInternalTimerService<?, ?> service : timerServices.values()) {
+				service.advanceWatermark(mark.getTimestamp());
+			}
+			output.emitWatermark(mark);
 		}
-		output.emitWatermark(mark);
+	}
+
+	public void processWatermarkStatus(WatermarkStatus watermarkStatus) throws Exception {
+		// if we have a watermark status transition, propagate the status change downstream
+		if ((currentWatermarkStatus.isIdle() && watermarkStatus.isActive())
+			|| (currentWatermarkStatus.isActive() && watermarkStatus.isIdle())) {
+			currentWatermarkStatus = watermarkStatus;
+			output.emitWatermarkStatus(watermarkStatus);
+		}
 	}
 
 	public void processWatermark1(Watermark mark) throws Exception {
-		input1Watermark = mark.getTimestamp();
-		long newMin = Math.min(input1Watermark, input2Watermark);
-		if (newMin > combinedWatermark) {
-			combinedWatermark = newMin;
-			processWatermark(new Watermark(combinedWatermark));
+		if (input1Status.isWatermarkActive()) {
+			input1Status.setWatermark(mark.getTimestamp());
+
+			if (!input1Status.isWatermarkAligned() && mark.getTimestamp() >= combinedWatermark) {
+				input1Status.setIsWatermarkAligned(true);
+			}
+
+			long newMin;
+			if (input1Status.isWatermarkAligned() && input2Status.isWatermarkAligned()) {
+				newMin = Math.min(input1Status.getWatermark(), input2Status.getWatermark());
+			} else {
+				newMin = (input1Status.isWatermarkAligned()) ? input1Status.getWatermark() : input2Status.getWatermark();
+			}
+
+			if (newMin > combinedWatermark) {
+				combinedWatermark = newMin;
+				processWatermark(new Watermark(combinedWatermark));
+			}
 		}
 	}
 
 	public void processWatermark2(Watermark mark) throws Exception {
-		input2Watermark = mark.getTimestamp();
-		long newMin = Math.min(input1Watermark, input2Watermark);
-		if (newMin > combinedWatermark) {
-			combinedWatermark = newMin;
-			processWatermark(new Watermark(combinedWatermark));
+		if (input2Status.isWatermarkActive()) {
+			input2Status.setWatermark(mark.getTimestamp());
+
+			if (!input2Status.isWatermarkAligned() && mark.getTimestamp() >= combinedWatermark) {
+				input2Status.setIsWatermarkAligned(true);
+			}
+
+			long newMin;
+			if (input1Status.isWatermarkAligned() && input2Status.isWatermarkAligned()) {
+				newMin = Math.min(input1Status.getWatermark(), input2Status.getWatermark());
+			} else {
+				newMin = (input1Status.isWatermarkAligned()) ? input1Status.getWatermark() : input2Status.getWatermark();
+			}
+
+			if (newMin > combinedWatermark) {
+				combinedWatermark = newMin;
+				processWatermark(new Watermark(combinedWatermark));
+			}
+		}
+	}
+
+	public void processWatermarkStatus1(WatermarkStatus watermarkStatus) throws Exception {
+		if (input1Status.isWatermarkIdle() && watermarkStatus.isActive()) {
+			input1Status.setWatermarkStatus(WatermarkStatus.ACTIVE);
+
+			if (input1Status.getWatermark() >= combinedWatermark) {
+				input1Status.setIsWatermarkAligned(true);
+			}
+
+			if (currentWatermarkStatus.isIdle()) {
+				processWatermarkStatus(WatermarkStatus.ACTIVE);
+			}
+		} else if (input1Status.isWatermarkActive() && watermarkStatus.isIdle()) {
+			input1Status.setWatermarkStatus(WatermarkStatus.IDLE);
+			input1Status.setIsWatermarkAligned(false);
+
+			if (input2Status.isWatermarkIdle()) {
+				processWatermarkStatus(WatermarkStatus.IDLE);
+			}
+		}
+	}
+
+	public void processWatermarkStatus2(WatermarkStatus watermarkStatus) throws Exception {
+		if (input2Status.isWatermarkIdle() && watermarkStatus.isActive()) {
+			input2Status.setWatermarkStatus(WatermarkStatus.ACTIVE);
+
+			if (input2Status.getWatermark() >= combinedWatermark) {
+				input2Status.setIsWatermarkAligned(true);
+			}
+
+			if (currentWatermarkStatus.isIdle()) {
+				processWatermarkStatus(WatermarkStatus.ACTIVE);
+			}
+		} else if (input2Status.isWatermarkActive() && watermarkStatus.isIdle()) {
+			input2Status.setWatermarkStatus(WatermarkStatus.IDLE);
+			input2Status.setIsWatermarkAligned(false);
+
+			if (input1Status.isWatermarkIdle()) {
+				processWatermarkStatus(WatermarkStatus.IDLE);
+			}
 		}
 	}
 

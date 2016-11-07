@@ -19,6 +19,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.watermark.WatermarkStatus;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.util.Collector;
 
@@ -40,6 +41,17 @@ public interface Output<T> extends Collector<T> {
 	 * timestamp will be emitted in the future.
 	 */
 	void emitWatermark(Watermark mark);
+
+	/**
+	 * Emits a {@link WatermarkStatus} from an operator. This trigger is broadcast to all downstream
+	 * operators.
+	 *
+	 * <p>The trigger can be either a {@link WatermarkStatus#IDLE} or a
+	 * {@link WatermarkStatus#ACTIVE}. A deactivate trigger specifies that the operator will
+	 * temporarily stop emitting watermarks. Emitting an activate trigger afterwards indicates that it will resume
+	 * emitting watermarks.
+	 */
+	void emitWatermarkStatus(WatermarkStatus watermarkStatus);
 
 	void emitLatencyMarker(LatencyMarker latencyMarker);
 }

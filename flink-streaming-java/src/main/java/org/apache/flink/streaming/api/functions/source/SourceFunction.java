@@ -24,6 +24,7 @@ import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.TimestampAssigner;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.api.watermark.WatermarkStatus;
 
 import java.io.Serializable;
 
@@ -162,7 +163,7 @@ public interface SourceFunction<T> extends Function, Serializable {
 		/**
 		 * Emits one element from the source, without attaching a timestamp. In most cases,
 		 * this is the default way of emitting elements.
-		 * 
+		 *
 		 * <p>The timestamp that the element will get assigned depends on the time characteristic of
 		 * the streaming program:
 		 * <ul>
@@ -174,7 +175,14 @@ public interface SourceFunction<T> extends Function, Serializable {
 		 *         operation (like time windows).</li>
 		 * </ul>
 		 *
+		 * <p>This method will throw an {@link IllegalStateException} if it is called while the source
+		 * context is watermark idle, i.e. when {@link WatermarkStatus#IDLE} was the last emitted status
+		 * using {@link SourceContext#emitWatermarkStatus(WatermarkStatus)}. This is only relevant when
+		 * the time characteristic of the streaming program is set to either
+		 * {@link TimeCharacteristic#IngestionTime} or {@link TimeCharacteristic#EventTime}.
+		 *
 		 * @param element The element to emit
+		 * @throws IllegalStateException Thrown if the source context is currently watermark idle
 		 */
 		void collect(T element);
 
@@ -195,8 +203,15 @@ public interface SourceFunction<T> extends Function, Serializable {
 		 *     <li>On {@link TimeCharacteristic#EventTime}, the timestamp will be used.</li>
 		 * </ul>
 		 *
+		 * <p>This method will throw an {@link IllegalStateException} if it is called while the source
+		 * context is watermark idle, i.e. when {@link WatermarkStatus#IDLE} was the last emitted status
+		 * using {@link SourceContext#emitWatermarkStatus(WatermarkStatus)}. This is only relevant when
+		 * the time characteristic of the streaming program is set to either
+		 * {@link TimeCharacteristic#IngestionTime} or {@link TimeCharacteristic#EventTime}.
+		 *
 		 * @param element The element to emit
 		 * @param timestamp The timestamp in milliseconds since the Epoch
+		 * @throws IllegalStateException Thrown if the source context is currently watermark idle
 		 */
 		@PublicEvolving
 		void collectWithTimestamp(T element, long timestamp);
@@ -207,15 +222,42 @@ public interface SourceFunction<T> extends Function, Serializable {
 		 * elements will be emitted, those elements are considered <i>late</i>.
 		 * 
 		 * <p>This method is only relevant when running on {@link TimeCharacteristic#EventTime}.
-		 * On {@link TimeCharacteristic#ProcessingTime},Watermarks will be ignored. On
+		 * On {@link TimeCharacteristic#ProcessingTime}, Watermarks will be ignored. On
 		 * {@link TimeCharacteristic#IngestionTime}, the Watermarks will be replaced by the
 		 * automatic ingestion time watermarks.
 		 *
+		 * <p>This method will throw an {@link IllegalStateException} if it is called while the source
+		 * context is watermark idle, i.e. when {@link WatermarkStatus#IDLE} was the last emitted status
+		 * using {@link SourceContext#emitWatermarkStatus(WatermarkStatus)}.
+		 *
 		 * @param mark The Watermark to emit
+		 * @throws IllegalStateException Thrown if the source context is currently watermark idle
 		 */
 		@PublicEvolving
 		void emitWatermark(Watermark mark);
 
+		/**
+		 * Emits the given {@link WatermarkStatus}, which is either {@link WatermarkStatus#IDLE} or
+		 * {@link WatermarkStatus#ACTIVE}.
+		 *
+		 * <p>The last emitted Watermark Status denotes the current Watermark Status. When the current
+		 * status is idle, records and watermarks are not allowed to be emitted. This is only relevant when
+		 * the time characteristic of the streaming program is set to either
+		 * {@link TimeCharacteristic#IngestionTime} or {@link TimeCharacteristic#EventTime}.
+		 *
+		 * @param watermarkStatus The watermark status to emit
+		 */
+		@PublicEvolving
+		void emitWatermarkStatus(WatermarkStatus watermarkStatus);
+
+		/**
+		 * Returns the current Watermark Status, which is the last emitted Watermark Status using
+		 * {@link SourceContext#emitWatermarkStatus(WatermarkStatus)}.
+		 *
+		 * @return The current Watermark Status
+		 */
+		@PublicEvolving
+		WatermarkStatus getCurrentWatermarkStatus();
 
 		/**
 		 * Returns the checkpoint lock. Please refer to the class-level comment in
