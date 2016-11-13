@@ -21,7 +21,6 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.KeyedStateStore;
 import org.apache.flink.api.common.state.State;
@@ -58,6 +57,8 @@ import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamstatus.StatusWatermarkValve;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.tasks.OperatorStateHandles;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
@@ -72,6 +73,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * Base class for all stream operators. Operators that contain a user function should extend the class 
@@ -141,16 +143,17 @@ public abstract class AbstractStreamOperator<OUT>
 	// ---------------- timers ------------------
 
 	private transient Map<String, HeapInternalTimerService<?, ?>> timerServices;
-//	private transient Map<String, HeapInternalTimerService<?, ?>> restoredServices;
 
+	// ---------------- one-input & two-input status / watermark valves ------------------
 
-	// ---------------- two-input operator watermarks ------------------
-
-	// We keep track of watermarks from both inputs, the combined input is the minimum
-	// Once the minimum advances we emit a new watermark for downstream operators
-	private long combinedWatermark = Long.MIN_VALUE;
-	private long input1Watermark = Long.MIN_VALUE;
-	private long input2Watermark = Long.MIN_VALUE;
+	/**
+	 * Only one is used, depending on whether the concrete implementation is a
+	 * {@link org.apache.flink.streaming.api.operators.OneInputStreamOperator} or
+	 * {@link org.apache.flink.streaming.api.operators.TwoInputStreamOperator}. If the concrete implementation is a
+	 * {@link StreamSource}, then this is irrelevant.
+	 */
+	private StatusWatermarkValve oneInputStatusWatermarkValve;
+	private StatusWatermarkValve twoInputStatusWatermarkValve;
 
 	// ------------------------------------------------------------------------
 	//  Life Cycle
@@ -259,6 +262,8 @@ public abstract class AbstractStreamOperator<OUT>
 		if (timerServices == null) {
 			timerServices = new HashMap<>();
 		}
+		this.oneInputStatusWatermarkValve = new StatusWatermarkValve(1, new WatermarkAdvancingValveOutputHandler(output, timerServices));
+		this.twoInputStatusWatermarkValve = new StatusWatermarkValve(2, new WatermarkAdvancingValveOutputHandler(output, timerServices));
 	}
 
 	private void initKeyedState() {
@@ -721,11 +726,11 @@ public abstract class AbstractStreamOperator<OUT>
 		}
 	}
 
-	public class CountingOutput implements Output<StreamRecord<OUT>> {
+	private class CountingOutput implements Output<StreamRecord<OUT>> {
 		private final Output<StreamRecord<OUT>> output;
 		private final Counter numRecordsOut;
 
-		public CountingOutput(Output<StreamRecord<OUT>> output, Counter counter) {
+		private CountingOutput(Output<StreamRecord<OUT>> output, Counter counter) {
 			this.output = output;
 			this.numRecordsOut = counter;
 		}
@@ -733,6 +738,11 @@ public abstract class AbstractStreamOperator<OUT>
 		@Override
 		public void emitWatermark(Watermark mark) {
 			output.emitWatermark(mark);
+		}
+
+		@Override
+		public void emitStreamStatus(StreamStatus streamStatus) {
+			output.emitStreamStatus(streamStatus);
 		}
 
 		@Override
@@ -753,7 +763,7 @@ public abstract class AbstractStreamOperator<OUT>
 	}
 
 	// ------------------------------------------------------------------------
-	//  Watermark handling
+	//  Watermark and Stream Status handling
 	// ------------------------------------------------------------------------
 
 	/**
@@ -801,45 +811,58 @@ public abstract class AbstractStreamOperator<OUT>
 	}
 
 	public void processWatermark(Watermark mark) throws Exception {
-		for (HeapInternalTimerService<?, ?> service : timerServices.values()) {
-			service.advanceWatermark(mark.getTimestamp());
-		}
-		output.emitWatermark(mark);
+		oneInputStatusWatermarkValve.inputWatermark(mark, 0);
+	}
+
+	public void processStreamStatus(StreamStatus streamStatus) throws Exception {
+		oneInputStatusWatermarkValve.inputStreamStatus(streamStatus, 0);
 	}
 
 	public void processWatermark1(Watermark mark) throws Exception {
-		input1Watermark = mark.getTimestamp();
-		long newMin = Math.min(input1Watermark, input2Watermark);
-		if (newMin > combinedWatermark) {
-			combinedWatermark = newMin;
-			processWatermark(new Watermark(combinedWatermark));
-		}
+		twoInputStatusWatermarkValve.inputWatermark(mark, 0);
 	}
 
 	public void processWatermark2(Watermark mark) throws Exception {
-		input2Watermark = mark.getTimestamp();
-		long newMin = Math.min(input1Watermark, input2Watermark);
-		if (newMin > combinedWatermark) {
-			combinedWatermark = newMin;
-			processWatermark(new Watermark(combinedWatermark));
+		twoInputStatusWatermarkValve.inputWatermark(mark, 1);
+	}
+
+	public void processStreamStatus1(StreamStatus streamStatus) throws Exception {
+		twoInputStatusWatermarkValve.inputStreamStatus(streamStatus, 0);
+	}
+
+	public void processStreamStatus2(StreamStatus streamStatus) throws Exception {
+		twoInputStatusWatermarkValve.inputStreamStatus(streamStatus, 1);
+	}
+
+	private class WatermarkAdvancingValveOutputHandler implements StatusWatermarkValve.ValveOutputHandler {
+		private final Output<StreamRecord<OUT>> output;
+		private final Map<String, HeapInternalTimerService<?, ?>> timerServices;
+
+		private WatermarkAdvancingValveOutputHandler(
+			Output<StreamRecord<OUT>> output,
+			Map<String, HeapInternalTimerService<?, ?>> timerServices) {
+			this.output = checkNotNull(output);
+			this.timerServices = checkNotNull(timerServices);
+		}
+
+		@Override
+		public void handleWatermark(Watermark watermark) {
+			try {
+				// use the valve's output watermarks to advance our current watermark
+				for (HeapInternalTimerService<?, ?> service : timerServices.values()) {
+					service.advanceWatermark(watermark.getTimestamp());
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+
+			output.emitWatermark(watermark);
+		}
+
+		@Override
+		public void handleStreamStatus(StreamStatus streamStatus) {
+			output.emitStreamStatus(streamStatus);
 		}
 	}
 
-	@VisibleForTesting
-	public int numProcessingTimeTimers() {
-		int count = 0;
-		for (HeapInternalTimerService<?, ?> timerService : timerServices.values()) {
-			count += timerService.numProcessingTimeTimers();
-		}
-		return count;
-	}
-
-	@VisibleForTesting
-	public int numEventTimeTimers() {
-		int count = 0;
-		for (HeapInternalTimerService<?, ?> timerService : timerServices.values()) {
-			count += timerService.numEventTimeTimers();
-		}
-		return count;
-	}
 }

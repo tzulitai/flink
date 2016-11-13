@@ -103,7 +103,12 @@ public class TwoInputStreamTaskTest {
 	@SuppressWarnings("unchecked")
 	public void testWatermarkForwarding() throws Exception {
 		final TwoInputStreamTask<String, Integer, String> coMapTask = new TwoInputStreamTask<String, Integer, String>();
-		final TwoInputStreamTaskTestHarness<String, Integer, String> testHarness = new TwoInputStreamTaskTestHarness<String, Integer, String>(coMapTask, 2, 2, new int[] {1, 2}, BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.INT_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+		final TwoInputStreamTaskTestHarness<String, Integer, String> testHarness =
+			new TwoInputStreamTaskTestHarness<String, Integer, String>(
+				coMapTask, 2, 2, new int[] {1, 2},
+				BasicTypeInfo.STRING_TYPE_INFO,
+				BasicTypeInfo.INT_TYPE_INFO,
+				BasicTypeInfo.STRING_TYPE_INFO);
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
 		CoStreamMap<String, Integer, String> coMapOperator = new CoStreamMap<String, Integer, String>(new IdentityMap());
@@ -153,7 +158,7 @@ public class TwoInputStreamTaskTest {
 		TestHarnessUtil.assertOutputEquals("Output was not correct.", expectedOutput, testHarness.getOutput());
 
 
-		// advance watermark from one of the inputs, now we should get a now one since the
+		// advance watermark from one of the inputs, now we should get a new one since the
 		// minimum increases
 		testHarness.processElement(new Watermark(initialTime + 4), 1, 1);
 		testHarness.waitForInputProcessing();

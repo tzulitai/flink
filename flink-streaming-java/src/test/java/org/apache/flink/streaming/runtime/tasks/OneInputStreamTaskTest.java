@@ -139,7 +139,11 @@ public class OneInputStreamTaskTest extends TestLogger {
 	@SuppressWarnings("unchecked")
 	public void testWatermarkForwarding() throws Exception {
 		final OneInputStreamTask<String, String> mapTask = new OneInputStreamTask<String, String>();
-		final OneInputStreamTaskTestHarness<String, String> testHarness = new OneInputStreamTaskTestHarness<String, String>(mapTask, 2, 2, BasicTypeInfo.STRING_TYPE_INFO, BasicTypeInfo.STRING_TYPE_INFO);
+		final OneInputStreamTaskTestHarness<String, String> testHarness =
+			new OneInputStreamTaskTestHarness<String, String>(
+				mapTask, 2, 2,
+				BasicTypeInfo.STRING_TYPE_INFO,
+				BasicTypeInfo.STRING_TYPE_INFO);
 
 		StreamConfig streamConfig = testHarness.getStreamConfig();
 		StreamMap<String, String> mapOperator = new StreamMap<String, String>(new IdentityMap());
@@ -186,7 +190,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		TestHarnessUtil.assertOutputEquals("Output was not correct.", expectedOutput, testHarness.getOutput());
 
 
-		// advance watermark from one of the inputs, now we should get a now one since the
+		// advance watermark from one of the inputs, now we should get a new one since the
 		// minimum increases
 		testHarness.processElement(new Watermark(initialTime + 4), 1, 1);
 		testHarness.waitForInputProcessing();

@@ -41,7 +41,9 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 
 		if (numberOfInputs > 0) {
 			InputGate[] inputGates = getEnvironment().getAllInputGates();
-			inputProcessor = new StreamInputProcessor<IN>(inputGates, inSerializer,
+			inputProcessor = new StreamInputProcessor<IN>(
+					inputGates,
+					inSerializer,
 					this, 
 					configuration.getCheckpointMode(),
 					getEnvironment().getIOManager());
@@ -53,12 +55,12 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
 
 	@Override
 	protected void run() throws Exception {
+		this.inputProcessor.setup(this.headOperator, getCheckpointLock());
+
 		// cache some references on the stack, to make the code more JIT friendly
-		final OneInputStreamOperator<IN, OUT> operator = this.headOperator;
 		final StreamInputProcessor<IN> inputProcessor = this.inputProcessor;
-		final Object lock = getCheckpointLock();
-		
-		while (running && inputProcessor.processInput(operator, lock)) {
+
+		while (running && inputProcessor.processInput()) {
 			// all the work happens in the "processInput" method
 		}
 	}
