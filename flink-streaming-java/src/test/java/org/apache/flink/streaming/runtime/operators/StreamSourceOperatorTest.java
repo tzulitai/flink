@@ -36,6 +36,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 
 import org.apache.flink.streaming.runtime.tasks.TestProcessingTimeService;
@@ -236,7 +237,8 @@ public class StreamSourceOperatorTest {
 			operator.getContainingTask().getProcessingTimeService(),
 			operator.getContainingTask().getCheckpointLock(),
 			new CollectorOutput<String>(output),
-			operator.getExecutionConfig().getAutoWatermarkInterval());
+			operator.getExecutionConfig().getAutoWatermarkInterval(),
+			0);
 
 		// periodically emit the watermarks
 		// even though we start from 1 the watermark are still
@@ -354,6 +356,11 @@ public class StreamSourceOperatorTest {
 		@Override
 		public void emitWatermark(Watermark mark) {
 			list.add(mark);
+		}
+
+		@Override
+		public void emitStreamStatus(StreamStatus streamStatus) {
+			list.add(streamStatus);
 		}
 
 		@Override

@@ -71,6 +71,11 @@ public class ListSourceContext<T> implements SourceFunction.SourceContext<T> {
 	}
 
 	@Override
+	public void markAsTemporarilyIdle() {
+		// don't do anything
+	}
+
+	@Override
 	public Object getCheckpointLock() {
 		return lock;
 	}

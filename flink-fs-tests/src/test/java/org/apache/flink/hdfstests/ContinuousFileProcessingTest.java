@@ -652,6 +652,10 @@ public class ContinuousFileProcessingTest {
 		}
 
 		@Override
+		public void markAsTemporarilyIdle() {
+		}
+
+		@Override
 		public Object getCheckpointLock() {
 			return lock;
 		}

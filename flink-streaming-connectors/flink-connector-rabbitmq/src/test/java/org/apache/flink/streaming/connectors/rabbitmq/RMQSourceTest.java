@@ -408,6 +408,10 @@ public class RMQSourceTest {
 		}
 
 		@Override
+		public void markAsTemporarilyIdle() {
+		}
+
+		@Override
 		public Object getCheckpointLock() {
 			return lock;
 		}
