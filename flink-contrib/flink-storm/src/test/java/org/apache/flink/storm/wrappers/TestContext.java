@@ -45,6 +45,11 @@ class TestContext implements SourceContext<Tuple1<Integer>> {
 	}
 
 	@Override
+	public void markAsTemporarilyIdle() {
+		// ignore it
+	}
+
+	@Override
 	public Object getCheckpointLock() {
 		return null;
 	}

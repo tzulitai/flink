@@ -258,6 +258,11 @@ public class AbstractFetcherTimestampsTest {
 		}
 
 		@Override
+		public void markAsTemporarilyIdle() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public Object getCheckpointLock() {
 			return checkpointLock;
 		}

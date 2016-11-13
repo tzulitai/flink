@@ -286,6 +286,9 @@ public class SocketTextStreamFunctionTest {
 					public void emitWatermark(Watermark mark) {}
 
 					@Override
+					public void markAsTemporarilyIdle() {}
+
+					@Override
 					public Object getCheckpointLock() {
 						return lock;
 					}
