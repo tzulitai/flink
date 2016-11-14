@@ -25,6 +25,7 @@ import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 
 public class MockOutput<T> implements Output<StreamRecord<T>> {
 	private Collection<T> outputs;
@@ -41,12 +42,17 @@ public class MockOutput<T> implements Output<StreamRecord<T>> {
 
 	@Override
 	public void emitWatermark(Watermark mark) {
-		throw new RuntimeException("THIS MUST BE IMPLEMENTED");
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void emitStreamStatus(StreamStatus streamStatus) {
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void emitLatencyMarker(LatencyMarker latencyMarker) {
-		throw new RuntimeException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override

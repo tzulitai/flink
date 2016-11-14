@@ -19,7 +19,6 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
-import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -27,16 +26,17 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.tasks.OperatorStateHandles;
-import org.apache.flink.streaming.util.AbstractStreamOperatorTestHarness;
-import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
-import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
+import org.apache.flink.streaming.util.*;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -402,6 +402,52 @@ public class AbstractStreamOperatorTest {
 	}
 
 	/**
+	 * Verifies that even if concrete implementations generate watermarks that bypass
+	 * our watermark propagating logic, the watermarks are still blocked if the operator
+	 * is currently idle.
+	 */
+	@Test
+	public void testIgnoresGeneratedWatermarksWhenIdle() throws Exception {
+		OneInputWatermarkGeneratingTestOperator watermarkGenerator = new OneInputWatermarkGeneratingTestOperator();
+
+		OneInputStreamOperatorTestHarness<String, String> testHarness =
+			new OneInputStreamOperatorTestHarness<>(watermarkGenerator);
+
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<>();
+
+		testHarness.open();
+
+		// the operator starts from ACTIVE, so all watermarks should be present in the output
+		testHarness.processWatermark(new Watermark(0));
+		expectedOutput.add(new Watermark(0));
+		testHarness.processWatermark(new Watermark(1));
+		expectedOutput.add(new Watermark(1));
+		testHarness.processWatermark(new Watermark(2));
+		expectedOutput.add(new Watermark(2));
+
+		// now, the operator should be IDLE, and block any watermarks from being output
+		testHarness.processStreamStatus(StreamStatus.IDLE);
+		expectedOutput.add(StreamStatus.IDLE);
+		testHarness.processWatermark(new Watermark(3)); // ignored
+		testHarness.processWatermark(new Watermark(4)); // ignored
+		testHarness.processWatermark(new Watermark(5)); // ignored
+
+		// once the operator is ACTIVE again, the generated watermarks should not be blocked
+		testHarness.processStreamStatus(StreamStatus.ACTIVE);
+		expectedOutput.add(StreamStatus.ACTIVE);
+		testHarness.processWatermark(new Watermark(6));
+		expectedOutput.add(new Watermark(6));
+		testHarness.processWatermark(new Watermark(7));
+		expectedOutput.add(new Watermark(7));
+		testHarness.processWatermark(new Watermark(8));
+		expectedOutput.add(new Watermark(8));
+
+		TestHarnessUtil.assertOutputEquals("Output was not correct.",
+			expectedOutput,
+			testHarness.getOutput());
+	}
+
+	/**
 	 * Extracts the result values form the test harness and clear the output queue.
 	 */
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -487,6 +533,61 @@ public class AbstractStreamOperatorTest {
 		public void onProcessingTime(InternalTimer<Integer, VoidNamespace> timer) throws Exception {
 			String stateValue = getPartitionedState(stateDescriptor).value();
 			output.collect(new StreamRecord<>("ON_PROC_TIME:" + stateValue));
+		}
+	}
+
+	/**
+	 * A one-input operator that bypasses watermark propagating logic at the
+	 * abstract operator level. Records are simply forwarded.
+	 */
+	private static class OneInputWatermarkGeneratingTestOperator
+		extends AbstractStreamOperator<String>
+		implements OneInputStreamOperator<String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void processElement(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+		}
+
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			output.emitWatermark(mark);
+		}
+	}
+
+	/**
+	 * A two-input operator that bypasses watermark propagating logic at the
+	 * abstract operator level. Records are simply forwarded.
+	 *
+	 * It doesn't really matter that the operator isn't ensuring increasing
+	 * watermarks output, because we just want to fake the bypassing behaviour.
+	 */
+	private static class TwoInputWatermarkGeneratingTestOperator
+		extends AbstractStreamOperator<String>
+		implements TwoInputStreamOperator<String, String, String> {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void processElement1(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+		}
+
+		@Override
+		public void processElement2(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+		}
+
+		@Override
+		public void processWatermark1(Watermark mark) throws Exception {
+			output.emitWatermark(mark);
+		}
+
+		@Override
+		public void processWatermark2(Watermark mark) throws Exception {
+			output.emitWatermark(mark);
 		}
 	}
 

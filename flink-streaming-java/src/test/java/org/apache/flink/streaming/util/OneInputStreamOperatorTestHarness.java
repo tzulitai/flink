@@ -20,6 +20,7 @@ package org.apache.flink.streaming.util;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 
 import java.util.Collection;
 
@@ -72,5 +73,9 @@ public class OneInputStreamOperatorTestHarness<IN, OUT>
 
 	public void processWatermark(Watermark mark) throws Exception {
 		oneInputOperator.processWatermark(mark);
+	}
+
+	public void processStreamStatus(StreamStatus streamStatus) throws Exception {
+		oneInputOperator.processStreamStatus(streamStatus);
 	}
 }

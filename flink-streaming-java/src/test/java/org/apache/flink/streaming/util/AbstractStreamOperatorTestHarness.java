@@ -49,6 +49,7 @@ import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.tasks.OperatorStateHandles;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
@@ -529,6 +530,11 @@ public class AbstractStreamOperatorTestHarness<OUT> {
 			} else {
 				outputList.add(new StreamRecord<>(outputSerializer.copy(element.getValue())));
 			}
+		}
+
+		@Override
+		public void emitStreamStatus(StreamStatus streamStatus) {
+			outputList.add(streamStatus);
 		}
 
 		@Override

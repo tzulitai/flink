@@ -32,6 +32,7 @@ import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.util.XORShiftRandom;
 
 
@@ -102,6 +103,13 @@ public class DirectedOutput<OUT> implements Output<StreamRecord<OUT>> {
 	public void emitWatermark(Watermark mark) {
 		for (Output<StreamRecord<OUT>> out : allOutputs) {
 			out.emitWatermark(mark);
+		}
+	}
+
+	@Override
+	public void emitStreamStatus(StreamStatus streamStatus) {
+		for (Output<StreamRecord<OUT>> out : allOutputs) {
+			out.emitStreamStatus(streamStatus);
 		}
 	}
 

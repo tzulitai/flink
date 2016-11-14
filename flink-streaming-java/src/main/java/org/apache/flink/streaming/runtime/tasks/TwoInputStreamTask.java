@@ -70,6 +70,7 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 				inputDeserializer1, inputDeserializer2,
 				this,
 				configuration.getCheckpointMode(),
+				getCheckpointLock(),
 				getEnvironment().getIOManager(),
 				getEnvironment().getTaskManagerInfo().getConfiguration());
 
@@ -79,12 +80,12 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 
 	@Override
 	protected void run() throws Exception {
-		// cache some references on the stack, to make the code more JIT friendly
-		final TwoInputStreamOperator<IN1, IN2, OUT> operator = this.headOperator;
+		this.inputProcessor.setup(this.headOperator);
+
+		// cache processor reference on the stack, to make the code more JIT friendly
 		final StreamTwoInputProcessor<IN1, IN2> inputProcessor = this.inputProcessor;
-		final Object lock = getCheckpointLock();
-		
-		while (running && inputProcessor.processInput(operator, lock)) {
+
+		while (running && inputProcessor.processInput()) {
 			// all the work happens in the "processInput" method
 		}
 	}

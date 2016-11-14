@@ -38,6 +38,7 @@ import org.apache.flink.streaming.api.collector.selector.CopyingDirectedOutput;
 import org.apache.flink.streaming.api.collector.selector.DirectedOutput;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
 import org.apache.flink.streaming.runtime.io.RecordWriterOutput;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
@@ -378,6 +379,16 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> {
 		}
 
 		@Override
+		public void emitStreamStatus(StreamStatus streamStatus) {
+			try {
+				operator.processStreamStatus(streamStatus);
+			}
+			catch (Exception e) {
+				throw new ExceptionInChainedOperatorException(e);
+			}
+		}
+
+		@Override
 		public void emitLatencyMarker(LatencyMarker latencyMarker) {
 			try {
 				operator.processLatencyMarker(latencyMarker);
@@ -435,6 +446,13 @@ public class OperatorChain<OUT, OP extends StreamOperator<OUT>> {
 		public void emitWatermark(Watermark mark) {
 			for (Output<StreamRecord<T>> output : outputs) {
 				output.emitWatermark(mark);
+			}
+		}
+
+		@Override
+		public void emitStreamStatus(StreamStatus streamStatus) {
+			for (Output<StreamRecord<T>> output : outputs) {
+				output.emitStreamStatus(streamStatus);
 			}
 		}
 
