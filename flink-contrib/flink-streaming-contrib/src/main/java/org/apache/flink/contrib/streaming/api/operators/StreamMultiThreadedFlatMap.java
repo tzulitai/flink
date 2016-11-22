@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -65,7 +64,7 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	private final int threadPoolSize;
 
 	private transient List<InFlightElement<OUT>> restoredInFlightElements;
-	private transient BoundedThreadPoolExecutor executor;
+	private transient ThreadPoolExecutor executor;
 	private transient Object checkpointLock;
 	private transient StreamElementSerializer<IN> inSerializer;
 	private transient StreamElementSerializer<OUT> outSerializer;
@@ -92,9 +91,11 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 		this.inSerializer = new StreamElementSerializer<>(config.<IN>getTypeSerializerIn1(getUserCodeClassloader()));
 		this.outSerializer = new StreamElementSerializer<>(config.<OUT>getTypeSerializerOut(getUserCodeClassloader()));
 
-		this.executor = new BoundedThreadPoolExecutor(threadPoolSize);
+		this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
 		this.checkpointLock = containingTask.getCheckpointLock();
-		this.queue = new InFlightElementsQueue<>(this.checkpointLock);
+
+		// use threadPoolSize * 2 as the maximum queue size
+		this.queue = new InFlightElementsQueue<>(threadPoolSize * 2, this.checkpointLock);
 
 		this.outputEmitter = new OutputEmitter<>(this.queue, this.checkpointLock, output);
 	}
@@ -108,7 +109,7 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 				long index = this.queue.add(element.getElement());
 				// re-invoke function
 				if (!element.isOutputCollected()) {
-					this.executor.submitConcurrentFlatMapInvoke(
+					submitConcurrentFlatMapInvoke(
 						element.getElement().<IN>asRecord().getValue(),
 						checkpointLock,
 						index);
@@ -122,7 +123,7 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	public void close() throws Exception {
 		super.close();
 
-		executor.terminate();
+		executor.shutdownNow();
 		outputEmitter.interrupt();
 		outputEmitter.shutdown();
 	}
@@ -131,7 +132,7 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	public void dispose() throws Exception {
 		super.dispose();
 
-		executor.terminate();
+		executor.shutdownNow();
 		outputEmitter.interrupt();
 		outputEmitter.shutdown();
 	}
@@ -143,8 +144,9 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	@Override
 	@SuppressWarnings("SynchronizeOnNonFinalField")
 	public void processElement(final StreamRecord<IN> element) throws Exception {
+		// this blocks if queue is saturated
 		long index = queue.add(element);
-		executor.submitConcurrentFlatMapInvoke(element.getValue(), checkpointLock, index);
+		submitConcurrentFlatMapInvoke(element.getValue(), checkpointLock, index);
 	}
 
 	@Override
@@ -198,8 +200,8 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	}
 
 	@SuppressWarnings("SynchronizeOnNonFinalField")
-	private void processNonRecordElement(StreamElement element) {
-		if (executor.getActiveThreadsCount() == 0) {
+	private void processNonRecordElement(StreamElement element) throws Exception {
+		if (executor.getActiveCount() == 0) {
 			if (element.isWatermark()) {
 				output.emitWatermark(element.asWatermark());
 			} else if (element.isLatencyMarker()) {
@@ -212,42 +214,16 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 		}
 	}
 
-	private class BoundedThreadPoolExecutor {
-
-		private final ThreadPoolExecutor executor;
-		private final Semaphore semaphore;
-
-		BoundedThreadPoolExecutor(int threadPoolSize) {
-			checkArgument(threadPoolSize > 0);
-			this.semaphore = new Semaphore(threadPoolSize);
-			this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadPoolSize);
-		}
-
-		void submitConcurrentFlatMapInvoke(final IN value, final Object checkpointLock, final long queueIndex)
-			throws InterruptedException {
-			semaphore.acquire();
-
-			executor.submit(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						userFunction.flatMap(value, checkpointLock, new ExactlyOnceCollector<>(queue, queueIndex, checkpointLock));
-					} catch (Exception e) {
-						throw new RuntimeException("Exception in task: " + e);
-					} finally {
-						semaphore.release();
-					}
+	private void submitConcurrentFlatMapInvoke(final IN value, final Object checkpointLock, final long queueIndex) {
+		executor.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					userFunction.flatMap(value, checkpointLock, new ExactlyOnceCollector<>(queue, queueIndex, checkpointLock));
+				} catch (Exception e) {
+					throw new RuntimeException("Exception in task: " + e);
 				}
-			});
-		}
-
-		void terminate() {
-			executor.shutdownNow();
-		}
-
-		int getActiveThreadsCount() {
-			return executor.getActiveCount();
-		}
-
+			}
+		});
 	}
 }

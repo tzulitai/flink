@@ -45,8 +45,4 @@ public class ExactlyOnceCollector<OUT> {
 		}
 	}
 
-	public void close() {
-
-	}
-
 }

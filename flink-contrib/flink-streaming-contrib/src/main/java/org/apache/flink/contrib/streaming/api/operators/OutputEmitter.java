@@ -22,8 +22,6 @@ import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
-import java.util.Collection;
-
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -53,13 +51,13 @@ public class OutputEmitter<OUT> extends Thread {
 		try {
 			while (running) {
 				synchronized (checkpointLock) {
-					Collection<InFlightElement<OUT>> elementsToEmit = queue.fetchAndRemoveEmittableElements();
+					InFlightElement<OUT> elementToEmit = queue.removeNextEmittableElement();
 
-					for (InFlightElement<OUT> element : elementsToEmit) {
-						StreamElement streamElement = element.getElement();
+					if (elementToEmit != null) {
+						StreamElement streamElement = elementToEmit.getElement();
 
 						if (streamElement.isRecord()) {
-							for (OUT outputValue : element.getOutputs()) {
+							for (OUT outputValue : elementToEmit.getOutputs()) {
 								timestampedCollector.collect(outputValue);
 							}
 						} else if (streamElement.isWatermark()) {

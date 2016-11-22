@@ -20,14 +20,15 @@ package org.apache.flink.contrib.streaming.api.operators;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -40,88 +41,127 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class InFlightElementsQueue<OUT> {
 
+	/**
+	 * The checkpoint lock is used for several purposes in this class:
+	 *  1. Synchronize all manipulation and access to the queue with checkpointing
+	 *  2. Block calling thread of adding elements if queue is currently saturated
+	 *  3. Block calling thread of removing elements if no elements can be removed
+	 *
+	 * We cannot use a separate lock for 2 and 3, because that may cause in deadlocking checkpointing.
+	 */
 	private final Object checkpointLock;
+
+	/** The maximum allowed number of in-flight elements (queue buffer size) */
+	private final int maxNumInFlightElements;
+
 	private final Map<Long, InFlightElement<OUT>> queue;
 
 	private long indexCounter;
 
-	public InFlightElementsQueue(Object checkpointLock) {
+	public InFlightElementsQueue(int maxNumInFlightElements, Object checkpointLock) {
+		checkArgument(maxNumInFlightElements > 0);
+		this.maxNumInFlightElements = maxNumInFlightElements;
 		this.checkpointLock = checkNotNull(checkpointLock);
 		this.queue = new LinkedHashMap<>();
 		this.indexCounter = Long.MIN_VALUE;
 	}
 
-	public long add(StreamElement element) {
-		assert Thread.holdsLock(checkpointLock);
-		long index = indexCounter++;
-		queue.put(index, new InFlightElement<OUT>(element));
+	public long add(StreamElement element) throws InterruptedException {
+		synchronized (checkpointLock) {
+			// block calling thread until the queue has space;
+			// this can only be woken up by "removeNextEmittableElement()"
+			if (queue.size() >= maxNumInFlightElements) {
+				checkpointLock.wait();
+			}
 
-		// check if there is emittable outputs
-		// if yes,
-		checkpointLock.notifyAll();
+			long index = indexCounter++;
+			queue.put(index, new InFlightElement<OUT>(element));
 
-		return index;
+			// if the added element results in the queue to contain elements that are qualified
+			// to be emitted, this wakes up blocking callers on "removeNextEmittableElement()"
+			if (hasEmittableElements()) {
+				checkpointLock.notifyAll();
+			}
+
+			return index;
+		}
 	}
 
 	public void setOutputsForElement(long index, Collection<OUT> outputs) {
-		assert Thread.holdsLock(checkpointLock);
+		synchronized (checkpointLock) {
+			queue.get(index).setOutputCollection(outputs);
 
-		// check if there is emittable outputs
-		// if yes,
-		checkpointLock.notifyAll();
-
-		queue.get(index).setOutputCollection(outputs);
+			// if the added element results in the queue to contain elements that are qualified
+			// to be emitted, this wakes up blocking callers on "removeNextEmittableElement()"
+			if (hasEmittableElements()) {
+				checkpointLock.notifyAll();
+			}
+		}
 	}
 
 	/**
-	 * Blocks
+	 * Removes and returns the next emittable element from the queue. Please see the class documentation of
+	 * {@link InFlightElement} for details on when an element no longer needs to be buffered.
 	 *
-	 * @return
+	 * This method blocks the caller if there are currently no elements in the queue qualified to be emitted.
+	 *
+	 * @return The removed element.
 	 */
-	public Collection<InFlightElement<OUT>> fetchAndRemoveEmittableElements() throws InterruptedException {
-		assert Thread.holdsLock(checkpointLock);
+	@Nullable
+	public InFlightElement<OUT> removeNextEmittableElement() throws InterruptedException {
+		synchronized (checkpointLock) {
+			// if no emittable outputs, block until we find out there are elements that can be emitted
+			// only either "add()" or "setOutputsForElement()" will wake us up
+			if (!hasEmittableElements()) {
+				checkpointLock.wait();
+			}
 
-		// if no emittable outputs, block until we find out there are elements that can be emitted
-		if (!hasEmittableElements()) {
-			checkpointLock.wait();
-		}
+			boolean seenIncompleteRecordElement = false;
 
-		List<InFlightElement<OUT>> emittableELements = new LinkedList<>();
-		boolean seenIncompleteRecordElement = false;
+			Iterator<Map.Entry<Long, InFlightElement<OUT>>> queueIterator = queue.entrySet().iterator();
+			while (queueIterator.hasNext()) {
+				InFlightElement<OUT> element = queueIterator.next().getValue();
+				StreamElement streamElement = element.getElement();
+				if (streamElement.isRecord()) {
+					if (element.isOutputCollected()) {
+						queueIterator.remove();
 
-		Iterator<Map.Entry<Long, InFlightElement<OUT>>> queueIterator = queue.entrySet().iterator();
-		while (queueIterator.hasNext()) {
-			InFlightElement element = queueIterator.next().getValue();
-			StreamElement streamElement = element.getElement();
-			if (streamElement.isRecord()) {
-				if (element.isOutputCollected()) {
-					emittableELements.add(element);
-					queueIterator.remove();
+						// this wakes up blocks on "add()" if the queue was previously saturated
+						checkpointLock.notifyAll();
+
+						return element;
+					} else {
+						seenIncompleteRecordElement = true;
+					}
 				} else {
-					seenIncompleteRecordElement = true;
-				}
-			} else {
-				if (!seenIncompleteRecordElement) {
-					emittableELements.add(element);
-					queueIterator.remove();
-				} else {
-					break;
+					if (!seenIncompleteRecordElement) {
+						queueIterator.remove();
+
+						// this wakes up blocks on "add()" if the queue was previously saturated
+						checkpointLock.notifyAll();
+
+						return element;
+					} else {
+						break;
+					}
 				}
 			}
 		}
 
-		return emittableELements;
+		// shouldn't end up here, since we wake up from the block only when
+		// there is emittable elements; this is just to silence the compiler
+		return null;
 	}
 
 	public List<InFlightElement<OUT>> snapshotElements() {
-		assert Thread.holdsLock(checkpointLock);
+		synchronized (checkpointLock) {
+			List<InFlightElement<OUT>> snapshot = new ArrayList<>(queue.size());
+			for (Map.Entry<Long, InFlightElement<OUT>> element : queue.entrySet()) {
+				snapshot.add(element.getValue());
+			}
 
-		List<InFlightElement<OUT>> snapshot = new ArrayList<>(queue.size());
-		for (Map.Entry<Long, InFlightElement<OUT>> element : queue.entrySet()) {
-			snapshot.add(element.getValue());
+			return snapshot;
 		}
-
-		return snapshot;
 	}
 
 	@VisibleForTesting
