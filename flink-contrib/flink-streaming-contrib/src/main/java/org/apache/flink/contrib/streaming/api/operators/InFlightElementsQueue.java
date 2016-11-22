@@ -67,6 +67,10 @@ public class InFlightElementsQueue<OUT> {
 	}
 
 	public long add(StreamElement element) throws InterruptedException {
+		return add(new InFlightElement<OUT>(element));
+	}
+
+	public long add(InFlightElement<OUT> inFlightElement) throws InterruptedException {
 		synchronized (checkpointLock) {
 			// block calling thread until the queue has space;
 			// this can only be woken up by "removeNextEmittableElement()"
@@ -75,7 +79,7 @@ public class InFlightElementsQueue<OUT> {
 			}
 
 			long index = indexCounter++;
-			queue.put(index, new InFlightElement<OUT>(element));
+			queue.put(index, inFlightElement);
 
 			// if the added element results in the queue to contain elements that are qualified
 			// to be emitted, this wakes up blocking callers on "removeNextEmittableElement()"

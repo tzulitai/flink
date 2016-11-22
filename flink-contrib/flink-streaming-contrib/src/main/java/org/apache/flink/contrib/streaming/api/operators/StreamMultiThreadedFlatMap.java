@@ -17,6 +17,7 @@
 
 package org.apache.flink.contrib.streaming.api.operators;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.contrib.streaming.api.functions.MultiThreadedFlatMapFunction;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FSDataOutputStream;
@@ -105,9 +106,10 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 		super.open();
 
 		if (this.restoredInFlightElements != null) {
-			for (InFlightElement element : this.restoredInFlightElements) {
-				long index = this.queue.add(element.getElement());
-				// re-invoke function
+			for (InFlightElement<OUT> element : this.restoredInFlightElements) {
+				long index = this.queue.add(element);
+
+				// re-invoke function with in-flight records that we haven't collected outputs for
 				if (!element.isOutputCollected()) {
 					submitConcurrentFlatMapInvoke(
 						element.getElement().<IN>asRecord().getValue(),
@@ -122,15 +124,6 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 	@Override
 	public void close() throws Exception {
 		super.close();
-
-		executor.shutdownNow();
-		outputEmitter.interrupt();
-		outputEmitter.shutdown();
-	}
-
-	@Override
-	public void dispose() throws Exception {
-		super.dispose();
 
 		executor.shutdownNow();
 		outputEmitter.interrupt();
@@ -225,5 +218,14 @@ public class StreamMultiThreadedFlatMap<IN, OUT>
 				}
 			}
 		});
+	}
+
+	// ------------------------------------------------------------------------
+	//  Test utilities
+	// ------------------------------------------------------------------------
+
+	@VisibleForTesting
+	InFlightElementsQueue<OUT> getQueue() {
+		return queue;
 	}
 }

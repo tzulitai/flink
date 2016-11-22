@@ -485,6 +485,18 @@ public class AbstractStreamOperatorTestHarness<OUT> {
 		return processingTimeService.getCurrentProcessingTime();
 	}
 
+	public void setTypeSerializerIn1(TypeSerializer<?> serializerIn1) {
+		this.config.setTypeSerializerIn1(serializerIn1);
+	}
+
+	public void setTypeSerializerIn2(TypeSerializer<?> serializerIn2) {
+		this.config.setTypeSerializerIn2(serializerIn2);
+	}
+
+	public void setTypeSerializerOut(TypeSerializer<?> serializerOut) {
+		this.config.setTypeSerializerOut(serializerOut);
+	}
+
 	public void setTimeCharacteristic(TimeCharacteristic timeCharacteristic) {
 		this.config.setTimeCharacteristic(timeCharacteristic);
 	}
