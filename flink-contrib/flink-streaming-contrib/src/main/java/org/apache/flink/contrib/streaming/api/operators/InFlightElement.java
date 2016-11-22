@@ -60,10 +60,10 @@ public class InFlightElement<OUT> {
 			if (this.outputs == null) {
 				this.outputs = outputs;
 			} else {
-				throw new IllegalStateException("Output already set");
+				throw new IllegalStateException("Output already set for in-flight element.");
 			}
 		} else {
-			throw new IllegalStateException("Outputs only allowed for Stream Records");
+			throw new IllegalStateException("Setting outputs is only allowed for Stream Record in-flight elements.");
 		}
 	}
 

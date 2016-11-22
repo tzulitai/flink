@@ -65,7 +65,7 @@ public class OutputEmitter<OUT> extends Thread {
 						} else if (streamElement.isLatencyMarker()) {
 							output.emitLatencyMarker(streamElement.asLatencyMarker());
 						} else {
-							throw new RuntimeException("Unrecognized :" );
+							throw new RuntimeException("Unrecognized StreamElement: " + streamElement);
 						}
 					}
 				}

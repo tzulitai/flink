@@ -66,10 +66,20 @@ public class InFlightElementsQueue<OUT> {
 		this.indexCounter = Long.MIN_VALUE;
 	}
 
+	/**
+	 * Add an element to the queue. This method blocks if the queue is currently saturated.
+	 *
+	 * @param element Stream element to add.
+	 * @return the index of the added element within the queue.
+	 */
 	public long add(StreamElement element) throws InterruptedException {
 		return add(new InFlightElement<OUT>(element));
 	}
 
+	/**
+	 * Utility variant of {@link InFlightElementsQueue#add(StreamElement)}, used mainly on restore
+	 * to directly add a element along with it's restored outputs into the queue.
+	 */
 	public long add(InFlightElement<OUT> inFlightElement) throws InterruptedException {
 		synchronized (checkpointLock) {
 			// block calling thread until the queue has space;

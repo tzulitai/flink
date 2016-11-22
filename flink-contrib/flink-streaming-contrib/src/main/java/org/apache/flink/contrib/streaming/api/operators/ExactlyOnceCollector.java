@@ -39,6 +39,12 @@ public class ExactlyOnceCollector<OUT> {
 		this.checkpointLock = checkNotNull(checkpointLock);
 	}
 
+	/**
+	 * This method should be called exactly one time to collect transformed outputs.
+	 * If there are no transformed outputs, you should still provide an empty collection.
+	 *
+	 * @param outputs the output collection to collect.
+	 */
 	public void collect(Collection<OUT> outputs) {
 		synchronized (checkpointLock) {
 			queue.setOutputsForElement(inputRecordIndex, outputs);
