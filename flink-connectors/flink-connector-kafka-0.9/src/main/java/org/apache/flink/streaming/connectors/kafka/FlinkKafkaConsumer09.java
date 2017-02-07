@@ -26,6 +26,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition
 import org.apache.flink.streaming.util.serialization.DeserializationSchema;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchemaWrapper;
+import org.apache.flink.util.PropertiesUtil;
 import org.apache.flink.util.SerializedValue;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -188,12 +189,12 @@ public class FlinkKafkaConsumer09<T> extends FlinkKafkaConsumerBase<T> {
 				runtimeContext.getProcessingTimeService(),
 				runtimeContext.getExecutionConfig().getAutoWatermarkInterval(),
 				runtimeContext.getUserCodeClassLoader(),
-				runtimeContext.isCheckpointingEnabled(),
 				runtimeContext.getTaskNameWithSubtasks(),
 				runtimeContext.getMetricGroup(),
 				deserializer,
 				properties,
 				pollTimeout,
+				offsetCommitMode,
 				startupMode,
 				useMetrics);
 		
@@ -230,6 +231,12 @@ public class FlinkKafkaConsumer09<T> extends FlinkKafkaConsumerBase<T> {
 		}
 
 		return partitions;
+	}
+
+	@Override
+	protected boolean getIsAutoCommitEnabled() {
+		return PropertiesUtil.getBoolean(properties, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false) &&
+			PropertiesUtil.getLong(properties, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 5000) > 0;
 	}
 
 	// ------------------------------------------------------------------------

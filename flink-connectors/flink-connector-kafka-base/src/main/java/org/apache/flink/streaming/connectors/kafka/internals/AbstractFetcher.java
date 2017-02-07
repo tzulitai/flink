@@ -24,6 +24,7 @@ import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
@@ -68,6 +69,8 @@ public abstract class AbstractFetcher<T, KPH> {
 	/** The mode describing whether the fetcher also generates timestamps and watermarks */
 	protected final int timestampWatermarkMode;
 
+	protected final OffsetCommitMode offsetCommitMode;
+
 	/** The startup mode for the consumer (only relevant if the consumer wasn't restored) */
 	protected final StartupMode startupMode;
 
@@ -91,11 +94,13 @@ public abstract class AbstractFetcher<T, KPH> {
 			ProcessingTimeService processingTimeProvider,
 			long autoWatermarkInterval,
 			ClassLoader userCodeClassLoader,
+			OffsetCommitMode offsetCommitMode,
 			StartupMode startupMode,
 			boolean useMetrics) throws Exception
 	{
 		this.sourceContext = checkNotNull(sourceContext);
 		this.checkpointLock = sourceContext.getCheckpointLock();
+		this.offsetCommitMode = checkNotNull(offsetCommitMode);
 		this.startupMode = checkNotNull(startupMode);
 		this.useMetrics = useMetrics;
 		

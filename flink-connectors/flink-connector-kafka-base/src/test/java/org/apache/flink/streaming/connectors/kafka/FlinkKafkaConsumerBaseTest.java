@@ -24,6 +24,7 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.OperatorStateStore;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
@@ -235,6 +236,7 @@ public class FlinkKafkaConsumerBaseTest {
 		final LinkedMap pendingOffsetsToCommit = new LinkedMap();
 	
 		FlinkKafkaConsumerBase<String> consumer = getConsumer(fetcher, pendingOffsetsToCommit, true);
+
 		assertEquals(0, pendingOffsetsToCommit.size());
 
 		OperatorStateStore backend = mock(OperatorStateStore.class);
@@ -384,6 +386,11 @@ public class FlinkKafkaConsumerBaseTest {
 		@Override
 		public RuntimeContext getRuntimeContext() {
 			return mock(StreamingRuntimeContext.class);
+		}
+
+		@Override
+		protected boolean getIsAutoCommitEnabled() {
+			return false;
 		}
 	}
 

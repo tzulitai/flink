@@ -98,7 +98,6 @@ public class KafkaConsumerThread extends Thread {
 	/** Flag tracking whether the latest commit request has completed */
 	private volatile boolean commitInProgress;
 
-
 	public KafkaConsumerThread(
 			Logger log,
 			Handover handover,

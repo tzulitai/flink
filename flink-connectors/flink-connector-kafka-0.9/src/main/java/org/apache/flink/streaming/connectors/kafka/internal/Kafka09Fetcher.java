@@ -22,6 +22,7 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
+import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internals.AbstractFetcher;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
@@ -78,12 +79,12 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 			ProcessingTimeService processingTimeProvider,
 			long autoWatermarkInterval,
 			ClassLoader userCodeClassLoader,
-			boolean enableCheckpointing,
 			String taskNameWithSubtasks,
 			MetricGroup metricGroup,
 			KeyedDeserializationSchema<T> deserializer,
 			Properties kafkaProperties,
 			long pollTimeout,
+			OffsetCommitMode offsetCommitMode,
 			StartupMode startupMode,
 			boolean useMetrics) throws Exception
 	{
@@ -96,6 +97,7 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 				processingTimeProvider,
 				autoWatermarkInterval,
 				userCodeClassLoader,
+				offsetCommitMode,
 				startupMode,
 				useMetrics);
 
@@ -105,10 +107,10 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 		final MetricGroup kafkaMetricGroup = metricGroup.addGroup("KafkaConsumer");
 		addOffsetStateGauge(kafkaMetricGroup);
 
-		// if checkpointing is enabled, we are not automatically committing to Kafka.
-		kafkaProperties.setProperty(
-				ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
-				Boolean.toString(!enableCheckpointing));
+		// if we're not configured to auto commit, make sure the setting in the properties is disabled
+		if (offsetCommitMode != OffsetCommitMode.KAFKA_PERIODIC) {
+			kafkaProperties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+		}
 		
 		this.consumerThread = new KafkaConsumerThread(
 				LOG,

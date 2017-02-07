@@ -22,7 +22,9 @@ import kafka.api.OffsetRequest;
 import kafka.common.TopicAndPartition;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
+import org.apache.flink.util.PropertiesUtil;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.Node;
 
@@ -79,9 +81,6 @@ public class Kafka08Fetcher<T> extends AbstractFetcher<T, TopicAndPartition> {
 	/** The behavior to use in case that an offset is not valid (any more) for a partition */
 	private final long invalidOffsetBehavior;
 
-	/** The interval in which to automatically commit (-1 if deactivated) */
-	private final long autoCommitInterval;
-
 	/** The handler that reads/writes offsets from/to ZooKeeper */
 	private volatile ZookeeperOffsetHandler zookeeperOffsetHandler;
 
@@ -98,7 +97,7 @@ public class Kafka08Fetcher<T> extends AbstractFetcher<T, TopicAndPartition> {
 			StreamingRuntimeContext runtimeContext,
 			KeyedDeserializationSchema<T> deserializer,
 			Properties kafkaProperties,
-			long autoCommitInterval,
+			OffsetCommitMode offsetCommitMode,
 			StartupMode startupMode,
 			boolean useMetrics) throws Exception
 	{
@@ -111,6 +110,7 @@ public class Kafka08Fetcher<T> extends AbstractFetcher<T, TopicAndPartition> {
 				runtimeContext.getProcessingTimeService(),
 				runtimeContext.getExecutionConfig().getAutoWatermarkInterval(),
 				runtimeContext.getUserCodeClassLoader(),
+				offsetCommitMode,
 				startupMode,
 				useMetrics);
 
@@ -118,8 +118,11 @@ public class Kafka08Fetcher<T> extends AbstractFetcher<T, TopicAndPartition> {
 		this.kafkaConfig = checkNotNull(kafkaProperties);
 		this.runtimeContext = runtimeContext;
 		this.invalidOffsetBehavior = getInvalidOffsetBehavior(kafkaProperties);
-		this.autoCommitInterval = autoCommitInterval;
 		this.unassignedPartitionsQueue = new ClosableBlockingQueue<>();
+
+		if (offsetCommitMode != OffsetCommitMode.KAFKA_PERIODIC) {
+			this.kafkaConfig.setProperty("auto.commit.enable", "false");
+		}
 
 		// initially, all these partitions are not assigned to a specific broker connection
 		for (KafkaTopicPartitionState<TopicAndPartition> partition : subscribedPartitions()) {
@@ -187,7 +190,8 @@ public class Kafka08Fetcher<T> extends AbstractFetcher<T, TopicAndPartition> {
 			}
 
 			// start the periodic offset committer thread, if necessary
-			if (autoCommitInterval > 0) {
+			if (offsetCommitMode == OffsetCommitMode.KAFKA_PERIODIC) {
+				long autoCommitInterval = PropertiesUtil.getLong(kafkaConfig, "auto.commit.interval.ms", 60000);
 				LOG.info("Starting periodic offset committer, with commit interval of {}ms", autoCommitInterval);
 
 				periodicCommitter = new PeriodicOffsetCommitter(zookeeperOffsetHandler, 

@@ -23,6 +23,7 @@ import org.apache.flink.core.testutils.OneShotLatch;
 import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.connectors.kafka.internal.Handover;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internal.Kafka010Fetcher;
@@ -130,12 +131,12 @@ public class Kafka010FetcherTest {
 				new TestProcessingTimeService(),
 				10,
 				getClass().getClassLoader(),
-				false, /* checkpointing */
 				"taskname-with-subtask",
 				new UnregisteredMetricsGroup(),
 				schema,
 				new Properties(),
 				0L,
+				OffsetCommitMode.ON_CHECKPOINTS,
 				StartupMode.GROUP_OFFSETS,
 				false);
 
@@ -268,12 +269,12 @@ public class Kafka010FetcherTest {
 				new TestProcessingTimeService(),
 				10,
 				getClass().getClassLoader(),
-				false, /* checkpointing */
 				"taskname-with-subtask",
 				new UnregisteredMetricsGroup(),
 				schema,
 				new Properties(),
 				0L,
+				OffsetCommitMode.ON_CHECKPOINTS,
 				StartupMode.GROUP_OFFSETS,
 				false);
 
@@ -385,12 +386,12 @@ public class Kafka010FetcherTest {
 				new TestProcessingTimeService(),
 				10, /* watermark interval */
 				this.getClass().getClassLoader(),
-				true, /* checkpointing */
 				"task_name",
 				new UnregisteredMetricsGroup(),
 				schema,
 				new Properties(),
 				0L,
+				OffsetCommitMode.ON_CHECKPOINTS,
 				StartupMode.GROUP_OFFSETS,
 				false);
 

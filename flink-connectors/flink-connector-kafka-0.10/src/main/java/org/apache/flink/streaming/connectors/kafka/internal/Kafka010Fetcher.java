@@ -22,6 +22,7 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext;
+import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.connectors.kafka.config.StartupMode;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
@@ -55,12 +56,12 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 			ProcessingTimeService processingTimeProvider,
 			long autoWatermarkInterval,
 			ClassLoader userCodeClassLoader,
-			boolean enableCheckpointing,
 			String taskNameWithSubtasks,
 			MetricGroup metricGroup,
 			KeyedDeserializationSchema<T> deserializer,
 			Properties kafkaProperties,
 			long pollTimeout,
+			OffsetCommitMode offsetCommitMode,
 			StartupMode startupMode,
 			boolean useMetrics) throws Exception
 	{
@@ -73,12 +74,12 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 				processingTimeProvider,
 				autoWatermarkInterval,
 				userCodeClassLoader,
-				enableCheckpointing,
 				taskNameWithSubtasks,
 				metricGroup,
 				deserializer,
 				kafkaProperties,
 				pollTimeout,
+				offsetCommitMode,
 				startupMode,
 				useMetrics);
 	}

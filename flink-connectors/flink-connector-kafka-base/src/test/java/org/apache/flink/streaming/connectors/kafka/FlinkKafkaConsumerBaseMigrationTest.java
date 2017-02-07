@@ -191,6 +191,11 @@ public class FlinkKafkaConsumerBaseMigrationTest {
 		protected List<KafkaTopicPartition> getKafkaPartitions(List<String> topics) {
 			return partitions;
 		}
+
+		@Override
+		protected boolean getIsAutoCommitEnabled() {
+			return false;
+		}
 	}
 }
 

@@ -112,9 +112,6 @@ public class FlinkKafkaConsumer08<T> extends FlinkKafkaConsumerBase<T> {
 	/** The properties to parametrize the Kafka consumer and ZooKeeper client */ 
 	private final Properties kafkaProperties;
 
-	/** The interval in which to automatically commit (-1 if deactivated) */
-	private final long autoCommitInterval;
-
 	// ------------------------------------------------------------------------
 
 	/**
@@ -187,8 +184,6 @@ public class FlinkKafkaConsumer08<T> extends FlinkKafkaConsumerBase<T> {
 
 		// eagerly check for invalid "auto.offset.reset" values before launching the job
 		validateAutoOffsetResetValue(props);
-
-		this.autoCommitInterval = PropertiesUtil.getLong(props, "auto.commit.interval.ms", 60000);
 	}
 
 	@Override
@@ -202,11 +197,18 @@ public class FlinkKafkaConsumer08<T> extends FlinkKafkaConsumerBase<T> {
 
 		boolean useMetrics = !Boolean.valueOf(kafkaProperties.getProperty(KEY_DISABLE_METRICS, "false"));
 
-		return new Kafka08Fetcher<>(sourceContext,
-				thisSubtaskPartitions, restoredSnapshotState,
-				watermarksPeriodic, watermarksPunctuated,
-				runtimeContext, deserializer, kafkaProperties,
-				autoCommitInterval, startupMode, useMetrics);
+		return new Kafka08Fetcher<>(
+				sourceContext,
+				thisSubtaskPartitions,
+				restoredSnapshotState,
+				watermarksPeriodic,
+				watermarksPunctuated,
+				runtimeContext,
+				deserializer,
+				kafkaProperties,
+				offsetCommitMode,
+				startupMode,
+				useMetrics);
 	}
 
 	@Override
@@ -226,6 +228,12 @@ public class FlinkKafkaConsumer08<T> extends FlinkKafkaConsumerBase<T> {
 		}
 
 		return partitionInfos;
+	}
+
+	@Override
+	protected boolean getIsAutoCommitEnabled() {
+		return PropertiesUtil.getBoolean(kafkaProperties, "auto.commit.enable", false) &&
+			PropertiesUtil.getLong(kafkaProperties, "auto.commit.interval.ms", 60000) > 0;
 	}
 
 	// ------------------------------------------------------------------------

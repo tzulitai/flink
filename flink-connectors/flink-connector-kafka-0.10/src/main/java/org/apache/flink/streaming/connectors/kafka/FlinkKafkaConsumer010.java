@@ -145,12 +145,12 @@ public class FlinkKafkaConsumer010<T> extends FlinkKafkaConsumer09<T> {
 				runtimeContext.getProcessingTimeService(),
 				runtimeContext.getExecutionConfig().getAutoWatermarkInterval(),
 				runtimeContext.getUserCodeClassLoader(),
-				runtimeContext.isCheckpointingEnabled(),
 				runtimeContext.getTaskNameWithSubtasks(),
 				runtimeContext.getMetricGroup(),
 				deserializer,
 				properties,
 				pollTimeout,
+				offsetCommitMode,
 				startupMode,
 				useMetrics);
 	}
