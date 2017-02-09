@@ -24,7 +24,9 @@ import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
+import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FSDataInputStream;
@@ -237,6 +239,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 	/**
 	 * This test verifies that generated watermarks are ignored and not forwarded when the task is idle.
 	 */
+	/*
 	@Test
 	public void testIgnoresGeneratedWatermarksWhenIdle() throws Exception {
 		final OneInputStreamTask<String, String> testTask = new OneInputStreamTask<>();
@@ -257,6 +260,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		testHarness.invoke();
 		testHarness.waitForTaskRunning();
 
+		watermarkGeneratingTestOperator.setExpectForwardedWatermarks(true);
 		// the task starts as active, so all generated watermarks should be forwarded
 		testHarness.processElement(new StreamRecord<>("10"), 0, 0);
 		testHarness.processElement(new StreamRecord<>("20"), 0, 0);
@@ -273,7 +277,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		// now, toggle the task to be idle, and let the watermark generator produce some watermarks
 		testHarness.processElement(StreamStatus.IDLE);
-
+		watermarkGeneratingTestOperator.setExpectForwardedWatermarks(false);
 		// NOTE: normally, tasks will not have records to process while idle;
 		// we're doing this here only to mimic watermark generating in operators
 		testHarness.processElement(new StreamRecord<>("40"), 0, 0);
@@ -290,6 +294,137 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		// re-toggle the task to be active and see if new watermarks are correctly forwarded again
 		testHarness.processElement(StreamStatus.ACTIVE);
+		watermarkGeneratingTestOperator.setExpectForwardedWatermarks(true);
+		testHarness.processElement(new StreamRecord<>("70"), 0, 0);
+		testHarness.processElement(new StreamRecord<>("80"), 0, 0);
+		testHarness.processElement(new StreamRecord<>("90"), 0, 0);
+		testHarness.waitForInputProcessing();
+
+		expectedOutput.add(StreamStatus.ACTIVE);
+		expectedOutput.add(new StreamRecord<>("70"));
+		expectedOutput.add(new Watermark(70));
+		expectedOutput.add(new StreamRecord<>("80"));
+		expectedOutput.add(new Watermark(80));
+		expectedOutput.add(new StreamRecord<>("90"));
+		expectedOutput.add(new Watermark(90));
+		TestHarnessUtil.assertOutputEquals("Output was not correct.", expectedOutput, testHarness.getOutput());
+
+		testHarness.endInput();
+
+		testHarness.waitForTaskCompletion();
+
+		List<String> resultElements = TestHarnessUtil.getRawElementsFromOutput(testHarness.getOutput());
+		assertEquals(9, resultElements.size());
+	}
+	*/
+
+	/**
+	 * This test verifies that watermarks are not forwarded within operator chains when the task is idle.
+	 * The chain will be: (HEAD: normal operator) --> (watermark generating operator) --> (normal operator).
+	 * Neither of all 3 operators should the processWatermark method be invoked.
+	 */
+	@Test
+	public void testWatermarksNotForwardedWithinChainWhenIdle() throws Exception {
+		final OneInputStreamTask<String, String> testTask = new OneInputStreamTask<>();
+		final OneInputStreamTaskTestHarness<String, String> testHarness =
+			new OneInputStreamTaskTestHarness<String, String>(
+				testTask, 1, 1,
+				BasicTypeInfo.STRING_TYPE_INFO,
+				BasicTypeInfo.STRING_TYPE_INFO);
+
+		FailOnWatermarkTestOperator headOperator = new FailOnWatermarkTestOperator();
+		StreamConfig headOperatorConfig = testHarness.getStreamConfig();
+
+		WatermarkGeneratingTestOperator watermarkOperator = new WatermarkGeneratingTestOperator();
+		StreamConfig watermarkOperatorConfig = new StreamConfig(new Configuration());
+
+		FailOnWatermarkTestOperator tailOperator = new FailOnWatermarkTestOperator();
+		StreamConfig tailOperatorConfig = new StreamConfig(new Configuration());
+
+		headOperatorConfig.setStreamOperator(headOperator);
+		headOperatorConfig.setChainStart();
+		headOperatorConfig.setChainIndex(0);
+		headOperatorConfig.setChainedOutputs(Collections.singletonList(new StreamEdge(
+			new StreamNode(null, 0, null, null, null, null, null),
+			new StreamNode(null, 1, null, null, null, null, null),
+			0,
+			Collections.<String>emptyList(),
+			null
+		)));
+
+		watermarkOperatorConfig.setStreamOperator(watermarkOperator);
+		watermarkOperatorConfig.setTypeSerializerIn1(StringSerializer.INSTANCE);
+		watermarkOperatorConfig.setChainIndex(1);
+		watermarkOperatorConfig.setChainedOutputs(Collections.singletonList(new StreamEdge(
+			new StreamNode(null, 1, null, null, null, null, null),
+			new StreamNode(null, 2, null, null, null, null, null),
+			0,
+			Collections.<String>emptyList(),
+			null
+		)));
+
+		tailOperatorConfig.setStreamOperator(tailOperator);
+		tailOperatorConfig.setTypeSerializerIn1(StringSerializer.INSTANCE);
+		tailOperatorConfig.setChainIndex(2);
+		tailOperatorConfig.setChainEnd();
+
+		Map<Integer, StreamConfig> chainedConfigs = new HashMap<>(2);
+		chainedConfigs.put(1, watermarkOperatorConfig);
+		chainedConfigs.put(2, tailOperatorConfig);
+		headOperatorConfig.setTransitiveChainedTaskConfigs(chainedConfigs);
+
+		// -- begin test --
+		ConcurrentLinkedQueue<Object> expectedOutput = new ConcurrentLinkedQueue<Object>();
+
+		testHarness.invoke();
+		testHarness.waitForTaskRunning();
+
+		// the task starts as active, so all generated watermarks should be forwarded
+		testHarness.processElement(new StreamRecord<>(FailOnWatermarkTestOperator.EXPECT_FORWARDED_WATERMARKS_MARKER));
+
+		testHarness.processElement(new StreamRecord<>("10"), 0, 0);
+
+		// this watermark will be forwarded since the task is currently active,
+		// but should not be in the final output due to the watermark generator in the chain
+		testHarness.processElement(new Watermark(15));
+
+		testHarness.processElement(new StreamRecord<>("20"), 0, 0);
+		testHarness.processElement(new StreamRecord<>("30"), 0, 0);
+
+		testHarness.waitForInputProcessing();
+
+		expectedOutput.add(new StreamRecord<>(FailOnWatermarkTestOperator.EXPECT_FORWARDED_WATERMARKS_MARKER));
+		expectedOutput.add(new StreamRecord<>("10"));
+		expectedOutput.add(new Watermark(10));
+		expectedOutput.add(new StreamRecord<>("20"));
+		expectedOutput.add(new Watermark(20));
+		expectedOutput.add(new StreamRecord<>("30"));
+		expectedOutput.add(new Watermark(30));
+		TestHarnessUtil.assertOutputEquals("Output was not correct.", expectedOutput, testHarness.getOutput());
+
+		// now, toggle the task to be idle, and let the watermark generator produce some watermarks
+		testHarness.processElement(StreamStatus.IDLE);
+		testHarness.processElement(new StreamRecord<>(FailOnWatermarkTestOperator.NO_FORWARDED_WATERMARKS_MARKER));
+
+		// NOTE: normally, tasks will not have records to process while idle;
+		// we're doing this here only to mimic watermark generating in operators
+		testHarness.processElement(new StreamRecord<>("40"), 0, 0);
+		testHarness.processElement(new StreamRecord<>("50"), 0, 0);
+		testHarness.processElement(new StreamRecord<>("60"), 0, 0);
+		testHarness.processElement(new Watermark(65)); // the test will fail if any of the operators were forwarded this
+		testHarness.waitForInputProcessing();
+
+		// the 40 - 60 watermarks should not be forwarded, only the stream status toggle element and records
+		expectedOutput.add(StreamStatus.IDLE);
+		expectedOutput.add(new StreamRecord<>(FailOnWatermarkTestOperator.NO_FORWARDED_WATERMARKS_MARKER));
+		expectedOutput.add(new StreamRecord<>("40"));
+		expectedOutput.add(new StreamRecord<>("50"));
+		expectedOutput.add(new StreamRecord<>("60"));
+		TestHarnessUtil.assertOutputEquals("Output was not correct.", expectedOutput, testHarness.getOutput());
+
+		// re-toggle the task to be active and see if new watermarks are correctly forwarded again
+		testHarness.processElement(StreamStatus.ACTIVE);
+		testHarness.processElement(new StreamRecord<>(FailOnWatermarkTestOperator.NO_FORWARDED_WATERMARKS_MARKER));
 
 		testHarness.processElement(new StreamRecord<>("70"), 0, 0);
 		testHarness.processElement(new StreamRecord<>("80"), 0, 0);
@@ -297,6 +432,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		testHarness.waitForInputProcessing();
 
 		expectedOutput.add(StreamStatus.ACTIVE);
+		expectedOutput.add(new StreamRecord<>(FailOnWatermarkTestOperator.EXPECT_FORWARDED_WATERMARKS_MARKER));
 		expectedOutput.add(new StreamRecord<>("70"));
 		expectedOutput.add(new Watermark(70));
 		expectedOutput.add(new StreamRecord<>("80"));
@@ -768,18 +904,65 @@ public class OneInputStreamTaskTest extends TestLogger {
 		}
 	}
 
-	private static class WatermarkGeneratingTestOperator
-			extends AbstractStreamOperator<String>
-			implements OneInputStreamOperator<String, String> {
+	private static class WatermarkGeneratingTestOperator extends FailOnWatermarkTestOperator {
 
 		private static final long serialVersionUID = -5064871833244157221L;
 
 		@Override
 		public void processElement(StreamRecord<String> element) throws Exception {
 			output.collect(element);
-			output.emitWatermark(new Watermark(Long.valueOf(element.getValue())));
+
+			if (element.getValue().equals(EXPECT_FORWARDED_WATERMARKS_MARKER)) {
+				this.expectForwardedWatermarks = true;
+			} else if (element.getValue().equals(NO_FORWARDED_WATERMARKS_MARKER)) {
+				this.expectForwardedWatermarks = false;
+			} else {
+				output.emitWatermark(new Watermark(Long.valueOf(element.getValue())));
+			}
 		}
 
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			if (!expectForwardedWatermarks) {
+				throw new Exception("Received a " + mark + ", but this operator should not be forwarded watermarks.");
+			} else {
+				if (mark.equals(Watermark.MAX_WATERMARK)) {
+					output.emitWatermark(mark);
+				}
+			}
+		}
+	}
+
+	private static class FailOnWatermarkTestOperator
+			extends AbstractStreamOperator<String>
+			implements OneInputStreamOperator<String, String> {
+
+		private static final long serialVersionUID = 2048954179291813243L;
+
+		public final static String EXPECT_FORWARDED_WATERMARKS_MARKER = "EXPECT_WATERMARKS";
+		public final static String NO_FORWARDED_WATERMARKS_MARKER = "NO_WATERMARKS";
+
+		protected boolean expectForwardedWatermarks;
+
+		@Override
+		public void processElement(StreamRecord<String> element) throws Exception {
+			output.collect(element);
+
+			if (element.getValue().equals(EXPECT_FORWARDED_WATERMARKS_MARKER)) {
+				this.expectForwardedWatermarks = true;
+			} else if (element.getValue().equals(NO_FORWARDED_WATERMARKS_MARKER)) {
+				this.expectForwardedWatermarks = false;
+			}
+		}
+
+		@Override
+		public void processWatermark(Watermark mark) throws Exception {
+			if (!expectForwardedWatermarks) {
+				throw new Exception("Received a " + mark + ", but this operator should not be forwarded watermarks.");
+			} else {
+				output.emitWatermark(mark);
+			}
+		}
 	}
 }
 
