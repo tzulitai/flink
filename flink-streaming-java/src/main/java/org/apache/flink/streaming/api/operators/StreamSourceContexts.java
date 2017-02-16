@@ -20,6 +20,8 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatus;
+import org.apache.flink.streaming.runtime.streamstatus.StreamStatusMaintainer;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeCallback;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
@@ -42,16 +44,34 @@ public class StreamSourceContexts {
 	 * </ul>
 	 * */
 	public static <OUT> SourceFunction.SourceContext<OUT> getSourceContext(
-			TimeCharacteristic timeCharacteristic, ProcessingTimeService processingTimeService,
-			Object checkpointLock, Output<StreamRecord<OUT>> output, long watermarkInterval) {
+			TimeCharacteristic timeCharacteristic,
+			ProcessingTimeService processingTimeService,
+			Object checkpointLock,
+			StreamStatusMaintainer streamStatusMaintainer,
+			Output<StreamRecord<OUT>> output,
+			long watermarkInterval,
+			long idleTimeout) {
 
 		final SourceFunction.SourceContext<OUT> ctx;
 		switch (timeCharacteristic) {
 			case EventTime:
-				ctx = new ManualWatermarkContext<>(checkpointLock, output);
+				ctx = new ManualWatermarkContext<>(
+					output,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+
 				break;
 			case IngestionTime:
-				ctx = new AutomaticWatermarkContext<>(processingTimeService, checkpointLock, output, watermarkInterval);
+				ctx = new AutomaticWatermarkContext<>(
+					output,
+					watermarkInterval,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+
 				break;
 			case ProcessingTime:
 				ctx = new NonTimestampContext<>(checkpointLock, output);
@@ -97,6 +117,11 @@ public class StreamSourceContexts {
 		}
 
 		@Override
+		public void markAsTemporarilyIdle() {
+			// do nothing
+		}
+
+		@Override
 		public Object getCheckpointLock() {
 			return lock;
 		}
@@ -109,10 +134,8 @@ public class StreamSourceContexts {
 	 * {@link SourceFunction.SourceContext} to be used for sources with automatic timestamps
 	 * and watermark emission.
 	 */
-	private static class AutomaticWatermarkContext<T> implements SourceFunction.SourceContext<T> {
+	private static class AutomaticWatermarkContext<T> extends WatermarkContext<T> {
 
-		private final ProcessingTimeService timeService;
-		private final Object lock;
 		private final Output<StreamRecord<T>> output;
 		private final StreamRecord<T> reuse;
 
@@ -121,14 +144,18 @@ public class StreamSourceContexts {
 		private volatile ScheduledFuture<?> nextWatermarkTimer;
 		private volatile long nextWatermarkTime;
 
-		private AutomaticWatermarkContext(
-			final ProcessingTimeService timeService,
-			final Object checkpointLock,
-			final Output<StreamRecord<T>> output,
-			final long watermarkInterval) {
+		private long lastRecordTime;
 
-			this.timeService = Preconditions.checkNotNull(timeService, "Time Service cannot be null.");
-			this.lock = Preconditions.checkNotNull(checkpointLock, "The checkpoint lock cannot be null.");
+		private AutomaticWatermarkContext(
+				final Output<StreamRecord<T>> output,
+				final long watermarkInterval,
+				final ProcessingTimeService timeService,
+				final Object checkpointLock,
+				final StreamStatusMaintainer streamStatusMaintainer,
+				final long idleTimeout) {
+
+			super(timeService, checkpointLock, streamStatusMaintainer, idleTimeout);
+
 			this.output = Preconditions.checkNotNull(output, "The output cannot be null.");
 
 			Preconditions.checkArgument(watermarkInterval >= 1L, "The watermark interval cannot be smaller than 1 ms.");
@@ -136,63 +163,61 @@ public class StreamSourceContexts {
 
 			this.reuse = new StreamRecord<>(null);
 
+			this.lastRecordTime = Long.MIN_VALUE;
+
 			long now = this.timeService.getCurrentProcessingTime();
 			this.nextWatermarkTimer = this.timeService.registerTimer(now + watermarkInterval,
-				new WatermarkEmittingTask(this.timeService, lock, output));
+				new WatermarkEmittingTask(this.timeService, checkpointLock, output));
 		}
 
 		@Override
-		public void collect(T element) {
-			synchronized (lock) {
-				final long currentTime = this.timeService.getCurrentProcessingTime();
-				output.collect(reuse.replace(element, currentTime));
+		protected void processAndCollect(T element) {
+			lastRecordTime = this.timeService.getCurrentProcessingTime();
+			output.collect(reuse.replace(element, lastRecordTime));
 
-				// this is to avoid lock contention in the lockingObject by
-				// sending the watermark before the firing of the watermark
-				// emission task.
+			// this is to avoid lock contention in the lockingObject by
+			// sending the watermark before the firing of the watermark
+			// emission task.
+			if (lastRecordTime > nextWatermarkTime) {
+				// in case we jumped some watermarks, recompute the next watermark time
+				final long watermarkTime = lastRecordTime - (lastRecordTime % watermarkInterval);
+				nextWatermarkTime = watermarkTime + watermarkInterval;
+				output.emitWatermark(new Watermark(watermarkTime));
 
-				if (currentTime > nextWatermarkTime) {
-					// in case we jumped some watermarks, recompute the next watermark time
-					final long watermarkTime = currentTime - (currentTime % watermarkInterval);
-					nextWatermarkTime = watermarkTime + watermarkInterval;
-					output.emitWatermark(new Watermark(watermarkTime));
-
-					// we do not need to register another timer here
-					// because the emitting task will do so.
-				}
+				// we do not need to register another timer here
+				// because the emitting task will do so.
 			}
 		}
 
 		@Override
-		public void collectWithTimestamp(T element, long timestamp) {
-			collect(element);
+		protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			processAndCollect(element);
 		}
 
 		@Override
-		public void emitWatermark(Watermark mark) {
+		protected void processAndEmitWatermark(Watermark mark) {
+			nextWatermarkTime = Long.MAX_VALUE;
+			output.emitWatermark(mark);
 
-			if (mark.getTimestamp() == Long.MAX_VALUE) {
-				// allow it since this is the special end-watermark that for example the Kafka source emits
-				synchronized (lock) {
-					nextWatermarkTime = Long.MAX_VALUE;
-					output.emitWatermark(mark);
-				}
-
-				// we can shutdown the timer now, no watermarks will be needed any more
-				final ScheduledFuture<?> nextWatermarkTimer = this.nextWatermarkTimer;
-				if (nextWatermarkTimer != null) {
-					nextWatermarkTimer.cancel(true);
-				}
+			// we can shutdown the watermark timer now, no watermarks will be needed any more.
+			// Note that this procedure actually doesn't need to be synchronized with the lock,
+			// but since it's only a one-time thing, doesn't hurt either
+			final ScheduledFuture<?> nextWatermarkTimer = this.nextWatermarkTimer;
+			if (nextWatermarkTimer != null) {
+				nextWatermarkTimer.cancel(true);
 			}
 		}
 
 		@Override
-		public Object getCheckpointLock() {
-			return lock;
+		protected boolean allowWatermark(Watermark mark) {
+			// allow it since this is the special end-watermark that for example the Kafka source emits
+			return mark.getTimestamp() == Long.MAX_VALUE && nextWatermarkTime != Long.MAX_VALUE;
 		}
 
 		@Override
 		public void close() {
+			super.close();
+
 			final ScheduledFuture<?> nextWatermarkTimer = this.nextWatermarkTimer;
 			if (nextWatermarkTimer != null) {
 				nextWatermarkTimer.cancel(true);
@@ -229,6 +254,12 @@ public class StreamSourceContexts {
 							output.emitWatermark(new Watermark(watermarkTime));
 							nextWatermarkTime = watermarkTime + watermarkInterval;
 						}
+
+						// piggy-back the source idle check on the watermark interval, so that we may
+						// possibly discover idle sources faster before waiting for the next idle check to fire
+						if (streamStatusMaintainer.getStreamStatus().isActive() && currentTime - lastRecordTime > idleTimeout) {
+							markAsTemporarilyIdle();
+						}
 					}
 				}
 
@@ -247,45 +278,180 @@ public class StreamSourceContexts {
 	 * Streaming topologies can use timestamp assigner functions to override the timestamps
 	 * assigned here.
 	 */
-	private static class ManualWatermarkContext<T> implements SourceFunction.SourceContext<T> {
+	private static class ManualWatermarkContext<T> extends WatermarkContext<T> {
 
-		private final Object lock;
 		private final Output<StreamRecord<T>> output;
 		private final StreamRecord<T> reuse;
 
-		private ManualWatermarkContext(Object checkpointLock, Output<StreamRecord<T>> output) {
-			this.lock = Preconditions.checkNotNull(checkpointLock, "The checkpoint lock cannot be null.");
+		private ManualWatermarkContext(
+				final Output<StreamRecord<T>> output,
+				final ProcessingTimeService timeService,
+				final Object checkpointLock,
+				final StreamStatusMaintainer streamStatusMaintainer,
+				final long idleTimeout) {
+
+			super(timeService, checkpointLock, streamStatusMaintainer, idleTimeout);
+
 			this.output = Preconditions.checkNotNull(output, "The output cannot be null.");
 			this.reuse = new StreamRecord<>(null);
 		}
 
 		@Override
+		protected void processAndCollect(T element) {
+			output.collect(reuse.replace(element));
+		}
+
+		@Override
+		protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			output.collect(reuse.replace(element, timestamp));
+		}
+
+		@Override
+		protected void processAndEmitWatermark(Watermark mark) {
+			output.emitWatermark(mark);
+		}
+
+		@Override
+		protected boolean allowWatermark(Watermark mark) {
+			return true;
+		}
+	}
+
+	/**
+	 *
+	 * @param <T>
+	 */
+	private static abstract class WatermarkContext<T> implements SourceFunction.SourceContext<T> {
+
+		protected final ProcessingTimeService timeService;
+
+		protected final Object checkpointLock;
+		protected final StreamStatusMaintainer streamStatusMaintainer;
+		protected final long idleTimeout;
+
+		private ScheduledFuture<?> nextCheck;
+
+		private volatile boolean failOnNextCheck;
+
+		public WatermarkContext(
+				final ProcessingTimeService timeService,
+				final Object checkpointLock,
+				final StreamStatusMaintainer streamStatusMaintainer,
+				final long idleTimeout) {
+
+			this.timeService = Preconditions.checkNotNull(timeService, "Time Service cannot be null.");
+			this.checkpointLock = Preconditions.checkNotNull(checkpointLock, "Checkpoint Lock cannot be null.");
+			this.streamStatusMaintainer = Preconditions.checkNotNull(streamStatusMaintainer, "Stream Status Maintainer cannot be null.");
+
+			Preconditions.checkArgument(idleTimeout >= 0, "The idle timeout cannot be smaller than 0 ms.");
+			this.idleTimeout = idleTimeout;
+		}
+
+		@Override
 		public void collect(T element) {
-			synchronized (lock) {
-				output.collect(reuse.replace(element));
+			synchronized (checkpointLock) {
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+
+				if (nextCheck != null) {
+					this.failOnNextCheck = false;
+				} else {
+					triggerNextIdleCheckTimer();
+				}
+
+				processAndCollect(element);
 			}
 		}
 
 		@Override
 		public void collectWithTimestamp(T element, long timestamp) {
-			synchronized (lock) {
-				output.collect(reuse.replace(element, timestamp));
+			synchronized (checkpointLock) {
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+
+				if (nextCheck != null) {
+					this.failOnNextCheck = false;
+				} else {
+					triggerNextIdleCheckTimer();
+				}
+
+				processAndCollectWithTimestamp(element, timestamp);
 			}
 		}
 
 		@Override
 		public void emitWatermark(Watermark mark) {
-			synchronized (lock) {
-				output.emitWatermark(mark);
+			if (allowWatermark(mark)) {
+				synchronized (checkpointLock) {
+					streamStatusMaintainer.toggleStreamStatus(StreamStatus.ACTIVE);
+
+					if (nextCheck != null) {
+						this.failOnNextCheck = false;
+					} else {
+						triggerNextIdleCheckTimer();
+					}
+
+					processAndEmitWatermark(mark);
+				}
+			}
+		}
+
+		@Override
+		public void markAsTemporarilyIdle() {
+			synchronized (checkpointLock) {
+				streamStatusMaintainer.toggleStreamStatus(StreamStatus.IDLE);
 			}
 		}
 
 		@Override
 		public Object getCheckpointLock() {
-			return lock;
+			return checkpointLock;
 		}
 
 		@Override
-		public void close() {}
+		public void close() {
+			final ScheduledFuture<?> nextCheck = this.nextCheck;
+			if (nextCheck != null) {
+				nextCheck.cancel(true);
+			}
+		}
+
+		private void triggerNextIdleCheckTimer() {
+			if (idleTimeout > 0) {
+				failOnNextCheck = true;
+				nextCheck = this.timeService.registerTimer(
+					this.timeService.getCurrentProcessingTime() + idleTimeout,
+					new StreamStatusCheckTask());
+			}
+		}
+
+		private class StreamStatusCheckTask implements ProcessingTimeCallback {
+			@Override
+			public void onProcessingTime(long timestamp) throws Exception {
+				synchronized (checkpointLock) {
+					nextCheck = null;
+
+					if (failOnNextCheck) {
+						markAsTemporarilyIdle();
+					} else {
+						triggerNextIdleCheckTimer();
+					}
+				}
+			}
+		}
+
+		// ------------------------------------------------------------------------
+		//	Abstract methods for concrete subclasses to implement.
+		//  These methods are guaranteed to be synchronized on the checkpoint lock,
+		//  so implementations don't need to do so.
+		// ------------------------------------------------------------------------
+
+		protected abstract void processAndCollect(T element);
+		protected abstract void processAndCollectWithTimestamp(T element, long timestamp);
+
+		/** Whether or not a watermark should be allowed */
+		protected abstract boolean allowWatermark(Watermark mark);
+
+		/** Process and emit watermark. Only called if {@link WatermarkContext#allowWatermark(Watermark)} returns {@code true} */
+		protected abstract void processAndEmitWatermark(Watermark mark);
+
 	}
 }
