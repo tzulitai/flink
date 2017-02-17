@@ -257,7 +257,9 @@ public class StreamSourceContexts {
 
 						// piggy-back the source idle check on the watermark interval, so that we may
 						// possibly discover idle sources faster before waiting for the next idle check to fire
-						if (streamStatusMaintainer.getStreamStatus().isActive() && currentTime - lastRecordTime > idleTimeout) {
+						if (streamStatusMaintainer.getStreamStatus().isActive() &&
+							idleTimeout != -1 &&
+							currentTime - lastRecordTime > idleTimeout) {
 							markAsTemporarilyIdle();
 						}
 					}
@@ -333,6 +335,13 @@ public class StreamSourceContexts {
 
 		private volatile boolean failOnNextCheck;
 
+		/**
+		 *
+		 * @param timeService
+		 * @param checkpointLock
+		 * @param streamStatusMaintainer
+		 * @param idleTimeout (-1 if idleness checking is disabled)
+		 */
 		public WatermarkContext(
 				final ProcessingTimeService timeService,
 				final Object checkpointLock,
@@ -343,7 +352,9 @@ public class StreamSourceContexts {
 			this.checkpointLock = Preconditions.checkNotNull(checkpointLock, "Checkpoint Lock cannot be null.");
 			this.streamStatusMaintainer = Preconditions.checkNotNull(streamStatusMaintainer, "Stream Status Maintainer cannot be null.");
 
-			Preconditions.checkArgument(idleTimeout >= 0, "The idle timeout cannot be smaller than 0 ms.");
+			if (idleTimeout != -1) {
+				Preconditions.checkArgument(idleTimeout >= 1, "The idle timeout cannot be smaller than 1 ms.");
+			}
 			this.idleTimeout = idleTimeout;
 		}
 
@@ -415,7 +426,7 @@ public class StreamSourceContexts {
 		}
 
 		private void triggerNextIdleCheckTimer() {
-			if (idleTimeout > 0) {
+			if (idleTimeout != -1) {
 				failOnNextCheck = true;
 				nextCheck = this.timeService.registerTimer(
 					this.timeService.getCurrentProcessingTime() + idleTimeout,

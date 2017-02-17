@@ -82,7 +82,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
 			streamStatusMaintainer,
 			collector,
 			watermarkInterval,
-			0);
+			-1);
 
 		try {
 			userFunction.run(ctx);
