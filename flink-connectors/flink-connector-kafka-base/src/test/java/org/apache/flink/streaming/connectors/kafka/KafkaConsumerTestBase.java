@@ -144,7 +144,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 	// ------------------------------------------------------------------------
 
 	/**
-	 * Test that ensures the KafkaConsumer is properly failing if the topic doesnt exist
+	 * Test that ensures the KafkaConsumer is properly failing if the topic doesn't exist
 	 * and a wrong broker was specified
 	 *
 	 * @throws Exception
@@ -192,7 +192,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 
 				RuntimeException re = (RuntimeException) jee.getCause();
 
-				assertTrue(re.getMessage().contains("Unable to retrieve any partitions for the requested topics [doesntexist]"));
+				assertTrue(re.getMessage().contains("Unable to retrieve any partitions"));
 			}
 		}
 	}
@@ -1613,7 +1613,7 @@ public abstract class KafkaConsumerTestBase extends KafkaTestBase {
 			}
 		});
 
-		JobExecutionResult result = tryExecute(env1, "Consume " + ELEMENT_COUNT + " elements from Kafka");
+		tryExecute(env1, "Consume " + ELEMENT_COUNT + " elements from Kafka");
 
 		deleteTestTopic(topic);
 	}
