@@ -48,13 +48,16 @@ import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.TestLogger;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -77,6 +80,9 @@ import static org.mockito.Mockito.*;
  * <p>These tests document the implicit contract that exists between the windowing components.
  */
 public class WindowOperatorContractTest extends TestLogger {
+
+	@Rule
+	public ExpectedException expectedException = ExpectedException.none();
 
 	private static ValueStateDescriptor<String> valueStateDescriptor =
 			new ValueStateDescriptor<>("string-state", StringSerializer.INSTANCE, null);
@@ -1427,6 +1433,86 @@ public class WindowOperatorContractTest extends TestLogger {
 
 		assertEquals(3, testHarness.numKeyedStateEntries());
 		assertEquals(2, timeAdaptor.numTimers(testHarness));
+	}
+
+	@Test
+	public void testRejectShrinkingMergingEventTimeWindows() throws Exception {
+		testRejectShrinkingMergingWindows(new EventTimeAdaptor());
+	}
+
+	@Test
+	public void testRejectShrinkingMergingProcessingTimeWindows() throws Exception {
+		testRejectShrinkingMergingWindows(new ProcessingTimeAdaptor());
+	}
+
+	/**
+	 * A misbehaving {@code WindowAssigner} can cause a window to become late by merging if
+	 * it moves the end-of-window time before the watermark. This verifies that we don't allow that.
+	 */
+	void testRejectShrinkingMergingWindows(final TimeDomainAdaptor timeAdaptor) throws Exception {
+		int allowedLateness = 10;
+
+		if (timeAdaptor instanceof ProcessingTimeAdaptor) {
+			// we don't have allowed lateness for processing time
+			allowedLateness = 0;
+		}
+
+		MergingWindowAssigner<Integer, TimeWindow> mockAssigner = mockMergingAssigner();
+		timeAdaptor.setIsEventTime(mockAssigner);
+		Trigger<Integer, TimeWindow> mockTrigger = mockTrigger();
+		InternalWindowFunction<Iterable<Integer>, Void, Integer, TimeWindow> mockWindowFunction = mockWindowFunction();
+
+		KeyedOneInputStreamOperatorTestHarness<Integer, Integer, Void> testHarness =
+				createWindowOperator(mockAssigner, mockTrigger, allowedLateness, intListDescriptor, mockWindowFunction);
+
+		testHarness.open();
+
+		timeAdaptor.advanceTime(testHarness, 0);
+
+		assertEquals(0, testHarness.extractOutputStreamRecords().size());
+		assertEquals(0, testHarness.numKeyedStateEntries());
+
+		when(mockAssigner.assignWindows(anyInt(), anyLong(), anyAssignerContext()))
+				.thenReturn(Arrays.asList(new TimeWindow(0, 22)));
+
+		testHarness.processElement(new StreamRecord<>(0, 0L));
+
+		assertEquals(2, testHarness.numKeyedStateEntries()); // window contents and merging window set
+		assertEquals(1, timeAdaptor.numTimers(testHarness)); // cleanup timer
+
+		when(mockAssigner.assignWindows(anyInt(), anyLong(), anyAssignerContext()))
+				.thenReturn(Arrays.asList(new TimeWindow(0, 25)));
+
+		timeAdaptor.advanceTime(testHarness, 20);
+
+		// our window should still be there
+		assertEquals(2, testHarness.numKeyedStateEntries()); // window contents and merging window set
+		assertEquals(1, timeAdaptor.numTimers(testHarness)); // cleanup timer
+
+		// the result timestamp is ... + 2 because a watermark t says no element with
+		// timestamp <= t will come in the future and because window ends are exclusive:
+		// a window (0, 12) will have 11 as maxTimestamp. With the watermark at 20, 10 would
+		// already be considered late
+		shouldMergeWindows(
+				mockAssigner,
+				new ArrayList<>(Arrays.asList(new TimeWindow(0, 22), new TimeWindow(0, 25))),
+				new ArrayList<>(Arrays.asList(new TimeWindow(0, 22), new TimeWindow(0, 25))),
+				new TimeWindow(0, 20 - allowedLateness + 2));
+
+		testHarness.processElement(new StreamRecord<>(0, 0L));
+
+		// now merge it to a window that is just late
+		when(mockAssigner.assignWindows(anyInt(), anyLong(), anyAssignerContext()))
+				.thenReturn(Arrays.asList(new TimeWindow(0, 25)));
+
+		shouldMergeWindows(
+				mockAssigner,
+				new ArrayList<>(Arrays.asList(new TimeWindow(0, 20 - allowedLateness + 2), new TimeWindow(0, 25))),
+				new ArrayList<>(Arrays.asList(new TimeWindow(0, 20 - allowedLateness + 2), new TimeWindow(0, 25))),
+				new TimeWindow(0, 20 - allowedLateness + 1));
+
+		expectedException.expect(UnsupportedOperationException.class);
+		testHarness.processElement(new StreamRecord<>(0, 0L));
 	}
 
 	@Test
