@@ -199,6 +199,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 		}
 
 		try {
+			System.out.println("SERIALIZE using: " + kryo.getSerializer(record.getClass()));
 			kryo.writeClassAndObject(output, record);
 			output.flush();
 		}
@@ -228,6 +229,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 		}
 
 		try {
+			System.out.println("DESERIALIZE using: " + kryo.getSerializer(type));
 			return (T) kryo.readClassAndObject(input);
 		} catch (KryoException ke) {
 			Throwable cause = ke.getCause();
