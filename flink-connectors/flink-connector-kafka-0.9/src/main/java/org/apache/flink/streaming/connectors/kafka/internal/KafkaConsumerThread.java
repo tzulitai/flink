@@ -185,11 +185,15 @@ public class KafkaConsumerThread extends Thread {
 			// from blocking on the handover
 			ConsumerRecords<byte[], byte[]> records = null;
 
+			List<KafkaTopicPartitionState<TopicPartition>> newPartitions = null;
+
 			// main fetch loop
 			while (running) {
 
 				// check if we have new partitions to fetch data from
-				List<KafkaTopicPartitionState<TopicPartition>> newPartitions = unassignedPartitionsQueue.pollBatch();
+				if (newPartitions == null) {
+					newPartitions = unassignedPartitionsQueue.pollBatch();
+				}
 
 				if (newPartitions != null) {
 
@@ -244,6 +248,7 @@ public class KafkaConsumerThread extends Thread {
 					//		this.consumer.wakeup();
 					//		wakeup = false;
 					//	}
+						newPartitions = null;
 					}
 				}
 
@@ -348,6 +353,8 @@ public class KafkaConsumerThread extends Thread {
 		synchronized (consumerReassignmentLock) {
 			if (consumer != null) {
 				consumer.wakeup();
+			} else {
+				wakeup = true;
 			}
 		}
 	}
