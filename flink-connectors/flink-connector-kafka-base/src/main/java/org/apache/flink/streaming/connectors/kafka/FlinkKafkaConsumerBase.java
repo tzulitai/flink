@@ -361,7 +361,7 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 				topicsDescriptor,
 				getRuntimeContext().getIndexOfThisSubtask(),
 				getRuntimeContext().getNumberOfParallelSubtasks());
-		this.partitionDiscoverer.initializeConnections();
+		this.partitionDiscoverer.open();
 
 		subscribedPartitionsToStartOffsets = new HashMap<>();
 
@@ -506,7 +506,12 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 				LOG.debug("Consumer subtask {} is trying to discover new partitions ...");
 			}
 
-			discoveredPartitions = partitionDiscoverer.discoverPartitions();
+			try {
+				discoveredPartitions = partitionDiscoverer.discoverPartitions();
+			} catch (AbstractPartitionDiscoverer.ClosedException e) {
+				break;
+			}
+
 			if (!discoveredPartitions.isEmpty()) {
 				fetcher.addDiscoveredPartitions(discoveredPartitions);
 			}
@@ -551,7 +556,7 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 
 		if (partitionDiscoverer != null) {
 			try {
-				partitionDiscoverer.closeConnections();
+				partitionDiscoverer.close();
 			} catch (Exception e) {
 				throw new RuntimeException("Error while closing partition discoverer.", e);
 			}

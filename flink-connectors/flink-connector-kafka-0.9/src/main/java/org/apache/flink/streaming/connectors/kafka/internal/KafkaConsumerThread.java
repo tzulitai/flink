@@ -196,22 +196,22 @@ public class KafkaConsumerThread extends Thread {
 					// isolate the consumer from wakeup calls in setOffsetsToCommit() until the reassignment is completed
 					KafkaConsumer<byte[], byte[]> consumerTmp;
 					synchronized (consumerReassignmentLock) {
-						consumerTmp = this.consumer;
-						this.consumer = null;
-					}
+						//consumerTmp = this.consumer;
+						//this.consumer = null;
+					//}
 
 					Map<TopicPartition, Long> oldPartitionAssignmentsToPosition = new HashMap<>();
-					for (TopicPartition oldPartition : consumerTmp.assignment()) {
-						oldPartitionAssignmentsToPosition.put(oldPartition, consumerTmp.position(oldPartition));
+					for (TopicPartition oldPartition : consumer.assignment()) {
+						oldPartitionAssignmentsToPosition.put(oldPartition, consumer.position(oldPartition));
 					}
 					List<TopicPartition> newPartitionAssignments = new ArrayList<>(newPartitions.size() + oldPartitionAssignmentsToPosition.size());
 					newPartitionAssignments.addAll(oldPartitionAssignmentsToPosition.keySet());
 					newPartitionAssignments.addAll(convertKafkaPartitions(newPartitions));
 
-					consumerCallBridge.assignPartitions(consumerTmp, newPartitionAssignments);
+					consumerCallBridge.assignPartitions(consumer, newPartitionAssignments);
 
 					for (Map.Entry<TopicPartition, Long> oldPartitionToPosition : oldPartitionAssignmentsToPosition.entrySet()) {
-						consumerTmp.seek(oldPartitionToPosition.getKey(), oldPartitionToPosition.getValue());
+						consumer.seek(oldPartitionToPosition.getKey(), oldPartitionToPosition.getValue());
 					}
 
 					// offsets in the state may still be placeholder sentinel values if we are:
@@ -222,28 +222,28 @@ public class KafkaConsumerThread extends Thread {
 					// replace those with actual offsets, according to what the sentinel value represent.
 					for (KafkaTopicPartitionState<TopicPartition> newPartitionState : newPartitions) {
 						if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET) {
-							consumerCallBridge.seekPartitionToBeginning(consumerTmp, newPartitionState.getKafkaPartitionHandle());
-							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+							consumerCallBridge.seekPartitionToBeginning(consumer, newPartitionState.getKafkaPartitionHandle());
+							newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
 						} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.LATEST_OFFSET) {
-							consumerCallBridge.seekPartitionToEnd(consumerTmp, newPartitionState.getKafkaPartitionHandle());
-							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+							consumerCallBridge.seekPartitionToEnd(consumer, newPartitionState.getKafkaPartitionHandle());
+							newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
 						} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.GROUP_OFFSET) {
 							// the KafkaConsumer by default will automatically seek the consumer position
 							// to the committed group offset, so we do not need to do it.
 
-							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+							newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
 						} else {
-							consumerTmp.seek(newPartitionState.getKafkaPartitionHandle(), newPartitionState.getOffset() + 1);
+							consumer.seek(newPartitionState.getKafkaPartitionHandle(), newPartitionState.getOffset() + 1);
 						}
 					}
 
 					// let external operations call the consumer again
-					synchronized (consumerReassignmentLock) {
-						this.consumer = consumerTmp;
-						if (wakeup) {
-							this.consumer.wakeup();
-							wakeup = false;
-						}
+					//synchronized (consumerReassignmentLock) {
+					//	this.consumer = consumerTmp;
+					//	if (wakeup) {
+					//		this.consumer.wakeup();
+					//		wakeup = false;
+					//	}
 					}
 				}
 

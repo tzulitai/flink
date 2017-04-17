@@ -289,7 +289,11 @@ public class KafkaTestEnvironmentImpl extends KafkaTestEnvironment {
 		// create a partition discoverer, to make sure that partitions for the test topic are created
 		Kafka08PartitionDiscoverer partitionDiscoverer =
 			new Kafka08PartitionDiscoverer(new KafkaTopicsDescriptor(topicList, null), 0, 1, standardProps);
-		partitionDiscoverer.initializeConnections();
+		try {
+			partitionDiscoverer.open();
+		} catch (Exception e) {
+			throw new RuntimeException("Exception while opening partition discoverer.", e);
+		}
 
 		// validate that the topic has been created
 		final long deadline = System.nanoTime() + 30_000_000_000L;

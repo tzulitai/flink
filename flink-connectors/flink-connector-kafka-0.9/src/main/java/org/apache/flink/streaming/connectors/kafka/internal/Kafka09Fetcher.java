@@ -147,6 +147,7 @@ public class Kafka09Fetcher<T> extends AbstractFetcher<T, TopicPartition> {
 						// emit the actual record. this also updates offset state atomically
 						// and deals with timestamps and watermark generation
 						emitRecord(value, partition, record.offset(), record);
+						System.out.println("emitted: " + partition.getPartition() + " " + record.offset());
 					}
 				}
 			}

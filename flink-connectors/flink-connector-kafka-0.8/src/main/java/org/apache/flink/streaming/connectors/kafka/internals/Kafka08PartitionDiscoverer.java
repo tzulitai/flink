@@ -99,7 +99,7 @@ public class Kafka08PartitionDiscoverer extends AbstractPartitionDiscoverer {
 	}
 
 	@Override
-	public void initializeConnections() {
+	protected void initializeConnections() {
 		URL contactUrl = NetUtils.getCorrectHostnamePort(seedBrokerAddresses[currentContactSeedBrokerIndex]);
 		this.consumer = new SimpleConsumer(contactUrl.getHost(), contactUrl.getPort(), soTimeout, bufferSize, dummyClientId);
 	}
@@ -158,7 +158,7 @@ public class Kafka08PartitionDiscoverer extends AbstractPartitionDiscoverer {
 	}
 
 	@Override
-	public void closeConnections() throws Exception {
+	protected void closeConnections() throws Exception {
 		if (consumer != null) {
 			SimpleConsumer consumer = this.consumer;
 			consumer.close();

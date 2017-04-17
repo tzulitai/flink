@@ -22,6 +22,7 @@ import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicsDescriptor;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.errors.WakeupException;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -42,8 +43,6 @@ public class Kafka09PartitionDiscoverer extends AbstractPartitionDiscoverer {
 
 	private KafkaConsumer<?, ?> kafkaConsumer;
 
-	private final Object consumerLock = new Object();
-
 	public Kafka09PartitionDiscoverer(
 			KafkaTopicsDescriptor topicsDescriptor,
 			int indexOfThisSubtask,
@@ -55,42 +54,45 @@ public class Kafka09PartitionDiscoverer extends AbstractPartitionDiscoverer {
 	}
 
 	@Override
-	public void initializeConnections() {
+	protected void initializeConnections() {
 		this.kafkaConsumer = new KafkaConsumer<>(kafkaProperties);
 	}
 
 	@Override
-	protected List<String> getAllTopics() {
-		synchronized (consumerLock) {
+	protected List<String> getAllTopics() throws Exception {
+		try {
 			return new ArrayList<>(kafkaConsumer.listTopics().keySet());
+		} catch (WakeupException e) {
+			throw new ClosedException();
 		}
 	}
 
 	@Override
-	protected List<KafkaTopicPartition> getAllPartitionsForTopics(List<String> topics) {
-		synchronized (consumerLock) {
-			List<KafkaTopicPartition> partitions = new LinkedList<>();
+	protected List<KafkaTopicPartition> getAllPartitionsForTopics(List<String> topics) throws Exception {
+		List<KafkaTopicPartition> partitions = new LinkedList<>();
 
+		try {
 			for (String topic : topics) {
 				for (PartitionInfo partitionInfo : kafkaConsumer.partitionsFor(topic)) {
 					partitions.add(new KafkaTopicPartition(partitionInfo.topic(), partitionInfo.partition()));
 				}
 			}
-
-			return partitions;
+		} catch (WakeupException e) {
+			throw new ClosedException();
 		}
+
+		return partitions;
 	}
 
 	@Override
-	public void closeConnections() throws Exception {
-		synchronized (consumerLock) {
-			if (this.kafkaConsumer != null) {
-				KafkaConsumer<?, ?> consumer = this.kafkaConsumer;
-				consumer.close();
+	protected void closeConnections() throws Exception {
+		if (this.kafkaConsumer != null) {
+			KafkaConsumer<?, ?> consumer = this.kafkaConsumer;
+			consumer.wakeup();
+			consumer.close();
 
-				// make sure we don't re-close an already closed consumer
-				this.kafkaConsumer = null;
-			}
+			// make sure we don't re-close an already closed consumer
+			this.kafkaConsumer = null;
 		}
 	}
 }

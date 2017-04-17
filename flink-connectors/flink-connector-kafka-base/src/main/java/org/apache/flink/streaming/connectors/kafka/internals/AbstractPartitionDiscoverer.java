@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -51,6 +52,8 @@ public abstract class AbstractPartitionDiscoverer {
 	/** The total number of consumer subtasks. */
 	private final int numParallelSubtasks;
 
+	private AtomicBoolean closed = new AtomicBoolean(true);
+
 	/**
 	 * Map of topics to they're largest discovered partition id seen by this subtask.
 	 * This state may be updated whenever {@link AbstractPartitionDiscoverer#discoverPartitions()} or
@@ -73,6 +76,17 @@ public abstract class AbstractPartitionDiscoverer {
 		this.topicsToLargestDiscoveredPartitionId = new HashMap<>();
 	}
 
+	public void open() throws Exception {
+		closed.set(false);
+		initializeConnections();
+	}
+
+	public void close() throws Exception {
+		if (closed.compareAndSet(false, true)) {
+			closeConnections();
+		}
+	}
+
 	/**
 	 * Execute a partition discovery attempt for this subtask.
 	 * This method lets the partition discoverer update what partitions it has discovered so far.
@@ -80,59 +94,63 @@ public abstract class AbstractPartitionDiscoverer {
 	 * @return List of discovered new partitions that this subtask should subscribe to.
 	 */
 	public List<KafkaTopicPartition> discoverPartitions() throws Exception {
-		List<KafkaTopicPartition> newDiscoveredPartitions;
+		if (!closed.get()) {
+			List<KafkaTopicPartition> newDiscoveredPartitions;
 
-		// (1) get all possible partitions, based on whether we are subscribed to fixed topics or a topic patern
-		if (topicsDescriptor.isFixedTopics()) {
-			newDiscoveredPartitions = getAllPartitionsForTopics(topicsDescriptor.getFixedTopics());
-		} else {
-			List<String> matchedTopics = getAllTopics();
-
-			// retain topics that match the pattern
-			Iterator<String> iter = matchedTopics.iterator();
-			while (iter.hasNext()) {
-				if (!topicsDescriptor.getTopicPattern().matcher(iter.next()).matches()) {
-					iter.remove();
-				}
-			}
-
-			if (matchedTopics.size() != 0) {
-				// get partitions only for matched topics
-				newDiscoveredPartitions = getAllPartitionsForTopics(matchedTopics);
+			// (1) get all possible partitions, based on whether we are subscribed to fixed topics or a topic patern
+			if (topicsDescriptor.isFixedTopics()) {
+				newDiscoveredPartitions = getAllPartitionsForTopics(topicsDescriptor.getFixedTopics());
 			} else {
-				newDiscoveredPartitions = null;
-			}
-		}
+				List<String> matchedTopics = getAllTopics();
 
-		// (2) eliminate partition that are old partitions or should not be subscribed by this subtask
-		if (newDiscoveredPartitions == null || newDiscoveredPartitions.isEmpty()) {
-			throw new RuntimeException("Unable to retrieve any partitions with KafkaTopicsDescriptor: " + topicsDescriptor);
-		} else {
-			// sort so that we make sure the topicsToLargestDiscoveredPartitionId state is updated
-			// with incremental partition ids of the same topics (otherwise some partition ids may be skipped)
-			Collections.sort(newDiscoveredPartitions, new Comparator<KafkaTopicPartition>() {
-				@Override
-				public int compare(KafkaTopicPartition o1, KafkaTopicPartition o2) {
-					if (!o1.getTopic().equals(o2.getTopic())) {
-						return o1.getTopic().compareTo(o2.getTopic());
-					} else {
-						return Integer.compare(o1.getPartition(), o2.getPartition());
+				// retain topics that match the pattern
+				Iterator<String> iter = matchedTopics.iterator();
+				while (iter.hasNext()) {
+					if (!topicsDescriptor.getTopicPattern().matcher(iter.next()).matches()) {
+						iter.remove();
 					}
 				}
-			});
 
-			Iterator<KafkaTopicPartition> iter = newDiscoveredPartitions.iterator();
-			KafkaTopicPartition nextPartition;
-			while (iter.hasNext()) {
-				nextPartition = iter.next();
-				if (!checkAndSetDiscoveredPartition(nextPartition) ||
-						!shouldAssignToThisSubtask(nextPartition, indexOfThisSubtask, numParallelSubtasks)) {
-					iter.remove();
+				if (matchedTopics.size() != 0) {
+					// get partitions only for matched topics
+					newDiscoveredPartitions = getAllPartitionsForTopics(matchedTopics);
+				} else {
+					newDiscoveredPartitions = null;
 				}
 			}
-		}
 
-		return newDiscoveredPartitions;
+			// (2) eliminate partition that are old partitions or should not be subscribed by this subtask
+			if (newDiscoveredPartitions == null || newDiscoveredPartitions.isEmpty()) {
+				throw new RuntimeException("Unable to retrieve any partitions with KafkaTopicsDescriptor: " + topicsDescriptor);
+			} else {
+				// sort so that we make sure the topicsToLargestDiscoveredPartitionId state is updated
+				// with incremental partition ids of the same topics (otherwise some partition ids may be skipped)
+				Collections.sort(newDiscoveredPartitions, new Comparator<KafkaTopicPartition>() {
+					@Override
+					public int compare(KafkaTopicPartition o1, KafkaTopicPartition o2) {
+						if (!o1.getTopic().equals(o2.getTopic())) {
+							return o1.getTopic().compareTo(o2.getTopic());
+						} else {
+							return Integer.compare(o1.getPartition(), o2.getPartition());
+						}
+					}
+				});
+
+				Iterator<KafkaTopicPartition> iter = newDiscoveredPartitions.iterator();
+				KafkaTopicPartition nextPartition;
+				while (iter.hasNext()) {
+					nextPartition = iter.next();
+					if (!checkAndSetDiscoveredPartition(nextPartition) ||
+						!shouldAssignToThisSubtask(nextPartition, indexOfThisSubtask, numParallelSubtasks)) {
+						iter.remove();
+					}
+				}
+			}
+
+			return newDiscoveredPartitions;
+		} else {
+			throw new ClosedException();
+		}
 	}
 
 	/**
@@ -160,10 +178,10 @@ public abstract class AbstractPartitionDiscoverer {
 	// ------------------------------------------------------------------------
 
 	/** Establish the required connections in order to fetch topics and partitions metadata. */
-	public abstract void initializeConnections() throws Exception;
+	protected abstract void initializeConnections() throws Exception;
 
 	/** Close all established connections. */
-	public abstract void closeConnections() throws Exception;
+	protected abstract void closeConnections() throws Exception;
 
 	/** Fetch the list of all topics from Kafka. */
 	protected abstract List<String> getAllTopics() throws Exception;
@@ -177,6 +195,10 @@ public abstract class AbstractPartitionDiscoverer {
 
 	private static boolean shouldAssignToThisSubtask(KafkaTopicPartition partition, int indexOfThisSubtask, int numParallelSubtasks) {
 		return Math.abs(partition.hashCode() % numParallelSubtasks) == indexOfThisSubtask;
+	}
+
+	public static final class ClosedException extends Exception {
+		private static final long serialVersionUID = 1L;
 	}
 
 	@VisibleForTesting

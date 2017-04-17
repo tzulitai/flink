@@ -39,14 +39,14 @@ class PartitionInfoFetcher extends Thread {
 	@Override
 	public void run() {
 		try {
-			partitionDiscoverer.initializeConnections();
+			partitionDiscoverer.open();
 			result = partitionDiscoverer.getPartitionLeadersForTopics(topics);
 		}
 		catch (Throwable t) {
 			this.error = t;
 		} finally {
 			try {
-				partitionDiscoverer.closeConnections();
+				partitionDiscoverer.close();
 			} catch (Exception e) {
 				throw new RuntimeException("Error while closing partition discoverer.", e);
 			}
