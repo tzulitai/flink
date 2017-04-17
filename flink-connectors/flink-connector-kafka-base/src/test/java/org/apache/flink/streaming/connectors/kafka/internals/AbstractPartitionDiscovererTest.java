@@ -78,6 +78,7 @@ public class AbstractPartitionDiscovererTest {
 					mockGetAllPartitionsForTopicsReturn.size(),
 					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
 					createMockGetAllPartitionsFromTopicsSequenceFromFixedReturn(mockGetAllPartitionsForTopicsReturn));
+			partitionDiscoverer.open();
 
 			List<KafkaTopicPartition> initialDiscovery = partitionDiscoverer.discoverPartitions();
 			assertEquals(1, initialDiscovery.size());
@@ -111,11 +112,12 @@ public class AbstractPartitionDiscovererTest {
 
 			for (int i = 0; i < numConsumers; i++) {
 				TestPartitionDiscoverer partitionDiscoverer = new TestPartitionDiscoverer(
-					topicsDescriptor,
-					i,
-					numConsumers,
-					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
-					createMockGetAllPartitionsFromTopicsSequenceFromFixedReturn(mockGetAllPartitionsForTopicsReturn));
+						topicsDescriptor,
+						i,
+						numConsumers,
+						createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
+						createMockGetAllPartitionsFromTopicsSequenceFromFixedReturn(mockGetAllPartitionsForTopicsReturn));
+				partitionDiscoverer.open();
 
 				List<KafkaTopicPartition> initialDiscovery = partitionDiscoverer.discoverPartitions();
 				assertTrue(initialDiscovery.size() >= minPartitionsPerConsumer);
@@ -158,11 +160,12 @@ public class AbstractPartitionDiscovererTest {
 
 			for (int i = 0; i < numConsumers; i++) {
 				TestPartitionDiscoverer partitionDiscoverer = new TestPartitionDiscoverer(
-					topicsDescriptor,
-					i,
-					numConsumers,
-					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
-					createMockGetAllPartitionsFromTopicsSequenceFromFixedReturn(mockGetAllPartitionsForTopicsReturn));
+						topicsDescriptor,
+						i,
+						numConsumers,
+						createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
+						createMockGetAllPartitionsFromTopicsSequenceFromFixedReturn(mockGetAllPartitionsForTopicsReturn));
+				partitionDiscoverer.open();
 
 				List<KafkaTopicPartition> initialDiscovery = partitionDiscoverer.discoverPartitions();
 				assertTrue(initialDiscovery.size() <= 1);
@@ -214,25 +217,28 @@ public class AbstractPartitionDiscovererTest {
 			final int maxNewPartitionsPerConsumer = allPartitions.size() / numConsumers + 1;
 
 			TestPartitionDiscoverer partitionDiscovererSubtask0 = new TestPartitionDiscoverer(
-				topicsDescriptor,
-				0,
-				numConsumers,
-				createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
-				clone(mockGetAllPartitionsForTopicsReturnSequence));
+					topicsDescriptor,
+					0,
+					numConsumers,
+					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
+					clone(mockGetAllPartitionsForTopicsReturnSequence));
+			partitionDiscovererSubtask0.open();
 
 			TestPartitionDiscoverer partitionDiscovererSubtask1 = new TestPartitionDiscoverer(
-				topicsDescriptor,
-				1,
-				numConsumers,
-				createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
-				clone(mockGetAllPartitionsForTopicsReturnSequence));
+					topicsDescriptor,
+					1,
+					numConsumers,
+					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
+					clone(mockGetAllPartitionsForTopicsReturnSequence));
+			partitionDiscovererSubtask1.open();
 
 			TestPartitionDiscoverer partitionDiscovererSubtask2 = new TestPartitionDiscoverer(
-				topicsDescriptor,
-				2,
-				numConsumers,
-				createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
-				clone(mockGetAllPartitionsForTopicsReturnSequence));
+					topicsDescriptor,
+					2,
+					numConsumers,
+					createMockGetAllTopicsSequenceFromFixedReturn(Collections.singletonList(TEST_TOPIC)),
+					clone(mockGetAllPartitionsForTopicsReturnSequence));
+			partitionDiscovererSubtask2.open();
 
 			List<KafkaTopicPartition> initialDiscoverySubtask0 = partitionDiscovererSubtask0.discoverPartitions();
 			List<KafkaTopicPartition> initialDiscoverySubtask1 = partitionDiscovererSubtask1.discoverPartitions();

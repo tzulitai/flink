@@ -35,7 +35,6 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -74,7 +73,7 @@ public class KafkaConsumerThread extends Thread {
 	private final ClosableBlockingQueue<KafkaTopicPartitionState<TopicPartition>> unassignedPartitionsQueue;
 
 	/** This lock is used to prevent the consumer from being woken up while it is reassigning new partitions */
-	private final Object consumerReassignmentLock;
+	//private final Object consumerReassignmentLock;
 
 	/** We get this from the outside to publish metrics. **/
 	private final MetricGroup kafkaMetricGroup;
@@ -93,8 +92,6 @@ public class KafkaConsumerThread extends Thread {
 
 	/** Flag to mark the main work loop as alive */
 	private volatile boolean running;
-
-	private volatile boolean wakeup;
 
 	/** Flag tracking whether the latest commit request has completed */
 	private volatile boolean commitInProgress;
@@ -124,7 +121,7 @@ public class KafkaConsumerThread extends Thread {
 		this.pollTimeout = pollTimeout;
 		this.useMetrics = useMetrics;
 
-		this.consumerReassignmentLock = new Object();
+		//this.consumerReassignmentLock = new Object();
 		this.nextOffsetsToCommit = new AtomicReference<>();
 		this.running = true;
 	}
@@ -178,6 +175,29 @@ public class KafkaConsumerThread extends Thread {
 				return;
 			}
 
+			List<KafkaTopicPartitionState<TopicPartition>> newPartitions = unassignedPartitionsQueue.pollBatch();
+
+			if (newPartitions != null) {
+				consumerCallBridge.assignPartitions(consumer, convertKafkaPartitions(newPartitions));
+
+				for (KafkaTopicPartitionState<TopicPartition> newPartitionState : newPartitions) {
+					if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET) {
+						consumerCallBridge.seekPartitionToBeginning(consumer, newPartitionState.getKafkaPartitionHandle());
+						newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+					} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.LATEST_OFFSET) {
+						consumerCallBridge.seekPartitionToEnd(consumer, newPartitionState.getKafkaPartitionHandle());
+						newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+					} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.GROUP_OFFSET) {
+						// the KafkaConsumer by default will automatically seek the consumer position
+						// to the committed group offset, so we do not need to do it.
+
+						newPartitionState.setOffset(consumer.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+					} else {
+						consumer.seek(newPartitionState.getKafkaPartitionHandle(), newPartitionState.getOffset() + 1);
+					}
+				}
+			}
+
 			// from now on, external operations may call the consumer
 			this.consumer = consumer;
 
@@ -185,11 +205,10 @@ public class KafkaConsumerThread extends Thread {
 			// from blocking on the handover
 			ConsumerRecords<byte[], byte[]> records = null;
 
-			List<KafkaTopicPartitionState<TopicPartition>> newPartitions = null;
-
 			// main fetch loop
 			while (running) {
 
+				/*
 				// check if we have new partitions to fetch data from
 				if (newPartitions == null) {
 					newPartitions = unassignedPartitionsQueue.pollBatch();
@@ -198,7 +217,6 @@ public class KafkaConsumerThread extends Thread {
 				if (newPartitions != null) {
 
 					// isolate the consumer from wakeup calls in setOffsetsToCommit() until the reassignment is completed
-					KafkaConsumer<byte[], byte[]> consumerTmp;
 					synchronized (consumerReassignmentLock) {
 						//consumerTmp = this.consumer;
 						//this.consumer = null;
@@ -251,6 +269,7 @@ public class KafkaConsumerThread extends Thread {
 						newPartitions = null;
 					}
 				}
+				*/
 
 				// check if there is something to commit
 				if (!commitInProgress) {
@@ -320,12 +339,8 @@ public class KafkaConsumerThread extends Thread {
 		handover.wakeupProducer();
 
 		// this wakes up the consumer if it is blocked in a kafka poll;
-		synchronized (consumerReassignmentLock) {
-			if (consumer != null) {
-				consumer.wakeup();
-			} else {
-				wakeup = true;
-			}
+		if (consumer != null) {
+			consumer.wakeup();
 		}
 	}
 
@@ -350,12 +365,8 @@ public class KafkaConsumerThread extends Thread {
 		// if the consumer is blocked in a poll() or handover operation, wake it up to commit soon
 		handover.wakeupProducer();
 
-		synchronized (consumerReassignmentLock) {
-			if (consumer != null) {
-				consumer.wakeup();
-			} else {
-				wakeup = true;
-			}
+		if (consumer != null) {
+			consumer.wakeup();
 		}
 	}
 
