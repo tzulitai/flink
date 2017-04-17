@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.connectors.kafka.internal;
 
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.streaming.connectors.kafka.internals.ClosableBlockingQueue;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionState;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartitionStateSentinel;
 import org.apache.flink.streaming.connectors.kafka.internals.metrics.KafkaMetricWrapper;
@@ -34,6 +35,7 @@ import org.apache.kafka.common.errors.WakeupException;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -68,8 +70,11 @@ public class KafkaConsumerThread extends Thread {
 	/** The configuration for the Kafka consumer */
 	private final Properties kafkaProperties;
 
-	/** The partitions that this consumer reads from */ 
-	private final KafkaTopicPartitionState<TopicPartition>[] subscribedPartitionStates;
+	/** The queue of unassigned partitions that we need to assign to the Kafka consumer */
+	private final ClosableBlockingQueue<KafkaTopicPartitionState<TopicPartition>> unassignedPartitionsQueue;
+
+	/** This lock is used to prevent the consumer from being woken up while it is reassigning new partitions */
+	private final Object consumerReassignmentLock;
 
 	/** We get this from the outside to publish metrics. **/
 	private final MetricGroup kafkaMetricGroup;
@@ -89,15 +94,16 @@ public class KafkaConsumerThread extends Thread {
 	/** Flag to mark the main work loop as alive */
 	private volatile boolean running;
 
+	private volatile boolean wakeup;
+
 	/** Flag tracking whether the latest commit request has completed */
 	private volatile boolean commitInProgress;
-
 
 	public KafkaConsumerThread(
 			Logger log,
 			Handover handover,
 			Properties kafkaProperties,
-			KafkaTopicPartitionState<TopicPartition>[] subscribedPartitionStates,
+			ClosableBlockingQueue<KafkaTopicPartitionState<TopicPartition>> unassignedPartitionsQueue,
 			MetricGroup kafkaMetricGroup,
 			KafkaConsumerCallBridge consumerCallBridge,
 			String threadName,
@@ -113,11 +119,12 @@ public class KafkaConsumerThread extends Thread {
 		this.kafkaMetricGroup = checkNotNull(kafkaMetricGroup);
 		this.consumerCallBridge = checkNotNull(consumerCallBridge);
 
-		this.subscribedPartitionStates = checkNotNull(subscribedPartitionStates);
+		this.unassignedPartitionsQueue = unassignedPartitionsQueue;
 
 		this.pollTimeout = pollTimeout;
 		this.useMetrics = useMetrics;
 
+		this.consumerReassignmentLock = new Object();
 		this.nextOffsetsToCommit = new AtomicReference<>();
 		this.running = true;
 	}
@@ -151,9 +158,6 @@ public class KafkaConsumerThread extends Thread {
 			// The callback invoked by Kafka once an offset commit is complete
 			final OffsetCommitCallback offsetCommitCallback = new CommitCallback();
 
-			// tell the consumer which partitions to work with
-			consumerCallBridge.assignPartitions(consumer, convertKafkaPartitions(subscribedPartitionStates));
-
 			// register Kafka's very own metrics in Flink's metric reporters
 			if (useMetrics) {
 				// register Kafka metrics to Flink
@@ -174,26 +178,6 @@ public class KafkaConsumerThread extends Thread {
 				return;
 			}
 
-			// offsets in the state may still be placeholder sentinel values if we are starting fresh, or the
-			// checkpoint / savepoint state we were restored with had not completely been replaced with actual offset
-			// values yet; replace those with actual offsets, according to what the sentinel value represent.
-			for (KafkaTopicPartitionState<TopicPartition> partition : subscribedPartitionStates) {
-				if (partition.getOffset() == KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET) {
-					consumerCallBridge.seekPartitionToBeginning(consumer, partition.getKafkaPartitionHandle());
-					partition.setOffset(consumer.position(partition.getKafkaPartitionHandle()) - 1);
-				} else if (partition.getOffset() == KafkaTopicPartitionStateSentinel.LATEST_OFFSET) {
-					consumerCallBridge.seekPartitionToEnd(consumer, partition.getKafkaPartitionHandle());
-					partition.setOffset(consumer.position(partition.getKafkaPartitionHandle()) - 1);
-				} else if (partition.getOffset() == KafkaTopicPartitionStateSentinel.GROUP_OFFSET) {
-					// the KafkaConsumer by default will automatically seek the consumer position
-					// to the committed group offset, so we do not need to do it.
-
-					partition.setOffset(consumer.position(partition.getKafkaPartitionHandle()) - 1);
-				} else {
-					consumer.seek(partition.getKafkaPartitionHandle(), partition.getOffset() + 1);
-				}
-			}
-
 			// from now on, external operations may call the consumer
 			this.consumer = consumer;
 
@@ -203,6 +187,65 @@ public class KafkaConsumerThread extends Thread {
 
 			// main fetch loop
 			while (running) {
+
+				// check if we have new partitions to fetch data from
+				List<KafkaTopicPartitionState<TopicPartition>> newPartitions = unassignedPartitionsQueue.pollBatch();
+
+				if (newPartitions != null) {
+
+					// isolate the consumer from wakeup calls in setOffsetsToCommit() until the reassignment is completed
+					KafkaConsumer<byte[], byte[]> consumerTmp;
+					synchronized (consumerReassignmentLock) {
+						consumerTmp = this.consumer;
+						this.consumer = null;
+					}
+
+					Map<TopicPartition, Long> oldPartitionAssignmentsToPosition = new HashMap<>();
+					for (TopicPartition oldPartition : consumerTmp.assignment()) {
+						oldPartitionAssignmentsToPosition.put(oldPartition, consumerTmp.position(oldPartition));
+					}
+					List<TopicPartition> newPartitionAssignments = new ArrayList<>(newPartitions.size() + oldPartitionAssignmentsToPosition.size());
+					newPartitionAssignments.addAll(oldPartitionAssignmentsToPosition.keySet());
+					newPartitionAssignments.addAll(convertKafkaPartitions(newPartitions));
+
+					consumerCallBridge.assignPartitions(consumerTmp, newPartitionAssignments);
+
+					for (Map.Entry<TopicPartition, Long> oldPartitionToPosition : oldPartitionAssignmentsToPosition.entrySet()) {
+						consumerTmp.seek(oldPartitionToPosition.getKey(), oldPartitionToPosition.getValue());
+					}
+
+					// offsets in the state may still be placeholder sentinel values if we are:
+					//   (1) starting fresh,
+					//   (2) checkpoint / savepoint state we were restored with had not completely
+					//       been replaced with actual offset values yet, or
+					//   (3) the partition was newly discovered after startup;
+					// replace those with actual offsets, according to what the sentinel value represent.
+					for (KafkaTopicPartitionState<TopicPartition> newPartitionState : newPartitions) {
+						if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET) {
+							consumerCallBridge.seekPartitionToBeginning(consumerTmp, newPartitionState.getKafkaPartitionHandle());
+							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+						} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.LATEST_OFFSET) {
+							consumerCallBridge.seekPartitionToEnd(consumerTmp, newPartitionState.getKafkaPartitionHandle());
+							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+						} else if (newPartitionState.getOffset() == KafkaTopicPartitionStateSentinel.GROUP_OFFSET) {
+							// the KafkaConsumer by default will automatically seek the consumer position
+							// to the committed group offset, so we do not need to do it.
+
+							newPartitionState.setOffset(consumerTmp.position(newPartitionState.getKafkaPartitionHandle()) - 1);
+						} else {
+							consumerTmp.seek(newPartitionState.getKafkaPartitionHandle(), newPartitionState.getOffset() + 1);
+						}
+					}
+
+					// let external operations call the consumer again
+					synchronized (consumerReassignmentLock) {
+						this.consumer = consumerTmp;
+						if (wakeup) {
+							this.consumer.wakeup();
+							wakeup = false;
+						}
+					}
+				}
 
 				// check if there is something to commit
 				if (!commitInProgress) {
@@ -271,9 +314,13 @@ public class KafkaConsumerThread extends Thread {
 		// this wakes up the consumer if it is blocked handing over records
 		handover.wakeupProducer();
 
-		// this wakes up the consumer if it is blocked in a kafka poll 
-		if (consumer != null) {
-			consumer.wakeup();
+		// this wakes up the consumer if it is blocked in a kafka poll;
+		synchronized (consumerReassignmentLock) {
+			if (consumer != null) {
+				consumer.wakeup();
+			} else {
+				wakeup = true;
+			}
 		}
 	}
 
@@ -297,8 +344,11 @@ public class KafkaConsumerThread extends Thread {
 
 		// if the consumer is blocked in a poll() or handover operation, wake it up to commit soon
 		handover.wakeupProducer();
-		if (consumer != null) {
-			consumer.wakeup();
+
+		synchronized (consumerReassignmentLock) {
+			if (consumer != null) {
+				consumer.wakeup();
+			}
 		}
 	}
 
@@ -306,8 +356,8 @@ public class KafkaConsumerThread extends Thread {
 	//  Utilities
 	// ------------------------------------------------------------------------
 
-	private static List<TopicPartition> convertKafkaPartitions(KafkaTopicPartitionState<TopicPartition>[] partitions) {
-		ArrayList<TopicPartition> result = new ArrayList<>(partitions.length);
+	private static List<TopicPartition> convertKafkaPartitions(List<KafkaTopicPartitionState<TopicPartition>> partitions) {
+		ArrayList<TopicPartition> result = new ArrayList<>(partitions.size());
 		for (KafkaTopicPartitionState<TopicPartition> p : partitions) {
 			result.add(p.getKafkaPartitionHandle());
 		}
