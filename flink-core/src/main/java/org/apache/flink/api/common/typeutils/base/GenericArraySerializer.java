@@ -23,6 +23,7 @@ import java.lang.reflect.Array;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -185,5 +186,10 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 	@Override
 	public String toString() {
 		return "Serializer " + componentClass.getName() + "[]";
+	}
+
+	@Override
+	public TypeSerializerBuilder<C[]> getBuilder() {
+		return new GenericArraySerializerBuilder<>(componentClass, componentSerializer.getBuilder());
 	}
 }

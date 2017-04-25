@@ -18,7 +18,9 @@
 
 package org.apache.flink.api.common.typeutils.base;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
@@ -38,7 +40,8 @@ import java.util.HashMap;
  * @param <K> The type of the keys in the map.
  * @param <V> The type of the values in the map.
  */
-public class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
+@Internal
+public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 
 	private static final long serialVersionUID = -6885593032367050078L;
 	
@@ -171,6 +174,11 @@ public class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 				valueSerializer.copy(source, target);
 			}
 		}
+	}
+
+	@Override
+	public TypeSerializerBuilder<Map<K, V>> getBuilder() {
+		return new MapSerializerBuilder<>(keySerializer.getBuilder(), valueSerializer.getBuilder());
 	}
 
 	@Override

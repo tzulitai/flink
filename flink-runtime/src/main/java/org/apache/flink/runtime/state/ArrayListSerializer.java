@@ -17,7 +17,9 @@
  */
 package org.apache.flink.runtime.state;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -25,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 @SuppressWarnings("ForLoopReplaceableByForEach")
+@Internal
 final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 
 	private static final long serialVersionUID = 1119562170939152304L;
@@ -33,10 +36,6 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 
 	public ArrayListSerializer(TypeSerializer<T> elementSerializer) {
 		this.elementSerializer = elementSerializer;
-	}
-
-	public TypeSerializer<T> getElementSerializer() {
-		return elementSerializer;
 	}
 
 	@Override
@@ -112,6 +111,11 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 		for (int i = 0; i < num; i++) {
 			elementSerializer.copy(source, target);
 		}
+	}
+
+	@Override
+	public TypeSerializerBuilder<ArrayList<T>> getBuilder() {
+		return new ArrayListSerializerBuilder<>(elementSerializer.getBuilder());
 	}
 
 	// --------------------------------------------------------------------

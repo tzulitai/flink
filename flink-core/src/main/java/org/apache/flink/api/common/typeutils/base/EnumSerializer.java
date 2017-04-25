@@ -117,6 +117,11 @@ public final class EnumSerializer<T extends Enum<T>> extends TypeSerializer<T> {
 		return enumClass.hashCode();
 	}
 
+	@Override
+	public EnumSerializerBuilder<T> getBuilder() {
+		return new EnumSerializerBuilder<>(enumClass);
+	}
+
 	// --------------------------------------------------------------------------------------------
 
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {

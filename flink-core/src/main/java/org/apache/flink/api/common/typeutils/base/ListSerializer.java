@@ -20,6 +20,7 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -31,7 +32,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * A serializer for {@link List Lists}. The serializer relies on an element serializer
- * for teh serialization of the list's elements.
+ * for the serialization of the list's elements.
  * 
  * <p>The serialization format for the list is as follows: four bytes for the length of the lost,
  * followed by the serialized representation of each element.
@@ -165,5 +166,10 @@ public class ListSerializer<T> extends TypeSerializer<List<T>> {
 	@Override
 	public int hashCode() {
 		return elementSerializer.hashCode();
+	}
+
+	@Override
+	public TypeSerializerBuilder<List<T>> getBuilder() {
+		return new ListSerializerBuilder<>(elementSerializer.getBuilder());
 	}
 }
