@@ -22,7 +22,12 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
+import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.cep.nfa.NFA;
 import org.apache.flink.cep.nfa.compiler.NFACompiler;
 import org.apache.flink.core.fs.FSDataInputStream;
@@ -40,6 +45,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElementSerializer;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.OutputTag;
 import org.apache.flink.util.Preconditions;
 
@@ -447,11 +453,6 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 		}
 
 		@Override
-		public boolean canRestoreFrom(TypeSerializer<?> other) {
-			return equals(other) || other instanceof AbstractKeyedCEPPatternOperator.PriorityQueueSerializer;
-		}
-
-		@Override
 		public boolean equals(Object obj) {
 			if (obj instanceof PriorityQueueSerializer) {
 				@SuppressWarnings("unchecked")
@@ -471,6 +472,75 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 		@Override
 		public int hashCode() {
 			return Objects.hash(factory, elementSerializer);
+		}
+
+		@Override
+		public TypeSerializerBuilder<PriorityQueue<T>> getBuilder() {
+			return null;
+		}
+	}
+
+	private static class PriorityQueueSerializerBuilder<T> extends TypeSerializerBuilder<PriorityQueue<T>> {
+
+		private static final int VERSION = 1;
+
+		private TypeSerializerBuilder<T> elementSerializerBuilder;
+		private PriorityQueueFactory<T> factory;
+
+		public PriorityQueueSerializerBuilder() {}
+
+		public PriorityQueueSerializerBuilder(
+				TypeSerializerBuilder<T> elementSerializerBuilder,
+				PriorityQueueFactory<T> factory) {
+
+			this.elementSerializerBuilder = Preconditions.checkNotNull(elementSerializerBuilder);
+			this.factory = Preconditions.checkNotNull(factory);
+		}
+
+		@Override
+		public void write(DataOutputView out) throws IOException {
+			super.write(out);
+
+			TypeSerializerBuilderUtils.writeSerializerBuilder(out, elementSerializerBuilder);
+
+			InstantiationUtil.serializeObject(new DataOutputViewStream(out), factory);
+		}
+
+		@Override
+		public void read(DataInputView in) throws IOException {
+			super.read(in);
+
+			elementSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+
+			try {
+				factory = InstantiationUtil.deserializeObject(new DataInputViewStream(in), getUserCodeClassLoader());
+			} catch (ClassNotFoundException e) {
+				throw new IOException("Could not deserialize PriorityQueueFactory.", e);
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+			super.resolve(other);
+
+			if (other instanceof PriorityQueueSerializerBuilder) {
+				PriorityQueueSerializerBuilder<T> otherBuilder = (PriorityQueueSerializerBuilder<T>) other;
+				elementSerializerBuilder.resolve(otherBuilder.elementSerializerBuilder);
+				factory = otherBuilder.factory;
+			} else {
+				throw new UnresolvableTypeSerializerBuilderException();
+			}
+		}
+
+		@Override
+		public TypeSerializer<PriorityQueue<T>> build() {
+			return new PriorityQueueSerializer<>(elementSerializerBuilder.build(), factory);
+		}
+
+		@Override
+		public int getVersion() {
+			return VERSION;
 		}
 	}
 

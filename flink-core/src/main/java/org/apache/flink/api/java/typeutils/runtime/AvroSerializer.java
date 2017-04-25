@@ -27,6 +27,7 @@ import org.apache.avro.util.Utf8;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.java.typeutils.runtime.kryo.Serializers;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -177,7 +178,13 @@ public final class AvroSerializer<T> extends TypeSerializer<T> {
 	}
 	
 	// --------------------------------------------------------------------------------------------
-	
+
+
+	@Override
+	public TypeSerializerBuilder<T> getBuilder() {
+		return null;
+	}
+
 	@Override
 	public int hashCode() {
 		return 31 * this.type.hashCode() + this.typeToInstantiate.hashCode();

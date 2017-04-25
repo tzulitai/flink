@@ -121,6 +121,7 @@ public class FlinkKafkaConsumer09<T> extends FlinkKafkaConsumerBase<T> {
 	 */
 	public FlinkKafkaConsumer09(String topic, KeyedDeserializationSchema<T> deserializer, Properties props) {
 		this(Collections.singletonList(topic), deserializer, props);
+		getRuntimeContext().getMaxNumberOfParallelSubtasks()
 	}
 
 	/**

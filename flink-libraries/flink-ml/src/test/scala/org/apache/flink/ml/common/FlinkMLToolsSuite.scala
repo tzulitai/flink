@@ -18,7 +18,7 @@
 
 package org.apache.flink.ml.common
 
-import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
+import org.apache.flink.api.java.typeutils.runtime.kryo.{KryoSerializer, KryoSerializerBuilder}
 import org.apache.flink.api.scala.ExecutionEnvironment
 import org.apache.flink.ml.util.FlinkTestBase
 import org.scalatest.{FlatSpec, Matchers}

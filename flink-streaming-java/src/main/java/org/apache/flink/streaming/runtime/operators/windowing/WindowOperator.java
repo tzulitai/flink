@@ -37,6 +37,7 @@ import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.runtime.state.ArrayListSerializerBuilder;
 import org.apache.flink.util.OutputTag;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -1107,7 +1108,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 		long nextElementTimestamp = nextSlideTime - (numPanes * paneSize);
 
 		@SuppressWarnings("unchecked")
-		ArrayListSerializer<IN> ser = new ArrayListSerializer<>((TypeSerializer<IN>) getStateDescriptor().getSerializer());
+		ArrayListSerializer<IN> ser = new ArrayListSerializerBuilder<>(
+			(TypeSerializer<IN>) getStateDescriptor().getSerializer()).build();
 
 		while (numPanes > 0) {
 			validateMagicNumber(BEGIN_OF_PANE_MAGIC_NUMBER, in.readInt());

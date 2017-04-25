@@ -21,7 +21,9 @@ package org.apache.flink.cep.nfa;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.LinkedHashMultimap;
+import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
@@ -928,6 +930,12 @@ public class NFA<T> implements Serializable {
 		@Override
 		public int hashCode() {
 			return getClass().hashCode();
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public TypeSerializerBuilder<NFA<T>> getBuilder() {
+			return new BasicTypeSerializerBuilder<>((Class<? extends TypeSerializer<NFA<T>>>) Serializer.class);
 		}
 	}
 }

@@ -19,6 +19,7 @@
 package org.apache.flink.migration.streaming.runtime.streamrecord;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.NonExternalizableTypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -41,12 +42,11 @@ import java.io.IOException;
  * @param <T> The type of value in the {@link StreamRecord}
  */
 @Internal
-public final class StreamRecordSerializer<T> extends TypeSerializer<StreamRecord<T>> {
+public final class StreamRecordSerializer<T> extends NonExternalizableTypeSerializer<StreamRecord<T>> {
 
 	private static final long serialVersionUID = 1L;
 
 	private final TypeSerializer<T> typeSerializer;
-	
 
 	public StreamRecordSerializer(TypeSerializer<T> serializer) {
 		if (serializer instanceof StreamRecordSerializer) {

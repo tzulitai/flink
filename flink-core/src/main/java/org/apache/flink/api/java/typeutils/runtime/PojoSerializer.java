@@ -36,6 +36,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -59,13 +61,15 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 	private final int numFields;
 
-	private final Map<Class<?>, Integer> registeredClasses;
+	private final LinkedHashMap<Class<?>, Integer> registeredClasses;
 
 	private final TypeSerializer<?>[] registeredSerializers;
 
 	private final ExecutionConfig executionConfig;
 
-	private transient Map<Class<?>, TypeSerializer<?>> subclassSerializerCache;
+	private final HashMap<Class<?>, TypeSerializerBuilder<?>> previousSubclassSerializerBuilders;
+
+	private transient HashMap<Class<?>, TypeSerializer<?>> subclassSerializerCache;
 	private transient ClassLoader cl;
 	// We need to handle these ourselves in writeObject()/readObject()
 	private transient Field[] fields;
@@ -76,6 +80,53 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 			TypeSerializer<?>[] fieldSerializers,
 			Field[] fields,
 			ExecutionConfig executionConfig) {
+
+		this.clazz = checkNotNull(clazz);
+		this.fieldSerializers = (TypeSerializer<Object>[]) checkNotNull(fieldSerializers);
+		this.fields = checkNotNull(fields);
+		this.numFields = fieldSerializers.length;
+		this.executionConfig = checkNotNull(executionConfig);
+
+		LinkedHashSet<Class<?>> registeredPojoTypes = executionConfig.getRegisteredPojoTypes();
+
+		for (int i = 0; i < numFields; i++) {
+			this.fields[i].setAccessible(true);
+		}
+
+		cl = Thread.currentThread().getContextClassLoader();
+
+		subclassSerializerCache = new HashMap<Class<?>, TypeSerializer<?>>();
+
+		// We only want those classes that are not our own class and are actually sub-classes.
+		List<Class<?>> cleanedTaggedClasses = new ArrayList<Class<?>>(registeredPojoTypes.size());
+		for (Class<?> registeredClass: registeredPojoTypes) {
+			if (registeredClass.equals(clazz)) {
+				continue;
+			}
+			if (!clazz.isAssignableFrom(registeredClass)) {
+				continue;
+			}
+			cleanedTaggedClasses.add(registeredClass);
+
+		}
+		this.registeredClasses = new LinkedHashMap<Class<?>, Integer>(cleanedTaggedClasses.size());
+		registeredSerializers = new TypeSerializer[cleanedTaggedClasses.size()];
+
+		int id = 0;
+		for (Class<?> registeredClass: cleanedTaggedClasses) {
+			this.registeredClasses.put(registeredClass, id);
+			TypeInformation<?> typeInfo = TypeExtractor.createTypeInfo(registeredClass);
+			registeredSerializers[id] = typeInfo.createSerializer(executionConfig);
+
+			id++;
+		}
+	}
+
+	public PojoSerializer(
+		Class<T> clazz,
+		TypeSerializer<?>[] fieldSerializers,
+		Field[] fields,
+		ExecutionConfig executionConfig) {
 
 		this.clazz = checkNotNull(clazz);
 		this.fieldSerializers = (TypeSerializer<Object>[]) checkNotNull(fieldSerializers);
@@ -146,6 +197,11 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 			TypeInformation<?> typeInfo = TypeExtractor.createTypeInfo(subclass);
 			result = typeInfo.createSerializer(executionConfig);
+			if (previousSubclassSerializerBuilders.containsKey(subclass)) {
+				result.getBuilder().resolve();
+				previousSubclassSerializerBuilders.remove(subclass);
+			}
+
 			if (result instanceof PojoSerializer) {
 				PojoSerializer<?> subclassSerializer = (PojoSerializer<?>) result;
 				subclassSerializer.copyBaseFieldOrder(this);
@@ -418,7 +474,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					}
 				}
 			} catch (IllegalAccessException e) {
-				throw new RuntimeException("Error during POJO copy, this should not happen since we check the fields" + "before.");
+				throw new RuntimeException("Error during POJO copy, this should not happen since we checked the fields before.");
 
 			}
 		} else {
@@ -573,5 +629,14 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof PojoSerializer;
+	}
+
+	@Override
+	public TypeSerializerBuilder<T> getBuilder() {
+		return new PojoSerializerBuilder<>(
+				clazz,
+				TypeSerializerBuilderUtils.createBuilders(fieldSerializers),
+				registeredClasses,
+				TypeSerializerBuilderUtils.createBuilders(registeredSerializers));
 	}
 }

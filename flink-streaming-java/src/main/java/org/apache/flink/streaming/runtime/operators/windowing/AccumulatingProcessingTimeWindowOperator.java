@@ -22,7 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.runtime.state.ArrayListSerializer;
+import org.apache.flink.runtime.state.ArrayListSerializerBuilder;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.streaming.runtime.operators.windowing.functions.InternalWindowFunction;
@@ -49,8 +49,13 @@ public class AccumulatingProcessingTimeWindowOperator<KEY, IN, OUT>
 			long windowLength,
 			long windowSlide)
 	{
-		super(function, keySelector, keySerializer,
-				new ArrayListSerializer<>(valueSerializer), windowLength, windowSlide);
+		super(
+			function,
+			keySelector,
+			keySerializer,
+			new ArrayListSerializerBuilder<>(valueSerializer).build(),
+			windowLength,
+			windowSlide);
 	}
 
 	@Override

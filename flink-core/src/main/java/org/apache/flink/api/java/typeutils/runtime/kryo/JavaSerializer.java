@@ -27,6 +27,7 @@ import org.apache.flink.util.InstantiationUtil;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
 /**
  * This is a reimplementation of Kryo's {@link com.esotericsoftware.kryo.serializers.JavaSerializer},
@@ -41,7 +42,9 @@ import java.io.ObjectOutputStream;
  *
  * @param <T> The type to be serialized.
  */
-public class JavaSerializer<T> extends Serializer<T> {
+public class JavaSerializer<T> extends Serializer<T> implements Serializable {
+
+	private static final long serialVersionUID = -5904067729193979664L;
 
 	public JavaSerializer() {}
 

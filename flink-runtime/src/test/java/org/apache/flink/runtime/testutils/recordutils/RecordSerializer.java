@@ -21,7 +21,9 @@ package org.apache.flink.runtime.testutils.recordutils;
 
 import java.io.IOException;
 
-import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Record;
@@ -30,7 +32,7 @@ import org.apache.flink.types.Record;
 /**
  * Implementation of the (de)serialization and copying logic for the {@link Record}.
  */
-public final class RecordSerializer extends TypeSerializer<Record> {
+public final class RecordSerializer extends TypeSerializerSingleton<Record> {
 	
 	private static final long serialVersionUID = 1L;
 
@@ -54,12 +56,6 @@ public final class RecordSerializer extends TypeSerializer<Record> {
 	@Override
 	public boolean isImmutableType() {
 		return false;
-	}
-
-	@Override
-	public RecordSerializer duplicate() {
-		// does not hold state, so just return ourselves
-		return this;
 	}
 	
 	@Override
@@ -123,22 +119,14 @@ public final class RecordSerializer extends TypeSerializer<Record> {
 	}
 
 	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof RecordSerializer) {
-			RecordSerializer other = (RecordSerializer) obj;
-			return other.canEqual(this);
-		} else {
-			return false;
-		}
-	}
-
-	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof RecordSerializer;
 	}
 
+	// --------------------------------------------------------------------------------------------
+
 	@Override
-	public int hashCode() {
-		return RecordSerializer.class.hashCode();
+	public TypeSerializerBuilder<Record> getBuilder() {
+		return new TypeSerializerSingletonBuilder<>(RecordSerializer.class);
 	}
 }

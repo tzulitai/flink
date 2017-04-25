@@ -21,7 +21,9 @@ package org.apache.flink.runtime.operators.testutils.types;
 
 import java.io.IOException;
 
+import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.DataInputView;
@@ -107,6 +109,11 @@ public class IntPairSerializer extends TypeSerializer<IntPair> {
 	@Override
 	public int hashCode() {
 		return IntPairSerializer.class.hashCode();
+	}
+
+	@Override
+	public TypeSerializerBuilder<IntPair> getBuilder() {
+		return new BasicTypeSerializerBuilder<>(IntPairSerializer.class);
 	}
 
 	public static final class IntPairSerializerFactory implements TypeSerializerFactory<IntPair> {

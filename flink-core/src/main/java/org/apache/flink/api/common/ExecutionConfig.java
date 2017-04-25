@@ -165,6 +165,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
 
 	private LinkedHashSet<Class<?>> registeredPojoTypes = new LinkedHashSet<>();
 
+	// TODO map, enum
+
 	// --------------------------------------------------------------------------------------------
 
 	/**

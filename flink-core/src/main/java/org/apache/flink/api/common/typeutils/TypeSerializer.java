@@ -171,5 +171,6 @@ public abstract class TypeSerializer<T> implements Serializable {
 	 *
 	 * @return a builder for this serializer as of its current configuration or state.
 	 */
+	// TODO getConfiguration
 	public abstract TypeSerializerBuilder<T> getBuilder();
 }

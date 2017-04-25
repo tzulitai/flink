@@ -16,31 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.flink.api.java.typeutils.runtime;
+package org.apache.flink.api.java.typeutils.runtime.kryo;
 
-import org.apache.flink.annotation.Internal;
-import org.apache.flink.core.memory.DataOutputView;
-import java.io.IOException;
-import java.io.OutputStream;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Serializer;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 
-/**
- * An output stream that sends its data to a {@link DataOutputView}.
- */
-@Internal
-public class DataOutputViewStream extends OutputStream {
-	protected DataOutputView outputView;
+public class DummyRegistrationUtils {
 
-	public DataOutputViewStream(DataOutputView outputView){
-		this.outputView = outputView;
+	public static String getUniqueDummyRegisteredClassIdentifier() {
+
 	}
 
-	@Override
-	public void write(int b) throws IOException {
-		outputView.writeByte(b);
-	}
+	public static class DummyRegisteredClass {}
 
-	@Override
-	public void write(byte[] b, int off, int len) throws IOException {
-		outputView.write(b, off, len);
+	public static class DummyRegisteredSerializer extends Serializer {
+		@Override
+		public void write(Kryo kryo, Output output, Object o) {
+
+		}
+
+		@Override
+		public Object read(Kryo kryo, Input input, Class aClass) {
+			return null;
+		}
 	}
 }

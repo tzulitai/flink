@@ -36,6 +36,7 @@ public class RegisteredBackendStateMetaInfo<N, S> {
 	private StateDescriptor.Type stateType;
 	private String name;
 	private TypeSerializerBuilder<N> namespaceSerializerBuilder;
+	private Class<S> stateClass;
 	private TypeSerializerBuilder<S> stateSerializerBuilder;
 
 	/** Empty constructor used by {@link StateMetaInfoSerializationProxy} when reading serialized meta info. */

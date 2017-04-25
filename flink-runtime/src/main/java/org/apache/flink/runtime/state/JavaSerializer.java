@@ -19,7 +19,9 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.core.memory.DataInputView;
@@ -110,5 +112,11 @@ final class JavaSerializer<T extends Serializable> extends TypeSerializer<T> {
 	@Override
 	public int hashCode() {
 		return getClass().hashCode();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public TypeSerializerBuilder<T> getBuilder() {
+		return new BasicTypeSerializerBuilder<>((Class<? extends TypeSerializer<T>>) JavaSerializer.class);
 	}
 }

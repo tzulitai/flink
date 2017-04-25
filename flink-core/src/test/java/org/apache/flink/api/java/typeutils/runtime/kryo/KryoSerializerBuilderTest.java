@@ -16,31 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.flink.api.java.typeutils.runtime;
+package org.apache.flink.api.java.typeutils.runtime.kryo;
 
-import org.apache.flink.annotation.Internal;
-import org.apache.flink.core.memory.DataOutputView;
-import java.io.IOException;
-import java.io.OutputStream;
+import org.junit.Test;
 
-/**
- * An output stream that sends its data to a {@link DataOutputView}.
- */
-@Internal
-public class DataOutputViewStream extends OutputStream {
-	protected DataOutputView outputView;
+public class KryoSerializerBuilderTest {
 
-	public DataOutputViewStream(DataOutputView outputView){
-		this.outputView = outputView;
+	@Test
+	public void testResolveKryoSerializerBuilder() {
+		//
 	}
 
-	@Override
-	public void write(int b) throws IOException {
-		outputView.writeByte(b);
-	}
-
-	@Override
-	public void write(byte[] b, int off, int len) throws IOException {
-		outputView.write(b, off, len);
-	}
 }
