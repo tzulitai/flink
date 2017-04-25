@@ -21,6 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.IntValue;
@@ -83,5 +84,10 @@ public final class IntValueSerializer extends TypeSerializerSingleton<IntValue> 
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof IntValueSerializer;
+	}
+
+	@Override
+	public TypeSerializerBuilder<IntValue> getBuilder() {
+		return new TypeSerializerSingletonBuilder<>(IntValueSerializer.class);
 	}
 }

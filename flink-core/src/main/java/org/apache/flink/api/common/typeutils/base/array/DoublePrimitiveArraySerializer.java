@@ -21,7 +21,9 @@ package org.apache.flink.api.common.typeutils.base.array;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -106,5 +108,10 @@ public final class DoublePrimitiveArraySerializer extends TypeSerializerSingleto
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof DoublePrimitiveArraySerializer;
+	}
+
+	@Override
+	public TypeSerializerBuilder<double[]> getBuilder() {
+		return new TypeSerializerSingletonBuilder<>(DoublePrimitiveArraySerializer.class);
 	}
 }

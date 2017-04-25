@@ -18,7 +18,9 @@
 
 package org.apache.flink.graph.types.valuearray;
 
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -81,5 +83,10 @@ public final class StringValueArraySerializer extends TypeSerializerSingleton<St
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof StringValueArraySerializer;
+	}
+
+	@Override
+	public TypeSerializerBuilder<StringValueArray> getBuilder() {
+		return new TypeSerializerSingletonBuilder<>(StringValueArraySerializer.class);
 	}
 }

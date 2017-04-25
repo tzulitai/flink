@@ -21,7 +21,9 @@ package org.apache.flink.api.common.typeutils.base.array;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
+import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -36,7 +38,7 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
 	private static final boolean[] EMPTY = new boolean[0];
 
 	public static final BooleanPrimitiveArraySerializer INSTANCE = new BooleanPrimitiveArraySerializer();
-	
+
 	
 	@Override
 	public boolean isImmutableType() {
@@ -107,5 +109,10 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof BooleanPrimitiveArraySerializer;
+	}
+
+	@Override
+	public TypeSerializerBuilder<boolean[]> getBuilder() {
+		return new TypeSerializerSingletonBuilder<>(BooleanPrimitiveArraySerializer.class);
 	}
 }
