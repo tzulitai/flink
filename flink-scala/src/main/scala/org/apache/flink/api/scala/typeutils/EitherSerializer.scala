@@ -18,14 +18,14 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.core.memory.{DataOutputView, DataInputView}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
  * Serializer for [[Either]].
  */
 @Internal
-class EitherSerializer[A, B, T <: Either[A, B]](
+final class EitherSerializer[A, B, T <: Either[A, B]](
     val leftSerializer: TypeSerializer[A],
     val rightSerializer: TypeSerializer[B])
   extends TypeSerializer[T] {
@@ -103,5 +103,9 @@ class EitherSerializer[A, B, T <: Either[A, B]](
 
   override def hashCode(): Int = {
     31 * leftSerializer.hashCode() + rightSerializer.hashCode()
+  }
+
+  override def getBuilder: TypeSerializerBuilder[T] = {
+    new EitherSerializerBuilder(leftSerializer.getBuilder, rightSerializer.getBuilder)
   }
 }

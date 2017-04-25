@@ -18,14 +18,14 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.core.memory.{DataOutputView, DataInputView}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
  * Serializer for [[Option]].
  */
 @Internal
-class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
+final class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
   extends TypeSerializer[Option[A]] {
 
   override def duplicate: OptionSerializer[A] = {
@@ -94,5 +94,9 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
 
   override def hashCode(): Int = {
     elemSerializer.hashCode()
+  }
+
+  override def getBuilder: TypeSerializerBuilder[Option[A]] = {
+    new OptionSerializerBuilder[A](elemSerializer.getBuilder)
   }
 }

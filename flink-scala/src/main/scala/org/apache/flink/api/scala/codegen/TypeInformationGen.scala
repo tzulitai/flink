@@ -152,6 +152,10 @@ private[flink] trait TypeInformationGen[C <: Context] {
             override def createInstance(fields: Array[AnyRef]): T = {
               instance.splice
             }
+
+            override def getBuilder: TypeSerializerBuilder[T] = {
+
+            }
           }
         }
       }

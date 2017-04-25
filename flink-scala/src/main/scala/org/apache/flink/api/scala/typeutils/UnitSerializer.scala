@@ -18,37 +18,38 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton
+import org.apache.flink.api.common.typeutils.TypeSerializerBuilder
+import org.apache.flink.api.common.typeutils.base.{TypeSerializerSingleton, TypeSerializerSingletonBuilder}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 @Internal
-class UnitSerializer extends TypeSerializerSingleton[Unit] {
+final class UnitSerializer extends TypeSerializerSingleton[Unit] {
 
-  def isImmutableType(): Boolean = true
+  override def isImmutableType(): Boolean = true
 
-  def createInstance(): Unit = ()
+  override def createInstance(): Unit = ()
 
-  def copy(from: Unit): Unit = ()
+  override def copy(from: Unit): Unit = ()
 
-  def copy(from: Unit, reuse: Unit): Unit = ()
+  override def copy(from: Unit, reuse: Unit): Unit = ()
 
-  def getLength(): Int = 1
+  override def getLength(): Int = 1
 
-  def serialize(record: Unit, target: DataOutputView) {
+  override def serialize(record: Unit, target: DataOutputView) {
     target.write(0)
   }
 
-  def deserialize(source: DataInputView): Unit = {
+  override def deserialize(source: DataInputView): Unit = {
     source.readByte()
     ()
   }
 
-  def deserialize(reuse: Unit, source: DataInputView): Unit = {
+  override def deserialize(reuse: Unit, source: DataInputView): Unit = {
     source.readByte()
     ()
   }
 
-  def copy(source: DataInputView, target: DataOutputView) {
+  override def copy(source: DataInputView, target: DataOutputView) {
     target.write(source.readByte)
   }
 
@@ -56,5 +57,9 @@ class UnitSerializer extends TypeSerializerSingleton[Unit] {
 
   override def canEqual(obj: scala.Any): Boolean = {
     obj.isInstanceOf[UnitSerializer]
+  }
+
+  override def getBuilder(): TypeSerializerBuilder[Unit] = {
+    new TypeSerializerSingletonBuilder[Unit](classOf[UnitSerializer])
   }
 }

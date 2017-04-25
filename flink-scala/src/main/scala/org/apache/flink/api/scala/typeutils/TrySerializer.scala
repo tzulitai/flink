@@ -19,24 +19,25 @@ package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
 import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.api.common.typeutils.TypeSerializer
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
-import scala.util.{Success, Try, Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
  * Serializer for [[scala.util.Try]].
  */
 @Internal
-class TrySerializer[A](
+final class TrySerializer[A](
     private val elemSerializer: TypeSerializer[A],
-    private val executionConfig: ExecutionConfig)
+    private val throwableSerializer: TypeSerializer[Throwable])
   extends TypeSerializer[Try[A]] {
 
-  override def duplicate: TrySerializer[A] = this
+  def this(elemSerializer: TypeSerializer[A], executionConfig: ExecutionConfig) =
+    this (elemSerializer, new KryoSerializer[Throwable](classOf[Throwable], executionConfig))
 
-  val throwableSerializer = new KryoSerializer[Throwable](classOf[Throwable], executionConfig)
+  override def duplicate: TrySerializer[A] = this
 
   override def createInstance: Try[A] = {
     Failure(new RuntimeException("Empty Failure"))
@@ -96,6 +97,10 @@ class TrySerializer[A](
   }
 
   override def hashCode(): Int = {
-    31 * elemSerializer.hashCode() + executionConfig.hashCode()
+    31 * elemSerializer.hashCode() + throwableSerializer.hashCode()
+  }
+
+  override def getBuilder: TypeSerializerBuilder[Try[A]] = {
+    new TrySerializerBuilder[A](elemSerializer.getBuilder, throwableSerializer.getBuilder)
   }
 }
