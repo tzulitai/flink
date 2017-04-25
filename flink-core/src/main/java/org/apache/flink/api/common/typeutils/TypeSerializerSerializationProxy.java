@@ -31,6 +31,15 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * @deprecated since 1.3.0. Starting from 1.3.0, serializers should no longer be directly serialized.
+ *             Instead, their corresponding {@link TypeSerializerBuilder} is serialized, using a
+ *             {@link TypeSerializerBuilderUtils.TypeSerializerBuilderSerializationProxy}.
+ *
+ * @see TypeSerializerBuilder
+ * @see TypeSerializerBuilderUtils.TypeSerializerBuilderSerializationProxy
+ */
+@Deprecated
 @Internal
 public class TypeSerializerSerializationProxy<T> extends VersionedIOReadableWritable {
 
@@ -202,6 +211,11 @@ public class TypeSerializerSerializationProxy<T> extends VersionedIOReadableWrit
 
 		@Override
 		public void copy(DataInputView source, DataOutputView target) throws IOException {
+			throw new UnsupportedOperationException("This object is a dummy TypeSerializer.");
+		}
+
+		@Override
+		public TypeSerializerBuilder<T> getBuilder() {
 			throw new UnsupportedOperationException("This object is a dummy TypeSerializer.");
 		}
 

@@ -27,7 +27,7 @@ import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
-import org.apache.flink.runtime.state.ArrayListSerializer;
+import org.apache.flink.runtime.state.ArrayListSerializerBuilder;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.RegisteredBackendStateMetaInfo;
 import org.apache.flink.runtime.state.StateTransformationFunction;
@@ -54,8 +54,8 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 				new RegisteredBackendStateMetaInfo<>(
 						StateDescriptor.Type.UNKNOWN,
 						"test",
-						IntSerializer.INSTANCE,
-						new ArrayListSerializer<>(IntSerializer.INSTANCE)); // we use mutable state objects.
+						IntSerializer.INSTANCE.getConfiguration(),
+						new ArrayListSerializerBuilder<>(IntSerializer.INSTANCE)); // we use mutable state objects.
 
 		final MockInternalKeyContext<Integer> keyContext = new MockInternalKeyContext<>(IntSerializer.INSTANCE);
 
@@ -126,8 +126,8 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 				new RegisteredBackendStateMetaInfo<>(
 						StateDescriptor.Type.UNKNOWN,
 						"test",
-						IntSerializer.INSTANCE,
-						new ArrayListSerializer<>(IntSerializer.INSTANCE)); // we use mutable state objects.
+						IntSerializer.INSTANCE.getConfiguration(),
+						new ArrayListSerializerBuilder<>(IntSerializer.INSTANCE)); // we use mutable state objects.
 
 		final MockInternalKeyContext<Integer> keyContext = new MockInternalKeyContext<>(IntSerializer.INSTANCE);
 
@@ -171,8 +171,8 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 				new RegisteredBackendStateMetaInfo<>(
 						StateDescriptor.Type.UNKNOWN,
 						"test",
-						IntSerializer.INSTANCE,
-						new ArrayListSerializer<>(IntSerializer.INSTANCE)); // we use mutable state objects.
+						IntSerializer.INSTANCE.getConfiguration(),
+						new ArrayListSerializerBuilder<>(IntSerializer.INSTANCE)); // we use mutable state objects.
 
 		final MockInternalKeyContext<Integer> keyContext = new MockInternalKeyContext<>(IntSerializer.INSTANCE);
 
@@ -326,8 +326,8 @@ public class CopyOnWriteStateTableTest extends TestLogger {
 				new RegisteredBackendStateMetaInfo<>(
 						StateDescriptor.Type.UNKNOWN,
 						"test",
-						IntSerializer.INSTANCE,
-						new ArrayListSerializer<>(IntSerializer.INSTANCE)); // we use mutable state objects.
+						IntSerializer.INSTANCE.getConfiguration(),
+						new ArrayListSerializerBuilder<>(IntSerializer.INSTANCE)); // we use mutable state objects.
 
 		final MockInternalKeyContext<Integer> keyContext = new MockInternalKeyContext<>(IntSerializer.INSTANCE);
 

@@ -48,8 +48,8 @@ public class StateTableSnapshotCompatibilityTest {
 				new RegisteredBackendStateMetaInfo<>(
 						StateDescriptor.Type.UNKNOWN,
 						"test",
-						IntSerializer.INSTANCE,
-						new ArrayListSerializer<>(IntSerializer.INSTANCE));
+						IntSerializer.INSTANCE.getBuilder(),
+						new ArrayListSerializer<>(IntSerializer.INSTANCE).getBuilder());
 
 		final CopyOnWriteStateTableTest.MockInternalKeyContext<Integer> keyContext =
 				new CopyOnWriteStateTableTest.MockInternalKeyContext<>(IntSerializer.INSTANCE);

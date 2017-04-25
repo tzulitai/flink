@@ -161,19 +161,15 @@ public abstract class StateTable<K, N, S> {
 	// Meta data setter / getter and toString -----------------------------------------------------
 
 	public TypeSerializer<S> getStateSerializer() {
-		return metaInfo.getStateSerializer();
+		return metaInfo.getStateSerializerBuilder().build();
 	}
 
 	public TypeSerializer<N> getNamespaceSerializer() {
-		return metaInfo.getNamespaceSerializer();
+		return metaInfo.getNamespaceSerializerBuilder().build();
 	}
 
 	public RegisteredBackendStateMetaInfo<N, S> getMetaInfo() {
 		return metaInfo;
-	}
-
-	public void setMetaInfo(RegisteredBackendStateMetaInfo<N, S> metaInfo) {
-		this.metaInfo = metaInfo;
 	}
 
 	// Snapshot / Restore -------------------------------------------------------------------------

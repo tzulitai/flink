@@ -32,6 +32,7 @@ import java.util.Map;
  */
 public class OperatorStateHandle implements StreamStateHandle {
 
+	// IMPORTANT: Do not change the order of the elements in this enum, ordinal is used in serialization
 	public enum Mode {
 		SPLIT_DISTRIBUTE, BROADCAST
 	}

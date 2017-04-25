@@ -523,12 +523,12 @@ public class CopyOnWriteStateTable<K, N, S> extends StateTable<K, N, S> implemen
 
 	@Override
 	public TypeSerializer<S> getStateSerializer() {
-		return metaInfo.getStateSerializer();
+		return metaInfo.getStateSerializerBuilder().build();
 	}
 
 	@Override
 	public TypeSerializer<N> getNamespaceSerializer() {
-		return metaInfo.getNamespaceSerializer();
+		return metaInfo.getNamespaceSerializerBuilder().build();
 	}
 
 	@Override

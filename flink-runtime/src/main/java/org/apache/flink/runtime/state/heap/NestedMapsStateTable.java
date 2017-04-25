@@ -342,8 +342,8 @@ public class NestedMapsStateTable<K, N, S> extends StateTable<K, N, S> {
 			final Map<N, Map<K, S>> keyGroupMap = owningStateTable.getMapForKeyGroup(keyGroupId);
 			if (null != keyGroupMap) {
 				TypeSerializer<K> keySerializer = owningStateTable.keyContext.getKeySerializer();
-				TypeSerializer<N> namespaceSerializer = owningStateTable.metaInfo.getNamespaceSerializer();
-				TypeSerializer<S> stateSerializer = owningStateTable.metaInfo.getStateSerializer();
+				TypeSerializer<N> namespaceSerializer = owningStateTable.metaInfo.getNamespaceSerializerBuilder().build();
+				TypeSerializer<S> stateSerializer = owningStateTable.metaInfo.getStateSerializerBuilder().build();
 				dov.writeInt(countMappingsInKeyGroup(keyGroupMap));
 				for (Map.Entry<N, Map<K, S>> namespaceEntry : keyGroupMap.entrySet()) {
 					final N namespace = namespaceEntry.getKey();

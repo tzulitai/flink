@@ -54,6 +54,7 @@ import org.apache.flink.runtime.state.KeyedBackendSerializationProxy;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.RegisteredBackendStateMetaInfo;
 import org.apache.flink.runtime.state.StreamStateHandle;
+import org.apache.flink.runtime.state.UnresolvableStateException;
 import org.apache.flink.runtime.state.internal.InternalAggregatingState;
 import org.apache.flink.runtime.state.internal.InternalFoldingState;
 import org.apache.flink.runtime.state.internal.InternalListState;
@@ -133,8 +134,8 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			TypeSerializer<N> namespaceSerializer,
 			TypeSerializer<V> valueSerializer) {
 
-		final RegisteredBackendStateMetaInfo<N, V> newMetaInfo =
-				new RegisteredBackendStateMetaInfo<>(stateType, stateName, namespaceSerializer, valueSerializer);
+		final RegisteredBackendStateMetaInfo<N, V> newMetaInfo = new RegisteredBackendStateMetaInfo<>(
+				stateType, stateName, namespaceSerializer.getBuilder(), valueSerializer.getBuilder());
 
 		@SuppressWarnings("unchecked")
 		StateTable<K, N, V> stateTable = (StateTable<K, N, V>) stateTables.get(stateName);
@@ -143,11 +144,12 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			stateTable = newStateTable(newMetaInfo);
 			stateTables.put(stateName, stateTable);
 		} else {
-			if (!newMetaInfo.canRestoreFrom(stateTable.getMetaInfo())) {
-				throw new RuntimeException("Trying to access state using incompatible meta info, was " +
-						stateTable.getMetaInfo() + " trying access with " + newMetaInfo);
+			try {
+				stateTable.getMetaInfo().resolve(newMetaInfo);
+			} catch (UnresolvableStateException e) {
+				throw new RuntimeException("The previous registered state meta info cannot be resolved. " +
+					"Original meta info was " + stateTable.getMetaInfo() + ", trying to resolve with " + newMetaInfo, e);
 			}
-			stateTable.setMetaInfo(newMetaInfo);
 		}
 		return stateTable;
 	}
@@ -241,7 +243,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 				"Too many KV-States: " + stateTables.size() +
 						". Currently at most " + Short.MAX_VALUE + " states are supported");
 
-		List<KeyedBackendSerializationProxy.StateMetaInfo<?, ?>> metaInfoProxyList = new ArrayList<>(stateTables.size());
+		List<RegisteredBackendStateMetaInfo<?, ?>> metaInfoList = new ArrayList<>(stateTables.size());
 
 		final Map<String, Integer> kVStateToId = new HashMap<>(stateTables.size());
 
@@ -249,13 +251,8 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
 		for (Map.Entry<String, StateTable<K, ?, ?>> kvState : stateTables.entrySet()) {
 			RegisteredBackendStateMetaInfo<?, ?> metaInfo = kvState.getValue().getMetaInfo();
-			KeyedBackendSerializationProxy.StateMetaInfo<?, ?> metaInfoProxy = new KeyedBackendSerializationProxy.StateMetaInfo(
-					metaInfo.getStateType(),
-					metaInfo.getName(),
-					metaInfo.getNamespaceSerializer(),
-					metaInfo.getStateSerializer());
 
-			metaInfoProxyList.add(metaInfoProxy);
+			metaInfoList.add(metaInfo);
 			kVStateToId.put(kvState.getKey(), kVStateToId.size());
 			StateTable<K, ?, ?> stateTable = kvState.getValue();
 			if (null != stateTable) {
@@ -264,7 +261,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 		}
 
 		final KeyedBackendSerializationProxy serializationProxy =
-				new KeyedBackendSerializationProxy(keySerializer, metaInfoProxyList);
+				new KeyedBackendSerializationProxy(keySerializer.getBuilder(), metaInfoList);
 
 		//--------------------------------------------------- this becomes the end of sync part
 
@@ -401,22 +398,17 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
 				serializationProxy.read(inView);
 
-				List<KeyedBackendSerializationProxy.StateMetaInfo<?, ?>> metaInfoList =
-						serializationProxy.getNamedStateSerializationProxies();
+				List<RegisteredBackendStateMetaInfo<?, ?>> metaInfoList = serializationProxy.getNamedStates();
 
-				for (KeyedBackendSerializationProxy.StateMetaInfo<?, ?> metaInfoSerializationProxy : metaInfoList) {
+				for (RegisteredBackendStateMetaInfo<?, ?> restoredMetaInfo : metaInfoList) {
 
-					StateTable<K, ?, ?> stateTable = stateTables.get(metaInfoSerializationProxy.getStateName());
+					StateTable<K, ?, ?> stateTable = stateTables.get(restoredMetaInfo.getName());
 
 					//important: only create a new table we did not already create it previously
 					if (null == stateTable) {
-
-						RegisteredBackendStateMetaInfo<?, ?> registeredBackendStateMetaInfo =
-								new RegisteredBackendStateMetaInfo<>(metaInfoSerializationProxy);
-
-						stateTable = newStateTable(registeredBackendStateMetaInfo);
-						stateTables.put(metaInfoSerializationProxy.getStateName(), stateTable);
-						kvStatesById.put(numRegisteredKvStates, metaInfoSerializationProxy.getStateName());
+						stateTable = newStateTable(restoredMetaInfo);
+						stateTables.put(restoredMetaInfo.getName(), stateTable);
+						kvStatesById.put(numRegisteredKvStates, restoredMetaInfo.getName());
 						++numRegisteredKvStates;
 					}
 				}

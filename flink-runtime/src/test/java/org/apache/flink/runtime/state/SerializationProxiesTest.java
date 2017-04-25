@@ -68,7 +68,7 @@ public class SerializationProxiesTest {
 		}
 
 		Assert.assertEquals(keySerializer, serializationProxy.getKeySerializerProxy().getTypeSerializer());
-		Assert.assertEquals(stateMetaInfoList, serializationProxy.getNamedStateSerializationProxies());
+		Assert.assertEquals(stateMetaInfoList, serializationProxy.getNamedStates());
 	}
 
 	@Test
