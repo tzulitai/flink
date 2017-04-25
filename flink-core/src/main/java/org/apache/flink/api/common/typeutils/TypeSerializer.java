@@ -161,7 +161,15 @@ public abstract class TypeSerializer<T> implements Serializable {
 
 	public abstract int hashCode();
 
-	public boolean canRestoreFrom(TypeSerializer<?> other) {
-		return equals(other);
-	}
+	// --------------------------------------------------------------------------------------------
+	// Serializer builder
+	// --------------------------------------------------------------------------------------------
+
+	/**
+	 * Return a {@link TypeSerializerBuilder} that can rebuild this serializer
+	 * to its current configuration or state.
+	 *
+	 * @return a builder for this serializer as of its current configuration or state.
+	 */
+	public abstract TypeSerializerBuilder<T> getBuilder();
 }
