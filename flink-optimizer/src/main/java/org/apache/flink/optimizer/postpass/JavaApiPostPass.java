@@ -38,7 +38,7 @@ import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypePairComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.java.operators.translation.PlanUnwrappingReduceGroupOperator;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.api.java.typeutils.runtime.RuntimeComparatorFactory;
@@ -279,7 +279,7 @@ public class JavaApiPostPass implements OptimizerPostPass {
 		}
 	}
 	
-	private <T> TypeSerializerFactory<?> createSerializer(TypeInformation<T> typeInfo) {
+	private <T> TypeSerializerFactoryOld<?> createSerializer(TypeInformation<T> typeInfo) {
 		TypeSerializer<T> serializer = typeInfo.createSerializer(executionConfig);
 
 		return new RuntimeSerializerFactory<T>(serializer, typeInfo.getTypeClass());

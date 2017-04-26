@@ -18,8 +18,8 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationProxy;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.io.VersionMismatchException;
@@ -40,7 +40,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 
 	public static final int VERSION = 2;
 
-	private TypeSerializerBuilder<?> keySerializerBuilder;
+	private TypeSerializerConfiguration<?> keySerializerBuilder;
 	private List<RegisteredBackendStateMetaInfo<?, ?>> namedStates;
 
 	private SerializationCompatibilityProxy versionProxy;
@@ -51,7 +51,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 		this.userCodeClassLoader = Preconditions.checkNotNull(userCodeClassLoader);
 	}
 
-	public KeyedBackendSerializationProxy(TypeSerializerBuilder<?> keySerializerBuilder, List<RegisteredBackendStateMetaInfo<?, ?>> namedStates) {
+	public KeyedBackendSerializationProxy(TypeSerializerConfiguration<?> keySerializerBuilder, List<RegisteredBackendStateMetaInfo<?, ?>> namedStates) {
 		this.keySerializerBuilder = Preconditions.checkNotNull(keySerializerBuilder);
 		this.restoredVersion = VERSION;
 
@@ -64,7 +64,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 		return namedStates;
 	}
 
-	public TypeSerializerBuilder<?> getKeySerializerBuilder() {
+	public TypeSerializerConfiguration<?> getKeySerializerBuilder() {
 		return keySerializerBuilder;
 	}
 
@@ -124,7 +124,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 		@Override
 		public void write(DataOutputView out) throws IOException {
 			// --- write key serializer builder
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, keySerializerBuilder);
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, keySerializerBuilder);
 
 			// --- write state meta infos
 			out.writeShort(namedStates.size());
@@ -146,7 +146,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 				new TypeSerializerSerializationProxy<>(userCodeClassLoader);
 			keySerializerProxy.read(in);
 
-			keySerializerBuilder = keySerializerProxy.getTypeSerializer().getBuilder();
+			keySerializerBuilder = keySerializerProxy.getTypeSerializer().getConfiguration();
 
 			// --- read state meta infos
 			int numKvStates = in.readShort();
@@ -164,7 +164,7 @@ public class KeyedBackendSerializationProxy extends VersionedIOReadableWritable 
 	private class V2SerializationCompatibilityProxy extends SerializationCompatibilityProxy {
 		@Override
 		public void read(DataInputView in) throws IOException {
-			keySerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, userCodeClassLoader);
+			keySerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, userCodeClassLoader);
 
 			// --- read state meta infos
 			int numKvStates = in.readShort();

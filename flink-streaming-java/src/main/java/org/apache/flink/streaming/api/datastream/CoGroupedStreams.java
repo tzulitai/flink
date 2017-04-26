@@ -25,7 +25,7 @@ import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.operators.translation.WrappingFunction;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
@@ -554,7 +554,7 @@ public class CoGroupedStreams<T1, T2> {
 		}
 
 		@Override
-		public TypeSerializerBuilder<TaggedUnion<T1, T2>> getBuilder() {
+		public TypeSerializerConfiguration<TaggedUnion<T1, T2>> getConfiguration() {
 			throw new UnsupportedOperationException();
 		}
 	}

@@ -25,7 +25,7 @@ import org.apache.flink.api.common.operators.SemanticProperties;
 import org.apache.flink.api.common.operators.util.FieldList;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypePairComparatorFactory;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.CompilerPostPassException;
 import org.apache.flink.optimizer.dag.OptimizerNode;
@@ -545,7 +545,7 @@ public abstract class GenericFlatTypePostPass<X, T extends AbstractSchema<X>> im
 				+ ". Most probable cause: Invalid constant field annotations.";
 	}
 	
-	private TypeSerializerFactory<?> createSerializer(T schema, PlanNode node) {
+	private TypeSerializerFactoryOld<?> createSerializer(T schema, PlanNode node) {
 		try {
 			return createSerializer(schema);
 		} catch (MissingFieldTypeInfoException e) {
@@ -570,7 +570,7 @@ public abstract class GenericFlatTypePostPass<X, T extends AbstractSchema<X>> im
 	//  Methods to create serializers and comparators
 	// --------------------------------------------------------------------------------------------
 	
-	protected abstract TypeSerializerFactory<?> createSerializer(T schema) throws MissingFieldTypeInfoException;
+	protected abstract TypeSerializerFactoryOld<?> createSerializer(T schema) throws MissingFieldTypeInfoException;
 	
 	protected abstract TypeComparatorFactory<?> createComparator(FieldList fields, boolean[] directions, T schema) throws MissingFieldTypeInfoException;
 	

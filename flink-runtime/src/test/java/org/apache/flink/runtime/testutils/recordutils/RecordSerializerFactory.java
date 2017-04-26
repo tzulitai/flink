@@ -20,14 +20,14 @@
 package org.apache.flink.runtime.testutils.recordutils;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.types.Record;
 
 /**
  * A factory that create a serializer for the {@link Record} data type.
  */
-public class RecordSerializerFactory implements TypeSerializerFactory<Record> {
+public class RecordSerializerFactory implements TypeSerializerFactoryOld<Record> {
 	
 	private static final RecordSerializerFactory INSTANCE = new RecordSerializerFactory();
 	

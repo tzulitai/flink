@@ -22,9 +22,9 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
@@ -475,22 +475,22 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 		}
 
 		@Override
-		public TypeSerializerBuilder<PriorityQueue<T>> getBuilder() {
+		public TypeSerializerConfiguration<PriorityQueue<T>> getConfiguration() {
 			return null;
 		}
 	}
 
-	private static class PriorityQueueSerializerBuilder<T> extends TypeSerializerBuilder<PriorityQueue<T>> {
+	private static class PriorityQueueSerializerBuilder<T> extends TypeSerializerConfiguration<PriorityQueue<T>> {
 
 		private static final int VERSION = 1;
 
-		private TypeSerializerBuilder<T> elementSerializerBuilder;
+		private TypeSerializerConfiguration<T> elementSerializerBuilder;
 		private PriorityQueueFactory<T> factory;
 
 		public PriorityQueueSerializerBuilder() {}
 
 		public PriorityQueueSerializerBuilder(
-				TypeSerializerBuilder<T> elementSerializerBuilder,
+				TypeSerializerConfiguration<T> elementSerializerBuilder,
 				PriorityQueueFactory<T> factory) {
 
 			this.elementSerializerBuilder = Preconditions.checkNotNull(elementSerializerBuilder);
@@ -501,7 +501,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 		public void write(DataOutputView out) throws IOException {
 			super.write(out);
 
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, elementSerializerBuilder);
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, elementSerializerBuilder);
 
 			InstantiationUtil.serializeObject(new DataOutputViewStream(out), factory);
 		}
@@ -510,7 +510,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 		public void read(DataInputView in) throws IOException {
 			super.read(in);
 
-			elementSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+			elementSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 
 			try {
 				factory = InstantiationUtil.deserializeObject(new DataInputViewStream(in), getUserCodeClassLoader());
@@ -521,7 +521,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+		public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 			super.resolve(other);
 
 			if (other instanceof PriorityQueueSerializerBuilder) {
@@ -529,7 +529,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 				elementSerializerBuilder.resolve(otherBuilder.elementSerializerBuilder);
 				factory = otherBuilder.factory;
 			} else {
-				throw new UnresolvableTypeSerializerBuilderException();
+				throw new UnresolvableTypeSerializerConfigurationException();
 			}
 		}
 

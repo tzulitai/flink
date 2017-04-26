@@ -20,7 +20,7 @@ package org.apache.flink.runtime.operators.sort;
 
 
 import org.apache.flink.api.common.typeutils.TypeComparator;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.common.typeutils.base.IntComparator;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -66,7 +66,7 @@ public class ExternalSortITCase extends TestLogger {
 
 	private MemoryManager memoryManager;
 	
-	private TypeSerializerFactory<Tuple2<Integer, String>> pactRecordSerializer;
+	private TypeSerializerFactoryOld<Tuple2<Integer, String>> pactRecordSerializer;
 	
 	private TypeComparator<Tuple2<Integer, String>> pactRecordComparator;
 	
@@ -315,7 +315,7 @@ public class ExternalSortITCase extends TestLogger {
 			// comparator
 			final RandomIntPairGenerator generator = new RandomIntPairGenerator(12345678, PAIRS);
 			
-			final TypeSerializerFactory<IntPair> serializerFactory = new IntPairSerializer.IntPairSerializerFactory();
+			final TypeSerializerFactoryOld<IntPair> serializerFactory = new IntPairSerializer.IntPairSerializerFactory();
 			final TypeComparator<IntPair> comparator = new TestData.IntPairComparator();
 			
 			// merge iterator

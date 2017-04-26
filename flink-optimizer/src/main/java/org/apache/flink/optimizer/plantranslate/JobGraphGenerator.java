@@ -29,7 +29,7 @@ import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.cache.DistributedCache.DistributedCacheEntry;
 import org.apache.flink.api.common.distributions.DataDistribution;
 import org.apache.flink.api.common.operators.util.UserCodeWrapper;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.dag.TempMode;
@@ -684,7 +684,7 @@ public class JobGraphGenerator implements Visitor<PlanNode> {
 		}
 		
 		// check that the type serializer is consistent
-		TypeSerializerFactory<?> typeSerFact = null;
+		TypeSerializerFactoryOld<?> typeSerFact = null;
 		
 		// accounting for channels on the dynamic path
 		int numChannelsTotal = 0;

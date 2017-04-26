@@ -20,8 +20,8 @@ package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.java.tuple.Tuple;
 
 /**
@@ -35,7 +35,7 @@ public final class TupleSerializerBuilder<T extends Tuple> extends TupleSerializ
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public TupleSerializerBuilder() {}
 
-	public TupleSerializerBuilder(Class<T> tupleClass, TypeSerializerBuilder<?>[] fieldSerializerBuilders) {
+	public TupleSerializerBuilder(Class<T> tupleClass, TypeSerializerConfiguration<?>[] fieldSerializerBuilders) {
 		super(tupleClass, fieldSerializerBuilders);
 	}
 
@@ -43,6 +43,6 @@ public final class TupleSerializerBuilder<T extends Tuple> extends TupleSerializ
 	public TypeSerializer<T> build() {
 		return new TupleSerializer<>(
 				getTupleClass(),
-				TypeSerializerBuilderUtils.buildSerializers(getFieldSerializerBuilders()));
+				TypeSerializerConfigurationUtils.buildSerializers(getFieldSerializerBuilders()));
 	}
 }

@@ -18,7 +18,7 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder, TypeSerializerConfiguration}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
@@ -96,7 +96,7 @@ final class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
     elemSerializer.hashCode()
   }
 
-  override def getBuilder: TypeSerializerBuilder[Option[A]] = {
-    new OptionSerializerBuilder[A](elemSerializer.getBuilder)
+  override def getConfiguration: TypeSerializerConfiguration[Option[A]] = {
+    new OptionSerializerBuilder[A](elemSerializer.getConfiguration)
   }
 }

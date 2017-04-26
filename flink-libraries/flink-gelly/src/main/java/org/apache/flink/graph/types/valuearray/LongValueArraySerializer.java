@@ -18,7 +18,7 @@
 
 package org.apache.flink.graph.types.valuearray;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
@@ -86,7 +86,7 @@ public final class LongValueArraySerializer extends TypeSerializerSingleton<Long
 	}
 
 	@Override
-	public TypeSerializerBuilder<LongValueArray> getBuilder() {
+	public TypeSerializerConfiguration<LongValueArray> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(LongValueArraySerializer.class);
 	}
 }

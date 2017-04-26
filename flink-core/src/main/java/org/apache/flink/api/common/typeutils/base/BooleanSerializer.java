@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -85,7 +85,7 @@ public final class BooleanSerializer extends TypeSerializerSingleton<Boolean> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Boolean> getBuilder() {
+	public TypeSerializerConfiguration<Boolean> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(BooleanSerializer.class);
 	}
 }

@@ -21,7 +21,7 @@ import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.util.FunctionUtils;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.operators.BatchTask;
@@ -45,7 +45,7 @@ public class ChainedAllReduceDriver<IT> extends ChainedDriver<IT, IT> {
 		this.reducer = red;
 		FunctionUtils.setFunctionRuntimeContext(red, getUdfRuntimeContext());
 
-		TypeSerializerFactory<IT> serializerFactory = this.config.getInputSerializer(0, userCodeClassLoader);
+		TypeSerializerFactoryOld<IT> serializerFactory = this.config.getInputSerializer(0, userCodeClassLoader);
 		this.serializer = serializerFactory.getSerializer();
 
 		if (LOG.isDebugEnabled()) {

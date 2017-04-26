@@ -25,7 +25,7 @@ import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.io.RichOutputFormat;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.metrics.Counter;
@@ -68,7 +68,7 @@ public class DataSinkTask<IT> extends AbstractInvokable {
 	private MutableObjectIterator<IT> reader;
 
 	// The serializer for the input type
-	private TypeSerializerFactory<IT> inputTypeSerializerFactory;
+	private TypeSerializerFactoryOld<IT> inputTypeSerializerFactory;
 	
 	// local strategy
 	private CloseableInputProvider<IT> localStrategy;

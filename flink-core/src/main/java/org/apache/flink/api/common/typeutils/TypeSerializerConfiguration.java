@@ -30,7 +30,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * A Type Serializer Builder contains the configuration of a {@link TypeSerializer},
  * such that it can be used to rebuild the type serializer to the exact same state when
- * the builder was retrieved using {@link TypeSerializer#getBuilder()}.
+ * the builder was retrieved using {@link TypeSerializer#getConfiguration()}.
  *
  * <p>Note that the terms "builder configuration" and "serializer configuration / state" is
  * interchangeable, as generally the builder's configuration is an extraction of a serializer's
@@ -57,7 +57,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> the type of the data handled by the serializer that this builder constructs.
  */
 @PublicEvolving
-public abstract class TypeSerializerBuilder<T> extends VersionedIOReadableWritable {
+public abstract class TypeSerializerConfiguration<T> extends VersionedIOReadableWritable {
 
 	/**
 	 * The user code class loader.
@@ -71,10 +71,10 @@ public abstract class TypeSerializerBuilder<T> extends VersionedIOReadableWritab
 	 * Create an empty builder instance that serves as the
 	 * deserialization proxy for previous serialized builders.
 	 *
-	 * <p>After creating this proxy, use {@link TypeSerializerBuilder#read(DataInputView)}
+	 * <p>After creating this proxy, use {@link TypeSerializerConfiguration#read(DataInputView)}
 	 * to deserialize the actual configuration.
 	 */
-	public TypeSerializerBuilder() {}
+	public TypeSerializerConfiguration() {}
 
 	/**
 	 * Set the user code class loader. This should only be relevant when
@@ -114,18 +114,24 @@ public abstract class TypeSerializerBuilder<T> extends VersionedIOReadableWritab
 	 *
 	 * @param other the other builder to resolve with.
 	 *
-	 * @throws UnresolvableTypeSerializerBuilderException if this builder cannot be resolved with the other builder
+	 * @throws UnresolvableTypeSerializerConfigurationException if this builder cannot be resolved with the other builder
 	 */
 	@SuppressWarnings("unchecked")
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
-		if (this == other) {
-			return;
-		}
+	public abstract TypeSerializerConfiguration<?> resolve(TypeSerializerConfiguration<?> other)
+			throws UnresolvableTypeSerializerConfigurationException;
 
-		if (null == other) {
-			throw new UnresolvableTypeSerializerBuilderException("Cannot resolve with a null serializer builder.");
-		}
-	}
+	//
+	public abstract TypeSerializerFactory getFactory();
+
+	//
+	public abstract TypeSerializer<T> createSerializer();
+
+	//
+	public abstract TypeSerializer<T> createSerializer(TypeSerializerConfiguration<?> other);
+
+	//
+	public abstract TypeSerializer<T> restoreSerializer(TypeSerializerConfiguration<?> current)
+			throws UnresolvableTypeSerializerConfigurationException;
 
 	/**
 	 * Get the user code class loader.
@@ -146,5 +152,7 @@ public abstract class TypeSerializerBuilder<T> extends VersionedIOReadableWritab
 	 *
 	 * @return the constructed serializer.
 	 */
+	/*
 	public abstract TypeSerializer<T> build();
+	*/
 }

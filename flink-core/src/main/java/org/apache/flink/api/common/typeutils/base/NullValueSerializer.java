@@ -19,7 +19,7 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.NullValue;
@@ -82,7 +82,7 @@ public final class NullValueSerializer extends TypeSerializerSingleton<NullValue
 	}
 
 	@Override
-	public TypeSerializerBuilder<NullValue> getBuilder() {
+	public TypeSerializerConfiguration<NullValue> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(NullValueSerializer.class);
 	}
 }

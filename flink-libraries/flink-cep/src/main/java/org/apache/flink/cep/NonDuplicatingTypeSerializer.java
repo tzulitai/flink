@@ -19,7 +19,7 @@
 package org.apache.flink.cep;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -188,7 +188,7 @@ public class NonDuplicatingTypeSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<T> getBuilder() {
+	public TypeSerializerConfiguration<T> getConfiguration() {
 		// this is not a serializer for registered state
 		throw new UnsupportedOperationException();
 	}

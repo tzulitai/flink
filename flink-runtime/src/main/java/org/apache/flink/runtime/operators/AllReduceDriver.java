@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.runtime.operators.util.TaskConfig;
 import org.apache.flink.util.MutableObjectIterator;
 
@@ -89,7 +89,7 @@ public class AllReduceDriver<T> implements Driver<ReduceFunction<T>, T> {
 			throw new Exception("Unrecognized driver strategy for AllReduce driver: " + config.getDriverStrategy().name());
 		}
 		
-		TypeSerializerFactory<T> serializerFactory = this.taskContext.getInputSerializer(0);
+		TypeSerializerFactoryOld<T> serializerFactory = this.taskContext.getInputSerializer(0);
 		this.serializer = serializerFactory.getSerializer();
 		this.input = this.taskContext.getInput(0);
 

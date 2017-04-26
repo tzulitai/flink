@@ -21,12 +21,12 @@ package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.InstantiationUtil;
 
 @Internal
-public final class RuntimeSerializerFactory<T> implements TypeSerializerFactory<T>, java.io.Serializable {
+public final class RuntimeSerializerFactory<T> implements TypeSerializerFactoryOld<T>, java.io.Serializable {
 
 	private static final long serialVersionUID = 1L;
 	

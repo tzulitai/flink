@@ -25,7 +25,7 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -235,7 +235,7 @@ public class CheckpointingCustomKvStateProgram {
 		}
 
 		@Override
-		public TypeSerializerBuilder<Integer> getBuilder() {
+		public TypeSerializerConfiguration<Integer> getConfiguration() {
 			return new TypeSerializerSingletonBuilder<>(CustomIntSerializer.class);
 		}
 	}

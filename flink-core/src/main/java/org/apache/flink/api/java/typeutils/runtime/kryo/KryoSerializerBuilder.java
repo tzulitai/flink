@@ -18,8 +18,8 @@
 
 package org.apache.flink.api.java.typeutils.runtime.kryo;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.core.memory.DataInputView;
@@ -37,7 +37,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T>
  */
-public final class KryoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
+public final class KryoSerializerBuilder<T> extends TypeSerializerConfiguration<T> {
 
 	private final static int VERSION = 1; // format
 
@@ -130,19 +130,19 @@ public final class KryoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof KryoSerializerBuilder) {
 			KryoSerializerBuilder<?> otherKryoSerializerBuilder = (KryoSerializerBuilder) other;
 
 			if (type != otherKryoSerializerBuilder.type) {
-				throw new UnresolvableTypeSerializerBuilderException();
+				throw new UnresolvableTypeSerializerConfigurationException();
 			}
 			this.registrations.putAll(otherKryoSerializerBuilder.registrations);
 			this.defaultSerializers = otherKryoSerializerBuilder.defaultSerializers;
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException();
+			throw new UnresolvableTypeSerializerConfigurationException();
 		}
 	}
 

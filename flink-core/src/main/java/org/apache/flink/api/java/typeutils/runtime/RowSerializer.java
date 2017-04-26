@@ -19,8 +19,8 @@ package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Row;
@@ -246,7 +246,7 @@ public class RowSerializer extends TypeSerializer<Row> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Row> getBuilder() {
-		return new RowSerializerBuilder(TypeSerializerBuilderUtils.createBuilders(fieldSerializers));
+	public TypeSerializerConfiguration<Row> getConfiguration() {
+		return new RowSerializerBuilder(TypeSerializerConfigurationUtils.createBuilders(fieldSerializers));
 	}
 }

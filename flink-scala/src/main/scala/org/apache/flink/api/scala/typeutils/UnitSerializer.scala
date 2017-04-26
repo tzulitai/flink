@@ -18,7 +18,7 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder
+import org.apache.flink.api.common.typeutils.{TypeSerializerBuilder, TypeSerializerConfiguration}
 import org.apache.flink.api.common.typeutils.base.{TypeSerializerSingleton, TypeSerializerSingletonBuilder}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
@@ -59,7 +59,7 @@ final class UnitSerializer extends TypeSerializerSingleton[Unit] {
     obj.isInstanceOf[UnitSerializer]
   }
 
-  override def getBuilder(): TypeSerializerBuilder[Unit] = {
+  override def getConfiguration(): TypeSerializerConfiguration[Unit] = {
     new TypeSerializerSingletonBuilder[Unit](classOf[UnitSerializer])
   }
 }

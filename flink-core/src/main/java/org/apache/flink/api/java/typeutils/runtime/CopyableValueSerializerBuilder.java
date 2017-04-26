@@ -19,8 +19,8 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.CopyableValue;
@@ -35,7 +35,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T> The copyable value type that the created {@link CopyableValueSerializer} handles.
  */
-public class CopyableValueSerializerBuilder<T extends CopyableValue<T>> extends TypeSerializerBuilder<T> {
+public class CopyableValueSerializerBuilder<T extends CopyableValue<T>> extends TypeSerializerConfiguration<T> {
 
 	private static final int VERSION = 1;
 
@@ -69,17 +69,17 @@ public class CopyableValueSerializerBuilder<T extends CopyableValue<T>> extends 
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof CopyableValueSerializerBuilder) {
 			if (valueClass != ((CopyableValueSerializerBuilder) other).valueClass) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 					"The class of the copyable value cannot change. Was [" + valueClass + "], " +
 						"trying to resolve with [" + ((CopyableValueSerializerBuilder) other).valueClass + "]");
 			}
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 				"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

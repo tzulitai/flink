@@ -33,11 +33,11 @@ import java.util.Arrays;
 
 /**
  * @deprecated since 1.3.0. Starting from 1.3.0, serializers should no longer be directly serialized.
- *             Instead, their corresponding {@link TypeSerializerBuilder} is serialized, using a
- *             {@link TypeSerializerBuilderUtils.TypeSerializerBuilderSerializationProxy}.
+ *             Instead, their corresponding {@link TypeSerializerConfiguration} is serialized, using a
+ *             {@link TypeSerializerConfigurationUtils.TypeSerializerConfigSerializationProxy}.
  *
- * @see TypeSerializerBuilder
- * @see TypeSerializerBuilderUtils.TypeSerializerBuilderSerializationProxy
+ * @see TypeSerializerConfiguration
+ * @see TypeSerializerConfigurationUtils.TypeSerializerConfigSerializationProxy
  */
 @Deprecated
 @Internal
@@ -215,7 +215,7 @@ public class TypeSerializerSerializationProxy<T> extends VersionedIOReadableWrit
 		}
 
 		@Override
-		public TypeSerializerBuilder<T> getBuilder() {
+		public TypeSerializerConfiguration<T> getConfiguration() {
 			throw new UnsupportedOperationException("This object is a dummy TypeSerializer.");
 		}
 

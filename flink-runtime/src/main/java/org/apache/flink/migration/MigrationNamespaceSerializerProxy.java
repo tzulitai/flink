@@ -19,7 +19,7 @@
 package org.apache.flink.migration;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -104,7 +104,7 @@ public class MigrationNamespaceSerializerProxy extends TypeSerializer<Serializab
 	}
 
 	@Override
-	public TypeSerializerBuilder<Serializable> getBuilder() {
+	public TypeSerializerConfiguration<Serializable> getConfiguration() {
 		throw new UnsupportedOperationException(
 				"This is just a proxy used during migration until the real type serializer is provided by the user.");
 	}

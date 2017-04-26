@@ -27,7 +27,7 @@ import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.api.common.typeutils.base.array.BytePrimitiveArraySerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
@@ -506,7 +506,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			}
 
 			KeyedBackendSerializationProxy serializationProxy =
-					new KeyedBackendSerializationProxy(stateBackend.getKeySerializer().getBuilder(), metaInfoList);
+					new KeyedBackendSerializationProxy(stateBackend.getKeySerializer().getConfiguration(), metaInfoList);
 
 			serializationProxy.write(outputView);
 		}
@@ -819,13 +819,13 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 		RegisteredBackendStateMetaInfo<N, S> newMetaInfo = new RegisteredBackendStateMetaInfo<>(
 				descriptor.getType(),
 				descriptor.getName(),
-				namespaceSerializer.getBuilder(),
-				descriptor.getSerializer().getBuilder());
+				namespaceSerializer.getConfiguration(),
+				descriptor.getSerializer().getConfiguration());
 
 		if (stateInfo != null) {
 			try {
 				newMetaInfo.resolve(stateInfo.f1);
-			} catch (UnresolvableTypeSerializerBuilderException e) {
+			} catch (UnresolvableTypeSerializerConfigurationException e) {
 				throw new IOException("Trying to access state using wrong meta info, was " + stateInfo.f1 +
 					" trying access with " + newMetaInfo);
 			}

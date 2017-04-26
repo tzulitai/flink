@@ -18,9 +18,9 @@
 
 package org.apache.flink.api.java.typeutils.runtime;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.InstantiationUtil;
@@ -35,17 +35,17 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T> The type of the tuple that the created {@link TupleSerializerBase} handles.
  */
-public abstract class TupleSerializerBuilderBase<T> extends TypeSerializerBuilder<T> {
+public abstract class TupleSerializerBuilderBase<T> extends TypeSerializerConfiguration<T> {
 
 	private static final int VERSION = 1;
 
 	private Class<T> tupleClass;
-	private TypeSerializerBuilder<?>[] fieldSerializerBuilders;
+	private TypeSerializerConfiguration<?>[] fieldSerializerBuilders;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public TupleSerializerBuilderBase() {}
 
-	public TupleSerializerBuilderBase(Class<T> tupleClass, TypeSerializerBuilder<?>[] fieldSerializerBuilders) {
+	public TupleSerializerBuilderBase(Class<T> tupleClass, TypeSerializerConfiguration<?>[] fieldSerializerBuilders) {
 		this.tupleClass = checkNotNull(tupleClass);
 		this.fieldSerializerBuilders = checkNotNull(fieldSerializerBuilders);
 	}
@@ -55,7 +55,7 @@ public abstract class TupleSerializerBuilderBase<T> extends TypeSerializerBuilde
 		super.write(out);
 
 		InstantiationUtil.serializeObject(new DataOutputViewStream(out), tupleClass);
-		TypeSerializerBuilderUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
+		TypeSerializerConfigurationUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
 	}
 
 	@Override
@@ -68,36 +68,36 @@ public abstract class TupleSerializerBuilderBase<T> extends TypeSerializerBuilde
 			throw new IOException("Could not find class in classpath.", e);
 		}
 
-		this.fieldSerializerBuilders = TypeSerializerBuilderUtils.readSerializerBuilders(in, getUserCodeClassLoader());
+		this.fieldSerializerBuilders = TypeSerializerConfigurationUtils.readSerializerBuilders(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other.getClass() == this.getClass()) {
 			if (tupleClass != ((TupleSerializerBuilderBase) other).tupleClass) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 						"The tuple class cannot change. Was [" + tupleClass + "], " +
 							"trying to resolve with [" + ((TupleSerializerBuilderBase) other).tupleClass + "]");
 			}
 
 			if (fieldSerializerBuilders.length != ((TupleSerializerBuilderBase) other).fieldSerializerBuilders.length) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 						"The number of fields cannot change. Was " + fieldSerializerBuilders.length + ", " +
 							"trying to resolve with " + ((TupleSerializerBuilderBase) other).fieldSerializerBuilders.length);
 			} else {
 				for (int i = 0; i < fieldSerializerBuilders.length; i++) {
 					try {
 						fieldSerializerBuilders[i].resolve(((TupleSerializerBuilderBase) other).fieldSerializerBuilders[i]);
-					} catch (UnresolvableTypeSerializerBuilderException e) {
-						throw new UnresolvableTypeSerializerBuilderException(
+					} catch (UnresolvableTypeSerializerConfigurationException e) {
+						throw new UnresolvableTypeSerializerConfigurationException(
 								"Serializer builder for field " + i + " could not be resolved", e);
 					}
 				}
 			}
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}
@@ -111,7 +111,7 @@ public abstract class TupleSerializerBuilderBase<T> extends TypeSerializerBuilde
 		return tupleClass;
 	}
 
-	public TypeSerializerBuilder<?>[] getFieldSerializerBuilders() {
+	public TypeSerializerConfiguration<?>[] getFieldSerializerBuilders() {
 		return fieldSerializerBuilders;
 	}
 }

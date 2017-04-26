@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -151,8 +151,8 @@ public class TupleSerializer<T extends Tuple> extends TupleSerializerBase<T> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<T> getBuilder() {
-		return new TupleSerializerBuilder<>(tupleClass, TypeSerializerBuilderUtils.createBuilders(fieldSerializers));
+	public TypeSerializerConfiguration<T> getConfiguration() {
+		return new TupleSerializerBuilder<>(tupleClass, TypeSerializerConfigurationUtils.createBuilders(fieldSerializers));
 	}
 
 	private T instantiateRaw() {

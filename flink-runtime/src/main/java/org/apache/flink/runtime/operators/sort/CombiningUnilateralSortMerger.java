@@ -22,7 +22,7 @@ import org.apache.flink.api.common.functions.GroupCombineFunction;
 import org.apache.flink.api.common.functions.util.FunctionUtils;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.iomanager.BlockChannelWriter;
@@ -101,10 +101,10 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	 *                                   perform the sort.
 	 */
 	public CombiningUnilateralSortMerger(GroupCombineFunction<E, E> combineStub, MemoryManager memoryManager, IOManager ioManager,
-			MutableObjectIterator<E> input, AbstractInvokable parentTask, 
-			TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
-			double memoryFraction, int maxNumFileHandles, float startSpillingFraction,
-			boolean handleLargeRecords, boolean objectReuseEnabled)
+										 MutableObjectIterator<E> input, AbstractInvokable parentTask,
+										 TypeSerializerFactoryOld<E> serializerFactory, TypeComparator<E> comparator,
+										 double memoryFraction, int maxNumFileHandles, float startSpillingFraction,
+										 boolean handleLargeRecords, boolean objectReuseEnabled)
 	throws IOException, MemoryAllocationException
 	{
 		this(combineStub, memoryManager, ioManager, input, parentTask, serializerFactory, comparator,
@@ -134,10 +134,10 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 	 *                                   perform the sort.
 	 */
 	public CombiningUnilateralSortMerger(GroupCombineFunction<E, E> combineStub, MemoryManager memoryManager, IOManager ioManager,
-			MutableObjectIterator<E> input, AbstractInvokable parentTask, 
-			TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
-			double memoryFraction, int numSortBuffers, int maxNumFileHandles,
-			float startSpillingFraction, boolean handleLargeRecords, boolean objectReuseEnabled)
+										 MutableObjectIterator<E> input, AbstractInvokable parentTask,
+										 TypeSerializerFactoryOld<E> serializerFactory, TypeComparator<E> comparator,
+										 double memoryFraction, int numSortBuffers, int maxNumFileHandles,
+										 float startSpillingFraction, boolean handleLargeRecords, boolean objectReuseEnabled)
 	throws IOException, MemoryAllocationException
 	{
 		super(memoryManager, ioManager, input, parentTask, serializerFactory, comparator,
@@ -157,9 +157,9 @@ public class CombiningUnilateralSortMerger<E> extends UnilateralSortMerger<E> {
 
 	@Override
 	protected ThreadBase<E> getSpillingThread(ExceptionHandler<IOException> exceptionHandler, CircularQueues<E> queues,
-		AbstractInvokable parentTask, MemoryManager memoryManager, IOManager ioManager, 
-		TypeSerializerFactory<E> serializerFactory, TypeComparator<E> comparator,
-		List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory, int maxFileHandles)
+											  AbstractInvokable parentTask, MemoryManager memoryManager, IOManager ioManager,
+											  TypeSerializerFactoryOld<E> serializerFactory, TypeComparator<E> comparator,
+											  List<MemorySegment> sortReadMemory, List<MemorySegment> writeMemory, int maxFileHandles)
 	{
 		return new CombiningSpillingThread(exceptionHandler, queues, parentTask,
 			memoryManager, ioManager, serializerFactory.getSerializer(), comparator, sortReadMemory, writeMemory, maxFileHandles);

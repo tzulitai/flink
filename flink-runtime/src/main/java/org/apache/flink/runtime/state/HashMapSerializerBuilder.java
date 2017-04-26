@@ -20,9 +20,9 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
@@ -37,19 +37,19 @@ import java.util.HashMap;
  * @param <V> The type of the map values that the created {@link HashMapSerializer} serializes.
  */
 @Internal
-public final class HashMapSerializerBuilder<K, V> extends TypeSerializerBuilder<HashMap<K, V>> {
+public final class HashMapSerializerBuilder<K, V> extends TypeSerializerConfiguration<HashMap<K, V>> {
 
 	private static final int VERSION = 1;
 
-	private TypeSerializerBuilder<K> keySerializerBuilder;
-	private TypeSerializerBuilder<V> valueSerializerBuilder;
+	private TypeSerializerConfiguration<K> keySerializerBuilder;
+	private TypeSerializerConfiguration<V> valueSerializerBuilder;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public HashMapSerializerBuilder() {}
 
 	public HashMapSerializerBuilder(
-			TypeSerializerBuilder<K> keySerializerBuilder,
-			TypeSerializerBuilder<V> valueSerializerBuilder) {
+			TypeSerializerConfiguration<K> keySerializerBuilder,
+			TypeSerializerConfiguration<V> valueSerializerBuilder) {
 
 		this.keySerializerBuilder = Preconditions.checkNotNull(keySerializerBuilder);
 		this.valueSerializerBuilder = Preconditions.checkNotNull(valueSerializerBuilder);
@@ -58,26 +58,26 @@ public final class HashMapSerializerBuilder<K, V> extends TypeSerializerBuilder<
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, keySerializerBuilder);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, valueSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, keySerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, valueSerializerBuilder);
 	}
 
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
-		keySerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
-		valueSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		keySerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		valueSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof HashMapSerializerBuilder) {
 			keySerializerBuilder.resolve(((HashMapSerializerBuilder) other).keySerializerBuilder);
 			valueSerializerBuilder.resolve(((HashMapSerializerBuilder) other).valueSerializerBuilder);
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

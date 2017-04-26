@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.InputViewIterator;
@@ -61,7 +61,7 @@ public class TempBarrier<T> implements CloseableInputProvider<T> {
 
 	// --------------------------------------------------------------------------------------------
 	
-	public TempBarrier(AbstractInvokable owner, MutableObjectIterator<T> input, TypeSerializerFactory<T> serializerFactory,
+	public TempBarrier(AbstractInvokable owner, MutableObjectIterator<T> input, TypeSerializerFactoryOld<T> serializerFactory,
 			MemoryManager memManager, IOManager ioManager, int numPages) throws MemoryAllocationException
 	{
 		this.serializer = serializerFactory.getSerializer();

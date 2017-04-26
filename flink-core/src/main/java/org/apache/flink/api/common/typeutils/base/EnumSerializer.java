@@ -118,7 +118,7 @@ public final class EnumSerializer<T extends Enum<T>> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public EnumSerializerBuilder<T> getBuilder() {
+	public EnumSerializerBuilder<T> getConfiguration() {
 		return new EnumSerializerBuilder<>(enumClass);
 	}
 

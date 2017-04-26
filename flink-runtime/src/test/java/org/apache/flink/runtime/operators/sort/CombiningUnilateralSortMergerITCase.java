@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.common.typeutils.base.IntComparator;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -70,8 +70,8 @@ public class CombiningUnilateralSortMergerITCase extends TestLogger {
 
 	private MemoryManager memoryManager;
 
-	private TypeSerializerFactory<Tuple2<Integer, String>> serializerFactory1;
-	private TypeSerializerFactory<Tuple2<Integer, Integer>> serializerFactory2;
+	private TypeSerializerFactoryOld<Tuple2<Integer, String>> serializerFactory1;
+	private TypeSerializerFactoryOld<Tuple2<Integer, Integer>> serializerFactory2;
 	
 	private TypeComparator<Tuple2<Integer, String>> comparator1;
 	private TypeComparator<Tuple2<Integer, Integer>> comparator2;

@@ -25,30 +25,30 @@ import org.apache.flink.core.memory.{DataInputView, DataOutputView}
   * Builder for [[OptionSerializer]]
   */
 @Internal
-final class OptionSerializerBuilder[A](private var elemSerializerBuilder: TypeSerializerBuilder[A])
-  extends TypeSerializerBuilder[Option[A]] {
+final class OptionSerializerBuilder[A](private var elemSerializerBuilder: TypeSerializerConfiguration[A])
+  extends TypeSerializerConfiguration[Option[A]] {
 
   /** This empty nullary constructor is required for deserializing the builder. */
   def this() = this(null)
 
   override def write(out: DataOutputView): Unit = {
     super.write(out)
-    TypeSerializerBuilderUtils.writeSerializerBuilder(out, elemSerializerBuilder)
+    TypeSerializerConfigurationUtils.writeSerializerBuilder(out, elemSerializerBuilder)
   }
 
   override def read(in: DataInputView): Unit = {
     super.read(in)
-    elemSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader)
+    elemSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader)
   }
 
-  override def resolve(other: TypeSerializerBuilder[_]): Unit = {
+  override def resolve(other: TypeSerializerConfiguration[_]): Unit = {
     super.resolve(other)
 
     other match {
       case otheOptionSerializerBuilder: OptionSerializerBuilder[A] =>
         elemSerializerBuilder.resolve(otheOptionSerializerBuilder.elemSerializerBuilder)
       case _ =>
-        throw new UnresolvableTypeSerializerBuilderException(
+        throw new UnresolvableTypeSerializerConfigurationException(
             "Cannot resolve this builder with another builder of type " + other.getClass)
     }
   }

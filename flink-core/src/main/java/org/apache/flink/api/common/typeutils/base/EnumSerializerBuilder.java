@@ -20,8 +20,8 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -35,7 +35,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> the enum type handled by the enum serializer that this builder constructs.
  */
 @Internal
-public class EnumSerializerBuilder<T extends Enum<T>> extends TypeSerializerBuilder<T> {
+public class EnumSerializerBuilder<T extends Enum<T>> extends TypeSerializerConfiguration<T> {
 
 	private static final int VERSION = 1;
 
@@ -66,16 +66,16 @@ public class EnumSerializerBuilder<T extends Enum<T>> extends TypeSerializerBuil
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof EnumSerializerBuilder) {
 			if (!enumClass.equals(((EnumSerializerBuilder) other).enumClass)) {
-				throw new UnresolvableTypeSerializerBuilderException("Enum class cannot change for an EnumSerializer.");
+				throw new UnresolvableTypeSerializerConfigurationException("Enum class cannot change for an EnumSerializer.");
 			} else {
 				for (int i = 0; i < values.length; i++) {
 					if (values[i] != ((EnumSerializerBuilder) other).values[i]) {
-						throw new UnresolvableTypeSerializerBuilderException(
+						throw new UnresolvableTypeSerializerConfigurationException(
 								"New enum constants can only be appended to the enumeration.");
 					}
 				}
@@ -84,7 +84,7 @@ public class EnumSerializerBuilder<T extends Enum<T>> extends TypeSerializerBuil
 			// the old enum constants are resolvable with the new ones; simply replace the constants array
 			this.values = enumClass.getEnumConstants();
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

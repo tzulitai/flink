@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.hash.InPlaceMutableHashTable;
@@ -32,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.memory.MemoryManager;
 import org.apache.flink.runtime.operators.sort.FixedLengthRecordSorter;
@@ -116,7 +116,7 @@ public class ReduceCombineDriver<T> implements Driver<ReduceFunction<T>, T> {
 		strategy = taskContext.getTaskConfig().getDriverStrategy();
 
 		// instantiate the serializer / comparator
-		final TypeSerializerFactory<T> serializerFactory = taskContext.getInputSerializer(0);
+		final TypeSerializerFactoryOld<T> serializerFactory = taskContext.getInputSerializer(0);
 		comparator = taskContext.getDriverComparator(0);
 		serializer = serializerFactory.getSerializer();
 		reducer = taskContext.getStub();

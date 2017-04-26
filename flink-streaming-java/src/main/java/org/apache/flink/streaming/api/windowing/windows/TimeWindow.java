@@ -20,7 +20,7 @@ package org.apache.flink.streaming.api.windowing.windows;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -206,7 +206,7 @@ public class TimeWindow extends Window {
 		}
 
 		@Override
-		public TypeSerializerBuilder<TimeWindow> getBuilder() {
+		public TypeSerializerConfiguration<TimeWindow> getConfiguration() {
 			return new BasicTypeSerializerBuilder<>(Serializer.class);
 		}
 	}

@@ -19,7 +19,7 @@ package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
 import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerConfiguration}
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
@@ -100,7 +100,7 @@ final class TrySerializer[A](
     31 * elemSerializer.hashCode() + throwableSerializer.hashCode()
   }
 
-  override def getBuilder: TypeSerializerBuilder[Try[A]] = {
-    new TrySerializerBuilder[A](elemSerializer.getBuilder, throwableSerializer.getBuilder)
+  override def getConfiguration: TypeSerializerConfiguration[Try[A]] = {
+    new TrySerializerBuilder[A](elemSerializer.getConfiguration, throwableSerializer.getConfiguration)
   }
 }

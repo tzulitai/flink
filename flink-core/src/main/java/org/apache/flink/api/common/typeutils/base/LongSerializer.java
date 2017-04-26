@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -86,7 +86,7 @@ public final class LongSerializer extends TypeSerializerSingleton<Long> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Long> getBuilder() {
+	public TypeSerializerConfiguration<Long> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(LongSerializer.class);
 	}
 }

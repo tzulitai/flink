@@ -24,7 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.common.typeutils.base.IntComparator;
 import org.apache.flink.api.java.tuple.Tuple;
 
@@ -289,13 +289,13 @@ public final class TestData {
 	//----Tuple2<Integer, String>
 	private static final TupleTypeInfo<Tuple2<Integer, String>> typeInfoIntString = TupleTypeInfo.getBasicTupleTypeInfo(Integer.class, String.class);
 
-	private static final TypeSerializerFactory<Tuple2<Integer, String>> serializerFactoryIntString = new MockTupleSerializerFactory(typeInfoIntString);
+	private static final TypeSerializerFactoryOld<Tuple2<Integer, String>> serializerFactoryIntString = new MockTupleSerializerFactory(typeInfoIntString);
 
 	public static TupleTypeInfo<Tuple2<Integer, String>> getIntStringTupleTypeInfo() {
 		return typeInfoIntString;
 	}
 
-	public static TypeSerializerFactory<Tuple2<Integer, String>> getIntStringTupleSerializerFactory() {
+	public static TypeSerializerFactoryOld<Tuple2<Integer, String>> getIntStringTupleSerializerFactory() {
 		return serializerFactoryIntString;
 	}
 
@@ -314,13 +314,13 @@ public final class TestData {
 	//----Tuple2<Integer, Integer>
 	private static final TupleTypeInfo<Tuple2<Integer, Integer>> typeInfoIntInt = TupleTypeInfo.getBasicTupleTypeInfo(Integer.class, Integer.class);
 
-	private static final TypeSerializerFactory<Tuple2<Integer, Integer>> serializerFactoryIntInt = new MockTupleSerializerFactory(typeInfoIntInt);
+	private static final TypeSerializerFactoryOld<Tuple2<Integer, Integer>> serializerFactoryIntInt = new MockTupleSerializerFactory(typeInfoIntInt);
 
 	public static TupleTypeInfo<Tuple2<Integer, Integer>> getIntIntTupleTypeInfo() {
 		return typeInfoIntInt;
 	}
 
-	public static TypeSerializerFactory<Tuple2<Integer, Integer>> getIntIntTupleSerializerFactory() {
+	public static TypeSerializerFactoryOld<Tuple2<Integer, Integer>> getIntIntTupleSerializerFactory() {
 		return serializerFactoryIntInt;
 	}
 
@@ -337,7 +337,7 @@ public final class TestData {
 	}
 
 	//----Tuple2<?, ?>
-	private static class MockTupleSerializerFactory<T extends Tuple> implements TypeSerializerFactory<T> {
+	private static class MockTupleSerializerFactory<T extends Tuple> implements TypeSerializerFactoryOld<T> {
 		private final TupleTypeInfo<T> info;
 
 		public MockTupleSerializerFactory(TupleTypeInfo<T> info) {

@@ -21,7 +21,7 @@ package org.apache.flink.runtime.operators.drivers;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.java.typeutils.runtime.RuntimeSerializerFactory;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.MemoryType;
@@ -47,9 +47,9 @@ public class TestTaskContext<S, T> implements TaskContext<S, T> {
 	
 	private MutableObjectIterator<?> input2;
 	
-	private TypeSerializerFactory<?> serializer1;
+	private TypeSerializerFactoryOld<?> serializer1;
 	
-	private TypeSerializerFactory<?> serializer2;
+	private TypeSerializerFactoryOld<?> serializer2;
 	
 	private TypeComparator<?> comparator1;
 	
@@ -82,12 +82,12 @@ public class TestTaskContext<S, T> implements TaskContext<S, T> {
 	//  Setters
 	// --------------------------------------------------------------------------------------------
 	
-	public <X> void setInput1(MutableObjectIterator<X> input, TypeSerializerFactory<X> serializer) {
+	public <X> void setInput1(MutableObjectIterator<X> input, TypeSerializerFactoryOld<X> serializer) {
 		this.input1 = input;
 		this.serializer1 = serializer;
 	}
 
-	public <X> void setInput2(MutableObjectIterator<X> input, TypeSerializerFactory<X> serializer) {
+	public <X> void setInput2(MutableObjectIterator<X> input, TypeSerializerFactoryOld<X> serializer) {
 		this.input2 = input;
 		this.serializer2 = serializer;
 	}
@@ -181,12 +181,12 @@ public class TestTaskContext<S, T> implements TaskContext<S, T> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <X> TypeSerializerFactory<X> getInputSerializer(int index) {
+	public <X> TypeSerializerFactoryOld<X> getInputSerializer(int index) {
 		switch (index) {
 		case 0:
-			return (TypeSerializerFactory<X>) this.serializer1;
+			return (TypeSerializerFactoryOld<X>) this.serializer1;
 		case 1:
-			return (TypeSerializerFactory<X>) this.serializer2;
+			return (TypeSerializerFactoryOld<X>) this.serializer2;
 		default:
 			throw new RuntimeException();
 		}

@@ -19,8 +19,8 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.state.StateDescriptor;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -35,9 +35,9 @@ public class RegisteredBackendStateMetaInfo<N, S> {
 
 	private StateDescriptor.Type stateType;
 	private String name;
-	private TypeSerializerBuilder<N> namespaceSerializerBuilder;
+	private TypeSerializerConfiguration<N> namespaceSerializerBuilder;
 	private Class<S> stateClass;
-	private TypeSerializerBuilder<S> stateSerializerBuilder;
+	private TypeSerializerConfiguration<S> stateSerializerBuilder;
 
 	/** Empty constructor used by {@link StateMetaInfoSerializationProxy} when reading serialized meta info. */
 	public RegisteredBackendStateMetaInfo() {}
@@ -45,8 +45,8 @@ public class RegisteredBackendStateMetaInfo<N, S> {
 	public RegisteredBackendStateMetaInfo(
 			StateDescriptor.Type stateType,
 			String name,
-			TypeSerializerBuilder<N> namespaceSerializerBuilder,
-			TypeSerializerBuilder<S> stateSerializerBuilder) {
+			TypeSerializerConfiguration<N> namespaceSerializerBuilder,
+			TypeSerializerConfiguration<S> stateSerializerBuilder) {
 
 		this.stateType = checkNotNull(stateType);
 		this.name = checkNotNull(name);
@@ -70,19 +70,19 @@ public class RegisteredBackendStateMetaInfo<N, S> {
 		return name;
 	}
 
-	public void setNamespaceSerializerBuilder(TypeSerializerBuilder<N> namespaceSerializerBuilder) {
+	public void setNamespaceSerializerBuilder(TypeSerializerConfiguration<N> namespaceSerializerBuilder) {
 		this.namespaceSerializerBuilder = namespaceSerializerBuilder;
 	}
 
-	public TypeSerializerBuilder<N> getNamespaceSerializerBuilder() {
+	public TypeSerializerConfiguration<N> getNamespaceSerializerBuilder() {
 		return namespaceSerializerBuilder;
 	}
 
-	public void setStateSerializerBuilder(TypeSerializerBuilder<S> stateSerializerBuilder) {
+	public void setStateSerializerBuilder(TypeSerializerConfiguration<S> stateSerializerBuilder) {
 		this.stateSerializerBuilder = stateSerializerBuilder;
 	}
 
-	public TypeSerializerBuilder<S> getStateSerializerBuilder() {
+	public TypeSerializerConfiguration<S> getStateSerializerBuilder() {
 		return stateSerializerBuilder;
 	}
 
@@ -116,14 +116,14 @@ public class RegisteredBackendStateMetaInfo<N, S> {
 
 		try {
 			namespaceSerializerBuilder.resolve(other.getNamespaceSerializerBuilder());
-		} catch (UnresolvableTypeSerializerBuilderException e) {
+		} catch (UnresolvableTypeSerializerConfigurationException e) {
 			throw new UnresolvableStateException("Namespace serializer builder cannot be resolved. " +
 					"Was " + namespaceSerializerBuilder + ", trying to resolve with " + other.getNamespaceSerializerBuilder(), e);
 		}
 
 		try {
 			stateSerializerBuilder.resolve(other.getStateSerializerBuilder());
-		} catch (UnresolvableTypeSerializerBuilderException e) {
+		} catch (UnresolvableTypeSerializerConfigurationException e) {
 			throw new UnresolvableStateException("State serializer builder cannot be resolved. " +
 					"Was " + stateSerializerBuilder + ", trying to resolve with " + other.getStateSerializerBuilder(), e);
 		}

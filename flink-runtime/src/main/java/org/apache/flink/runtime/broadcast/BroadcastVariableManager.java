@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.runtime.io.network.api.reader.MutableReader;
 import org.apache.flink.runtime.operators.BatchTask;
 
@@ -34,7 +34,7 @@ public class BroadcastVariableManager {
 	// --------------------------------------------------------------------------------------------
 	
 	public <T> BroadcastVariableMaterialization<T, ?> materializeBroadcastVariable(String name, int superstep, BatchTask<?, ?> holder,
-			MutableReader<?> reader, TypeSerializerFactory<T> serializerFactory) throws IOException
+			MutableReader<?> reader, TypeSerializerFactoryOld<T> serializerFactory) throws IOException
 	{
 		final BroadcastVariableKey key = new BroadcastVariableKey(holder.getEnvironment().getJobVertexId(), name, superstep);
 		

@@ -153,7 +153,7 @@ private[flink] trait TypeInformationGen[C <: Context] {
               instance.splice
             }
 
-            override def getBuilder: TypeSerializerBuilder[T] = {
+            override def getConfiguration: TypeSerializerConfiguration[T] = {
 
             }
           }

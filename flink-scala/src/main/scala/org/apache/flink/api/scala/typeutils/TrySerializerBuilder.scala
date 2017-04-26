@@ -29,26 +29,26 @@ import scala.util.Try
   */
 @Internal
 final class TrySerializerBuilder[A](
-    private var elemSerializerBuilder: TypeSerializerBuilder[A],
-    private var throwableSerializerBuilder: TypeSerializerBuilder[Throwable])
-  extends TypeSerializerBuilder[Try[A]] {
+                                     private var elemSerializerBuilder: TypeSerializerConfiguration[A],
+                                     private var throwableSerializerBuilder: TypeSerializerConfiguration[Throwable])
+  extends TypeSerializerConfiguration[Try[A]] {
 
   /** This empty nullary constructor is required for deserializing the builder. */
   def this() = this(null, null)
 
   override def write(out: DataOutputView): Unit = {
     super.write(out)
-    TypeSerializerBuilderUtils.writeSerializerBuilder(out, elemSerializerBuilder)
-    TypeSerializerBuilderUtils.writeSerializerBuilder(out, throwableSerializerBuilder)
+    TypeSerializerConfigurationUtils.writeSerializerBuilder(out, elemSerializerBuilder)
+    TypeSerializerConfigurationUtils.writeSerializerBuilder(out, throwableSerializerBuilder)
   }
 
   override def read(in: DataInputView): Unit = {
     super.read(in)
-    elemSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader)
-    throwableSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader)
+    elemSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader)
+    throwableSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader)
   }
 
-  override def resolve(other: TypeSerializerBuilder[_]): Unit = {
+  override def resolve(other: TypeSerializerConfiguration[_]): Unit = {
     super.resolve(other)
 
     other match {
@@ -56,7 +56,7 @@ final class TrySerializerBuilder[A](
         elemSerializerBuilder.resolve(otheTrySerializerBuilder.elemSerializerBuilder)
         throwableSerializerBuilder.resolve(otheTrySerializerBuilder.throwableSerializerBuilder)
       case _ =>
-        throw new UnresolvableTypeSerializerBuilderException(
+        throw new UnresolvableTypeSerializerConfigurationException(
             "Cannot resolve this builder with another builder of type " + other.getClass)
     }
   }

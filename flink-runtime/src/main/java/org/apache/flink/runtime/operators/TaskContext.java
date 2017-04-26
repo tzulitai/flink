@@ -21,7 +21,7 @@ package org.apache.flink.runtime.operators;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeComparator;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.memory.MemoryManager;
@@ -55,7 +55,7 @@ public interface TaskContext<S, OT> {
 
 	<X> MutableObjectIterator<X> getInput(int index);
 	
-	<X> TypeSerializerFactory<X> getInputSerializer(int index);
+	<X> TypeSerializerFactoryOld<X> getInputSerializer(int index);
 	
 	<X> TypeComparator<X> getDriverComparator(int index);
 	

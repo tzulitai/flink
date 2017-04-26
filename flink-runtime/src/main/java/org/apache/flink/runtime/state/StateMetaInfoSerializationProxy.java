@@ -19,8 +19,8 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.state.StateDescriptor;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationProxy;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.io.VersionMismatchException;
@@ -101,8 +101,8 @@ public class StateMetaInfoSerializationProxy<N, S> extends VersionedIOReadableWr
 			out.writeInt(stateMetaInfo.getStateType().ordinal());
 			out.writeUTF(stateMetaInfo.getName());
 
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, stateMetaInfo.getNamespaceSerializerBuilder());
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, stateMetaInfo.getStateSerializerBuilder());
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, stateMetaInfo.getNamespaceSerializerBuilder());
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, stateMetaInfo.getStateSerializerBuilder());
 		}
 
 		@Override
@@ -117,18 +117,18 @@ public class StateMetaInfoSerializationProxy<N, S> extends VersionedIOReadableWr
 			stateMetaInfo.setStateSerializerBuilder(readStateSerializerBuilder(in, userCodeClassLoader));
 		}
 
-		protected abstract TypeSerializerBuilder<N> readNamespaceSerializerBuilder(
+		protected abstract TypeSerializerConfiguration<N> readNamespaceSerializerBuilder(
 				DataInputView in,
 				ClassLoader classLoader) throws IOException;
 
-		protected abstract TypeSerializerBuilder<S> readStateSerializerBuilder(
+		protected abstract TypeSerializerConfiguration<S> readStateSerializerBuilder(
 				DataInputView in,
 				ClassLoader classLoader) throws IOException;
 	}
 
 	private class PreVersionedSerializationCompatilityProxy extends SerializationCompatibilityProxy {
 		@Override
-		protected TypeSerializerBuilder<N> readNamespaceSerializerBuilder(
+		protected TypeSerializerConfiguration<N> readNamespaceSerializerBuilder(
 			DataInputView in,
 			ClassLoader classLoader) throws IOException {
 
@@ -136,11 +136,11 @@ public class StateMetaInfoSerializationProxy<N, S> extends VersionedIOReadableWr
 					new TypeSerializerSerializationProxy<>(classLoader);
 			namespaceSerializerProxy.read(in);
 
-			return namespaceSerializerProxy.getTypeSerializer().getBuilder();
+			return namespaceSerializerProxy.getTypeSerializer().getConfiguration();
 		}
 
 		@Override
-		protected TypeSerializerBuilder<S> readStateSerializerBuilder(
+		protected TypeSerializerConfiguration<S> readStateSerializerBuilder(
 			DataInputView in,
 			ClassLoader classLoader) throws IOException {
 
@@ -148,25 +148,25 @@ public class StateMetaInfoSerializationProxy<N, S> extends VersionedIOReadableWr
 					new TypeSerializerSerializationProxy<>(classLoader);
 			stateSerializerProxy.read(in);
 
-			return stateSerializerProxy.getTypeSerializer().getBuilder();
+			return stateSerializerProxy.getTypeSerializer().getConfiguration();
 		}
 	}
 
 	private class V1SerializationCompatibilityProxy extends SerializationCompatibilityProxy {
 		@Override
-		protected TypeSerializerBuilder<N> readNamespaceSerializerBuilder(
+		protected TypeSerializerConfiguration<N> readNamespaceSerializerBuilder(
 			DataInputView in,
 			ClassLoader classLoader) throws IOException {
 
-			return TypeSerializerBuilderUtils.readSerializerBuilder(in, userCodeClassLoader);
+			return TypeSerializerConfigurationUtils.readSerializerBuilder(in, userCodeClassLoader);
 		}
 
 		@Override
-		protected TypeSerializerBuilder<S> readStateSerializerBuilder(
+		protected TypeSerializerConfiguration<S> readStateSerializerBuilder(
 			DataInputView in,
 			ClassLoader classLoader) throws IOException {
 
-			return TypeSerializerBuilderUtils.readSerializerBuilder(in, userCodeClassLoader);
+			return TypeSerializerConfigurationUtils.readSerializerBuilder(in, userCodeClassLoader);
 		}
 	}
 }

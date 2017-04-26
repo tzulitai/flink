@@ -22,7 +22,7 @@ import org.apache.flink.api.common.distributions.DataDistribution;
 import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.operators.util.FieldList;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.dag.EstimateProvider;
 import org.apache.flink.optimizer.dag.TempMode;
@@ -92,7 +92,7 @@ public class Channel implements EstimateProvider, Cloneable, DumpableConnection<
 	
 	private LocalProperties localProps;
 	
-	private TypeSerializerFactory<?> serializer;
+	private TypeSerializerFactoryOld<?> serializer;
 	
 	private TypeComparatorFactory<?> shipStrategyComparator;
 	
@@ -307,7 +307,7 @@ public class Channel implements EstimateProvider, Cloneable, DumpableConnection<
 	 *
 	 * @return The serializer.
 	 */
-	public TypeSerializerFactory<?> getSerializer() {
+	public TypeSerializerFactoryOld<?> getSerializer() {
 		return serializer;
 	}
 	
@@ -316,7 +316,7 @@ public class Channel implements EstimateProvider, Cloneable, DumpableConnection<
 	 *
 	 * @param serializer The serializer to set.
 	 */
-	public void setSerializer(TypeSerializerFactory<?> serializer) {
+	public void setSerializer(TypeSerializerFactoryOld<?> serializer) {
 		this.serializer = serializer;
 	}
 	

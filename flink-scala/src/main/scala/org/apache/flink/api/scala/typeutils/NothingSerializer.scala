@@ -18,7 +18,7 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder, TypeSerializerConfiguration}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
@@ -57,7 +57,7 @@ class NothingSerializer extends TypeSerializer[Any] {
   override def deserialize(reuse: Any, source: DataInputView): Any =
     throw new RuntimeException("This must not be used. You encountered a bug.")
 
-  override def getBuilder: TypeSerializerBuilder[Any] =
+  override def getConfiguration: TypeSerializerConfiguration[Any] =
     throw new RuntimeException("This must not be used. You encountered a bug.")
 
   override def equals(obj: Any): Boolean = {

@@ -26,7 +26,7 @@ import java.util.Map;
 
 import org.apache.flink.api.common.operators.util.FieldList;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.costs.Costs;
 import org.apache.flink.optimizer.dag.OptimizerNode;
@@ -47,9 +47,9 @@ public class WorksetIterationPlanNode extends DualInputPlanNode implements Itera
 	
 	private final PlanNode nextWorkSetPlanNode;
 	
-	private TypeSerializerFactory<?> worksetSerializer;
+	private TypeSerializerFactoryOld<?> worksetSerializer;
 	
-	private TypeSerializerFactory<?> solutionSetSerializer;
+	private TypeSerializerFactoryOld<?> solutionSetSerializer;
 	
 	private TypeComparatorFactory<?> solutionSetComparator;
 	
@@ -57,7 +57,7 @@ public class WorksetIterationPlanNode extends DualInputPlanNode implements Itera
 	
 	public Object postPassHelper;
 	
-	private TypeSerializerFactory<?> serializerForIterationChannel;
+	private TypeSerializerFactoryOld<?> serializerForIterationChannel;
 	
 	// --------------------------------------------------------------------------------------------
 
@@ -123,19 +123,19 @@ public class WorksetIterationPlanNode extends DualInputPlanNode implements Itera
 	
 	// --------------------------------------------------------------------------------------------
 	
-	public TypeSerializerFactory<?> getWorksetSerializer() {
+	public TypeSerializerFactoryOld<?> getWorksetSerializer() {
 		return worksetSerializer;
 	}
 	
-	public void setWorksetSerializer(TypeSerializerFactory<?> worksetSerializer) {
+	public void setWorksetSerializer(TypeSerializerFactoryOld<?> worksetSerializer) {
 		this.worksetSerializer = worksetSerializer;
 	}
 	
-	public TypeSerializerFactory<?> getSolutionSetSerializer() {
+	public TypeSerializerFactoryOld<?> getSolutionSetSerializer() {
 		return solutionSetSerializer;
 	}
 	
-	public void setSolutionSetSerializer(TypeSerializerFactory<?> solutionSetSerializer) {
+	public void setSolutionSetSerializer(TypeSerializerFactoryOld<?> solutionSetSerializer) {
 		this.solutionSetSerializer = solutionSetSerializer;
 	}
 	
@@ -249,11 +249,11 @@ public class WorksetIterationPlanNode extends DualInputPlanNode implements Itera
 	
 	// --------------------------------------------------------------------------------------------
 	
-	public TypeSerializerFactory<?> getSerializerForIterationChannel() {
+	public TypeSerializerFactoryOld<?> getSerializerForIterationChannel() {
 		return serializerForIterationChannel;
 	}
 	
-	public void setSerializerForIterationChannel(TypeSerializerFactory<?> serializerForIterationChannel) {
+	public void setSerializerForIterationChannel(TypeSerializerFactoryOld<?> serializerForIterationChannel) {
 		this.serializerForIterationChannel = serializerForIterationChannel;
 	}
 }

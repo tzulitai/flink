@@ -24,8 +24,8 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.fs.FSDataOutputStream;
@@ -240,7 +240,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 	static final class RegisteredOperatorStateMetaInfo<S> {
 
 		private String name;
-		private TypeSerializerBuilder<S> stateSerializerBuilder;
+		private TypeSerializerConfiguration<S> stateSerializerBuilder;
 		private OperatorStateHandle.Mode assignmentMode;
 
 		/** Empty constructor used by when reading serialized meta info. */
@@ -248,7 +248,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 
 		public RegisteredOperatorStateMetaInfo(
 				String name,
-				TypeSerializerBuilder<S> stateSerializerBuilder,
+				TypeSerializerConfiguration<S> stateSerializerBuilder,
 				OperatorStateHandle.Mode assignmentMode) {
 
 			this.name = Preconditions.checkNotNull(name);
@@ -264,11 +264,11 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 			return name;
 		}
 
-		public void setStateSerializerBuilder(TypeSerializerBuilder<S> stateSerializerBuilder) {
+		public void setStateSerializerBuilder(TypeSerializerConfiguration<S> stateSerializerBuilder) {
 			this.stateSerializerBuilder = stateSerializerBuilder;
 		}
 
-		public TypeSerializerBuilder<S> getStateSerializerBuilder() {
+		public TypeSerializerConfiguration<S> getStateSerializerBuilder() {
 			return stateSerializerBuilder;
 		}
 
@@ -302,7 +302,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 
 			try {
 				stateSerializerBuilder.resolve(other.getStateSerializerBuilder());
-			} catch (UnresolvableTypeSerializerBuilderException e) {
+			} catch (UnresolvableTypeSerializerConfigurationException e) {
 				throw new UnresolvableStateException("State serializer builder cannot be resolved. " +
 						"Was " + stateSerializerBuilder + ", trying to resolve with " + other.getStateSerializerBuilder(), e);
 			}
@@ -394,7 +394,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
 		TypeSerializer<S> partitionStateSerializer = Preconditions.checkNotNull(stateDescriptor.getElementSerializer());
 
 		RegisteredOperatorStateMetaInfo<S> newStateMetaInfo =
-				new RegisteredOperatorStateMetaInfo<>(name, partitionStateSerializer.getBuilder(), mode);
+				new RegisteredOperatorStateMetaInfo<>(name, partitionStateSerializer.getConfiguration(), mode);
 
 		@SuppressWarnings("unchecked")
 		PartitionableListState<S> partitionableListState = (PartitionableListState<S>) registeredStates.get(name);

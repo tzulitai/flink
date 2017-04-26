@@ -23,7 +23,7 @@ import static org.apache.flink.optimizer.plan.PlanNode.SourceAndDamReport.NOT_FO
 
 import java.util.Collections;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.optimizer.dag.DataSourceNode;
 import org.apache.flink.optimizer.dataproperties.GlobalProperties;
 import org.apache.flink.optimizer.dataproperties.LocalProperties;
@@ -35,7 +35,7 @@ import org.apache.flink.util.Visitor;
  */
 public class SourcePlanNode extends PlanNode {
 	
-	private TypeSerializerFactory<?> serializer;
+	private TypeSerializerFactoryOld<?> serializer;
 	
 	/**
 	 * Constructs a new source candidate node that uses <i>NONE</i> as its local strategy.
@@ -65,7 +65,7 @@ public class SourcePlanNode extends PlanNode {
 	 *
 	 * @return The serializer.
 	 */
-	public TypeSerializerFactory<?> getSerializer() {
+	public TypeSerializerFactoryOld<?> getSerializer() {
 		return serializer;
 	}
 	
@@ -74,7 +74,7 @@ public class SourcePlanNode extends PlanNode {
 	 *
 	 * @param serializer The serializer to set.
 	 */
-	public void setSerializer(TypeSerializerFactory<?> serializer) {
+	public void setSerializer(TypeSerializerFactoryOld<?> serializer) {
 		this.serializer = serializer;
 	}
 

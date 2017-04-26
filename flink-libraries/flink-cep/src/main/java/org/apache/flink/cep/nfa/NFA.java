@@ -23,7 +23,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.LinkedHashMultimap;
 import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
@@ -934,7 +934,7 @@ public class NFA<T> implements Serializable {
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public TypeSerializerBuilder<NFA<T>> getBuilder() {
+		public TypeSerializerConfiguration<NFA<T>> getConfiguration() {
 			return new BasicTypeSerializerBuilder<>((Class<? extends TypeSerializer<NFA<T>>>) Serializer.class);
 		}
 	}

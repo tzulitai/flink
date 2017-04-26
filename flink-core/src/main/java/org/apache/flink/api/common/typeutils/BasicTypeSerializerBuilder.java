@@ -30,14 +30,14 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A simple {@link TypeSerializerBuilder} for configuration-less {@link TypeSerializer}s.
+ * A simple {@link TypeSerializerConfiguration} for configuration-less {@link TypeSerializer}s.
  * This builder assumes that the serializer to build has an empty nullary constructor (since
  * the serializer does not require any configuration).
  *
  * @param <T> the type of the data handled by the serializer that this builder constructs.
  */
 @Internal
-public class BasicTypeSerializerBuilder<T> extends TypeSerializerBuilder<T> {
+public class BasicTypeSerializerBuilder<T> extends TypeSerializerConfiguration<T> {
 
 	private static final int VERSION = 1;
 
@@ -67,16 +67,16 @@ public class BasicTypeSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof BasicTypeSerializerBuilder) {
 			if (serializerClass != ((BasicTypeSerializerBuilder) other).serializerClass) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 					"The class of the serializer that the BasicTypeSerializerBuilder constructs cannot change");
 			}
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

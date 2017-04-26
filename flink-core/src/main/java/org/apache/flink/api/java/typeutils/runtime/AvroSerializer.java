@@ -27,7 +27,7 @@ import org.apache.avro.util.Utf8;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.java.typeutils.runtime.kryo.Serializers;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -181,7 +181,7 @@ public final class AvroSerializer<T> extends TypeSerializer<T> {
 
 
 	@Override
-	public TypeSerializerBuilder<T> getBuilder() {
+	public TypeSerializerConfiguration<T> getConfiguration() {
 		return null;
 	}
 

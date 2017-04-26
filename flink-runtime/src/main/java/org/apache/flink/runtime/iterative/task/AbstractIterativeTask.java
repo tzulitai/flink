@@ -21,6 +21,7 @@ package org.apache.flink.runtime.iterative.task;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.TaskInfo;
 import org.apache.flink.api.common.accumulators.Accumulator;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.operators.BatchTask;
@@ -32,7 +33,6 @@ import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.IterationRuntimeContext;
 import org.apache.flink.api.common.operators.util.JoinHashMap;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.reader.MutableReader;
@@ -348,7 +348,7 @@ public abstract class AbstractIterativeTask<S extends Function, OT> extends Batc
 	 * @return output serializer of this task
 	 */
 	private TypeSerializer<OT> getOutputSerializer() {
-		TypeSerializerFactory<OT> serializerFactory;
+		TypeSerializerFactoryOld<OT> serializerFactory;
 
 		if ((serializerFactory = getLastTasksConfig().getOutputSerializer(getUserCodeClassLoader())) ==
 				null) {

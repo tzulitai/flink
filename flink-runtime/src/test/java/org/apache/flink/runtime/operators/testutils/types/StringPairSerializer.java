@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.StringValue;
@@ -108,7 +108,7 @@ public class StringPairSerializer extends TypeSerializer<StringPair> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<StringPair> getBuilder() {
+	public TypeSerializerConfiguration<StringPair> getConfiguration() {
 		return new BasicTypeSerializerBuilder<>(StringPairSerializer.class);
 	}
 }

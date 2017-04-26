@@ -135,7 +135,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			TypeSerializer<V> valueSerializer) {
 
 		final RegisteredBackendStateMetaInfo<N, V> newMetaInfo = new RegisteredBackendStateMetaInfo<>(
-				stateType, stateName, namespaceSerializer.getBuilder(), valueSerializer.getBuilder());
+				stateType, stateName, namespaceSerializer.getConfiguration(), valueSerializer.getConfiguration());
 
 		@SuppressWarnings("unchecked")
 		StateTable<K, N, V> stateTable = (StateTable<K, N, V>) stateTables.get(stateName);
@@ -261,7 +261,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 		}
 
 		final KeyedBackendSerializationProxy serializationProxy =
-				new KeyedBackendSerializationProxy(keySerializer.getBuilder(), metaInfoList);
+				new KeyedBackendSerializationProxy(keySerializer.getConfiguration(), metaInfoList);
 
 		//--------------------------------------------------- this becomes the end of sync part
 

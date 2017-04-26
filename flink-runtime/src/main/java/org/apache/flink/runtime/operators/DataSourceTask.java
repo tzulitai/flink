@@ -23,7 +23,7 @@ import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.RichInputFormat;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.metrics.Counter;
@@ -67,7 +67,7 @@ public class DataSourceTask<OT> extends AbstractInvokable {
 	private InputFormat<OT, InputSplit> format;
 
 	// type serializer for the input
-	private TypeSerializerFactory<OT> serializerFactory;
+	private TypeSerializerFactoryOld<OT> serializerFactory;
 	
 	// Task configuration
 	private TaskConfig config;

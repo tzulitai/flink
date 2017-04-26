@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -115,7 +115,7 @@ public final class BigDecSerializer extends TypeSerializerSingleton<BigDecimal> 
 	}
 
 	@Override
-	public TypeSerializerBuilder<BigDecimal> getBuilder() {
+	public TypeSerializerConfiguration<BigDecimal> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(BigDecSerializer.class);
 	}
 

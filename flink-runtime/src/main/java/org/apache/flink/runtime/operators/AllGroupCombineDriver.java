@@ -22,7 +22,7 @@ package org.apache.flink.runtime.operators;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.GroupCombineFunction;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.operators.util.metrics.CountingCollector;
 import org.apache.flink.runtime.operators.util.metrics.CountingMutableObjectIterator;
@@ -97,7 +97,7 @@ public class AllGroupCombineDriver<IN, OUT> implements Driver<GroupCombineFuncti
 		final Counter numRecordsIn = this.taskContext.getMetricGroup().getIOMetricGroup().getNumRecordsInCounter();
 		final Counter numRecordsOut = this.taskContext.getMetricGroup().getIOMetricGroup().getNumRecordsOutCounter();
 
-		final TypeSerializerFactory<IN> serializerFactory = this.taskContext.getInputSerializer(0);
+		final TypeSerializerFactoryOld<IN> serializerFactory = this.taskContext.getInputSerializer(0);
 		TypeSerializer<IN> serializer = serializerFactory.getSerializer();
 
 		final MutableObjectIterator<IN> in = new CountingMutableObjectIterator<>(this.taskContext.<IN>getInput(0), numRecordsIn);

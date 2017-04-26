@@ -20,7 +20,7 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
@@ -177,8 +177,8 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Map<K, V>> getBuilder() {
-		return new MapSerializerBuilder<>(keySerializer.getBuilder(), valueSerializer.getBuilder());
+	public TypeSerializerConfiguration<Map<K, V>> getConfiguration() {
+		return new MapSerializerBuilder<>(keySerializer.getConfiguration(), valueSerializer.getConfiguration());
 	}
 
 	@Override

@@ -22,7 +22,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.util.FunctionUtils;
 import org.apache.flink.api.common.typeutils.TypeComparator;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
@@ -333,9 +333,9 @@ public class DriverTestBase<S extends Function> extends TestLogger implements Ta
 	}
 
 	@Override
-	public <X> TypeSerializerFactory<X> getInputSerializer(int index) {
+	public <X> TypeSerializerFactoryOld<X> getInputSerializer(int index) {
 		@SuppressWarnings("unchecked")
-		TypeSerializerFactory<X> factory = (TypeSerializerFactory<X>) RecordSerializerFactory.get();
+		TypeSerializerFactoryOld<X> factory = (TypeSerializerFactoryOld<X>) RecordSerializerFactory.get();
 		return factory;
 	}
 

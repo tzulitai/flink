@@ -27,7 +27,7 @@ import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.functions.util.FunctionUtils;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.metrics.MetricGroup;
@@ -160,12 +160,12 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 	/**
 	 * The serializers for the input data type.
 	 */
-	protected TypeSerializerFactory<?>[] inputSerializers;
+	protected TypeSerializerFactoryOld<?>[] inputSerializers;
 
 	/**
 	 * The serializers for the broadcast input data types.
 	 */
-	protected TypeSerializerFactory<?>[] broadcastInputSerializers;
+	protected TypeSerializerFactoryOld<?>[] broadcastInputSerializers;
 
 	/**
 	 * The comparators for the central driver.
@@ -426,7 +426,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		}
 		
 		@SuppressWarnings("unchecked")
-		final TypeSerializerFactory<X> serializerFactory =  (TypeSerializerFactory<X>) this.broadcastInputSerializers[inputNum];
+		final TypeSerializerFactoryOld<X> serializerFactory =  (TypeSerializerFactoryOld<X>) this.broadcastInputSerializers[inputNum];
 		
 		final MutableReader<?> reader = this.broadcastInputReaders[inputNum];
 
@@ -728,7 +728,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 	 * Creates all the serializers and comparators.
 	 */
 	protected void initInputsSerializersAndComparators(int numInputs, int numComparators) throws Exception {
-		this.inputSerializers = new TypeSerializerFactory<?>[numInputs];
+		this.inputSerializers = new TypeSerializerFactoryOld<?>[numInputs];
 		this.inputComparators = numComparators > 0 ? new TypeComparator<?>[numComparators] : null;
 		this.inputIterators = new MutableObjectIterator<?>[numInputs];
 
@@ -736,7 +736,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		
 		for (int i = 0; i < numInputs; i++) {
 			
-			final TypeSerializerFactory<?> serializerFactory = this.config.getInputSerializer(i, userCodeClassLoader);
+			final TypeSerializerFactoryOld<?> serializerFactory = this.config.getInputSerializer(i, userCodeClassLoader);
 			this.inputSerializers[i] = serializerFactory;
 			
 			this.inputIterators[i] = createInputIterator(this.inputReaders[i], this.inputSerializers[i]);
@@ -756,13 +756,13 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 	 * Creates all the serializers and iterators for the broadcast inputs.
 	 */
 	protected void initBroadcastInputsSerializers(int numBroadcastInputs) throws Exception {
-		this.broadcastInputSerializers = new TypeSerializerFactory<?>[numBroadcastInputs];
+		this.broadcastInputSerializers = new TypeSerializerFactoryOld<?>[numBroadcastInputs];
 
 		ClassLoader userCodeClassLoader = getUserCodeClassLoader();
 
 		for (int i = 0; i < numBroadcastInputs; i++) {
 			//  ---------------- create the serializer first ---------------------
-			final TypeSerializerFactory<?> serializerFactory = this.config.getBroadcastInputSerializer(i, userCodeClassLoader);
+			final TypeSerializerFactoryOld<?> serializerFactory = this.config.getBroadcastInputSerializer(i, userCodeClassLoader);
 			this.broadcastInputSerializers[i] = serializerFactory;
 		}
 	}
@@ -987,7 +987,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		return compFact.createComparator();
 	}
 	
-	protected MutableObjectIterator<?> createInputIterator(MutableReader<?> inputReader, TypeSerializerFactory<?> serializerFactory) {
+	protected MutableObjectIterator<?> createInputIterator(MutableReader<?> inputReader, TypeSerializerFactoryOld<?> serializerFactory) {
 		@SuppressWarnings("unchecked")
 		MutableReader<DeserializationDelegate<?>> reader = (MutableReader<DeserializationDelegate<?>>) inputReader;
 		@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -1108,13 +1108,13 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 
 
 	@Override
-	public <X> TypeSerializerFactory<X> getInputSerializer(int index) {
+	public <X> TypeSerializerFactoryOld<X> getInputSerializer(int index) {
 		if (index < 0 || index >= this.driver.getNumberOfInputs()) {
 			throw new IndexOutOfBoundsException();
 		}
 
 		@SuppressWarnings("unchecked")
-		final TypeSerializerFactory<X> serializerFactory = (TypeSerializerFactory<X>) this.inputSerializers[index];
+		final TypeSerializerFactoryOld<X> serializerFactory = (TypeSerializerFactoryOld<X>) this.inputSerializers[index];
 		return serializerFactory;
 	}
 
@@ -1213,7 +1213,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable impleme
 		}
 
 		// get the factory for the serializer
-		final TypeSerializerFactory<T> serializerFactory = config.getOutputSerializer(cl);
+		final TypeSerializerFactoryOld<T> serializerFactory = config.getOutputSerializer(cl);
 		final List<RecordWriter<SerializationDelegate<T>>> writers = new ArrayList<>(numOutputs);
 
 		// create a writer for each output

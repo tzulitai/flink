@@ -18,7 +18,7 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerBuilder}
+import org.apache.flink.api.common.typeutils.{TypeSerializer, TypeSerializerConfiguration}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
@@ -105,7 +105,7 @@ final class EitherSerializer[A, B, T <: Either[A, B]](
     31 * leftSerializer.hashCode() + rightSerializer.hashCode()
   }
 
-  override def getBuilder: TypeSerializerBuilder[T] = {
-    new EitherSerializerBuilder(leftSerializer.getBuilder, rightSerializer.getBuilder)
+  override def getConfiguration: TypeSerializerConfiguration[T] = {
+    new EitherSerializerBuilder(leftSerializer.getConfiguration, rightSerializer.getConfiguration)
   }
 }

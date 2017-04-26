@@ -26,7 +26,7 @@ import java.util.Set;
 
 import org.apache.flink.api.common.functions.BroadcastVariableInitializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.runtime.io.network.api.reader.MutableReader;
 import org.apache.flink.runtime.operators.BatchTask;
 import org.apache.flink.runtime.operators.util.ReaderIterator;
@@ -64,7 +64,7 @@ public class BroadcastVariableMaterialization<T, C> {
 
 	// --------------------------------------------------------------------------------------------
 	
-	public void materializeVariable(MutableReader<?> reader, TypeSerializerFactory<?> serializerFactory, BatchTask<?, ?> referenceHolder)
+	public void materializeVariable(MutableReader<?> reader, TypeSerializerFactoryOld<?> serializerFactory, BatchTask<?, ?> referenceHolder)
 			throws MaterializationExpiredException, IOException
 	{
 		Preconditions.checkNotNull(reader);
@@ -96,7 +96,7 @@ public class BroadcastVariableMaterialization<T, C> {
 			final MutableReader<DeserializationDelegate<T>> typedReader = (MutableReader<DeserializationDelegate<T>>) reader;
 			
 			@SuppressWarnings("unchecked")
-			final TypeSerializer<T> serializer = ((TypeSerializerFactory<T>) serializerFactory).getSerializer();
+			final TypeSerializer<T> serializer = ((TypeSerializerFactoryOld<T>) serializerFactory).getSerializer();
 
 			final ReaderIterator<T> readerIterator = new ReaderIterator<T>(typedReader, serializer);
 			

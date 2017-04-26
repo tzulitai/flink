@@ -166,11 +166,17 @@ public abstract class TypeSerializer<T> implements Serializable {
 	// --------------------------------------------------------------------------------------------
 
 	/**
-	 * Return a {@link TypeSerializerBuilder} that can rebuild this serializer
+	 * Return a {@link TypeSerializerConfiguration} that can rebuild this serializer
 	 * to its current configuration or state.
 	 *
 	 * @return a builder for this serializer as of its current configuration or state.
 	 */
 	// TODO getConfiguration
-	public abstract TypeSerializerBuilder<T> getBuilder();
+	public abstract TypeSerializerConfiguration<T> getConfiguration();
+
+	// TODO naming of configuration? relate to state
+	// ENUM
+	public abstract void reconfigure(TypeSerializerConfiguration<T> oldConfiguration) {
+
+	}
 }

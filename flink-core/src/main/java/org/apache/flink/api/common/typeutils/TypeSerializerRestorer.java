@@ -18,26 +18,18 @@
 
 package org.apache.flink.api.common.typeutils;
 
-import org.apache.flink.annotation.PublicEvolving;
+public class TypeSerializerRestorer {
 
-/**
- * An exception thrown to indicate that a {@link TypeSerializerBuilder} can
- * not be resolved with another builder.
- *
- * @see TypeSerializerBuilder
- */
-@PublicEvolving
-public class UnresolvableTypeSerializerBuilderException extends RuntimeException {
+	@SuppressWarnings("unchecked")
+	public static <T, C extends TypeSerializerConfiguration<T>> TypeSerializer<T> restore(C serializerConfiguration) {
+		final Factory factory = serializerConfiguration.getClass().getAnnotation(Factory.class);
 
-	private static final long serialVersionUID = -4415168100161132377L;
-
-	public UnresolvableTypeSerializerBuilderException() {}
-
-	public UnresolvableTypeSerializerBuilderException(String message) {
-		super(message);
+		try {
+			final TypeSerializerFactory<T, C> factory1 = factory.value().newInstance();
+			return factory1.create(serializerConfiguration);
+		} catch (Exception e) {
+			throw new RuntimeException();
+		}
 	}
 
-	public UnresolvableTypeSerializerBuilderException(String message, Throwable cause) {
-		super(message, cause);
-	}
 }

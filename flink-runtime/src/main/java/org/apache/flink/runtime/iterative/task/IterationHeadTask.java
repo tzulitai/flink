@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.runtime.io.network.api.EndOfSuperstepEvent;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
@@ -35,7 +36,6 @@ import org.apache.flink.api.common.operators.util.JoinHashMap;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.runtime.io.disk.InputViewIterator;
@@ -88,9 +88,9 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 
 	private Collector<X> finalOutputCollector;
 
-	private TypeSerializerFactory<Y> feedbackTypeSerializer;
+	private TypeSerializerFactoryOld<Y> feedbackTypeSerializer;
 
-	private TypeSerializerFactory<X> solutionTypeSerializer;
+	private TypeSerializerFactoryOld<X> solutionTypeSerializer;
 
 	private ResultPartitionWriter toSync;
 
@@ -160,7 +160,7 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 		double hashjoinMemorySize = config.getRelativeSolutionSetMemory();
 		final ClassLoader userCodeClassLoader = getUserCodeClassLoader();
 
-		TypeSerializerFactory<BT> solutionTypeSerializerFactory = config.getSolutionSetSerializer(userCodeClassLoader);
+		TypeSerializerFactoryOld<BT> solutionTypeSerializerFactory = config.getSolutionSetSerializer(userCodeClassLoader);
 		TypeComparatorFactory<BT> solutionTypeComparatorFactory = config.getSolutionSetComparator(userCodeClassLoader);
 	
 		TypeSerializer<BT> solutionTypeSerializer = solutionTypeSerializerFactory.getSerializer();
@@ -196,7 +196,7 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 	}
 	
 	private <BT> JoinHashMap<BT> initJoinHashMap() {
-		TypeSerializerFactory<BT> solutionTypeSerializerFactory = config.getSolutionSetSerializer
+		TypeSerializerFactoryOld<BT> solutionTypeSerializerFactory = config.getSolutionSetSerializer
 				(getUserCodeClassLoader());
 		TypeComparatorFactory<BT> solutionTypeComparatorFactory = config.getSolutionSetComparator
 				(getUserCodeClassLoader());
@@ -282,7 +282,7 @@ public class IterationHeadTask<X, Y, S extends Function, OT> extends AbstractIte
 			else {
 				// bulk iteration case
 				@SuppressWarnings("unchecked")
-				TypeSerializerFactory<X> solSer = (TypeSerializerFactory<X>) feedbackTypeSerializer;
+				TypeSerializerFactoryOld<X> solSer = (TypeSerializerFactoryOld<X>) feedbackTypeSerializer;
 				solutionTypeSerializer = solSer;
 				
 				// = termination Criterion tail

@@ -19,7 +19,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -188,7 +188,7 @@ public class InternalTimer<K, N> implements Comparable<InternalTimer<K, N>> {
 		}
 
 		@Override
-		public TypeSerializerBuilder<InternalTimer<K, N>> getBuilder() {
+		public TypeSerializerConfiguration<InternalTimer<K, N>> getConfiguration() {
 			throw new UnsupportedOperationException();
 		}
 	}

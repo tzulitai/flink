@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 import java.util.Date;
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -104,7 +104,7 @@ public final class DateSerializer extends TypeSerializerSingleton<Date> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Date> getBuilder() {
+	public TypeSerializerConfiguration<Date> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(DateSerializer.class);
 	}
 }

@@ -19,7 +19,7 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -87,7 +87,7 @@ public final class BigIntSerializer extends TypeSerializerSingleton<BigInteger> 
 	}
 
 	@Override
-	public TypeSerializerBuilder<BigInteger> getBuilder() {
+	public TypeSerializerConfiguration<BigInteger> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(BigIntSerializer.class);
 	}
 

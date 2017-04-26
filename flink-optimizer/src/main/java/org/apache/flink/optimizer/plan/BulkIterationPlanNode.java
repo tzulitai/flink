@@ -24,7 +24,7 @@ import static org.apache.flink.optimizer.plan.PlanNode.SourceAndDamReport.FOUND_
 
 import java.util.HashMap;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.optimizer.CompilerException;
 import org.apache.flink.optimizer.costs.Costs;
 import org.apache.flink.optimizer.dag.BulkIterationNode;
@@ -40,7 +40,7 @@ public class BulkIterationPlanNode extends SingleInputPlanNode implements Iterat
 	
 	private PlanNode rootOfTerminationCriterion;
 	
-	private TypeSerializerFactory<?> serializerForIterationChannel;
+	private TypeSerializerFactoryOld<?> serializerForIterationChannel;
 	
 	// --------------------------------------------------------------------------------------------
 
@@ -86,11 +86,11 @@ public class BulkIterationPlanNode extends SingleInputPlanNode implements Iterat
 	// --------------------------------------------------------------------------------------------
 
 	
-	public TypeSerializerFactory<?> getSerializerForIterationChannel() {
+	public TypeSerializerFactoryOld<?> getSerializerForIterationChannel() {
 		return serializerForIterationChannel;
 	}
 	
-	public void setSerializerForIterationChannel(TypeSerializerFactory<?> serializerForIterationChannel) {
+	public void setSerializerForIterationChannel(TypeSerializerFactoryOld<?> serializerForIterationChannel) {
 		this.serializerForIterationChannel = serializerForIterationChannel;
 	}
 

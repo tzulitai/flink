@@ -19,7 +19,7 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
@@ -193,8 +193,8 @@ public final class HashMapSerializer<K, V> extends TypeSerializer<HashMap<K, V>>
 	}
 
 	@Override
-	public TypeSerializerBuilder<HashMap<K, V>> getBuilder() {
-		return new HashMapSerializerBuilder<>(keySerializer.getBuilder(), valueSerializer.getBuilder());
+	public TypeSerializerConfiguration<HashMap<K, V>> getConfiguration() {
+		return new HashMapSerializerBuilder<>(keySerializer.getConfiguration(), valueSerializer.getConfiguration());
 	}
 
 }

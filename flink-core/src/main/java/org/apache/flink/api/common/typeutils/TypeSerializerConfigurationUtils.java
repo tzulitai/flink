@@ -31,15 +31,15 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * Utility methods for {@link TypeSerializerBuilder}.
+ * Utility methods for {@link TypeSerializerConfiguration}.
  */
 @Internal
-public class TypeSerializerBuilderUtils {
+public class TypeSerializerConfigurationUtils {
 
 	/**
 	 * Creates an array of serializers with the provided array of serializer builders.
 	 */
-	public static TypeSerializer<?>[] buildSerializers(TypeSerializerBuilder<?>[] builders) {
+	public static TypeSerializer<?>[] buildSerializers(TypeSerializerConfiguration<?>[] builders) {
 		final TypeSerializer<?>[] serializers = new TypeSerializer<?>[builders.length];
 
 		for (int i = 0; i < builders.length; i++) {
@@ -52,77 +52,77 @@ public class TypeSerializerBuilderUtils {
 	/**
 	 * Creates an array of serializer builders with the provided array of serializers.
 	 */
-	public static TypeSerializerBuilder<?>[] createBuilders(TypeSerializer<?>[] serializers) {
-		final TypeSerializerBuilder<?>[] builders = new TypeSerializerBuilder<?>[serializers.length];
+	public static TypeSerializerConfiguration<?>[] createBuilders(TypeSerializer<?>[] serializers) {
+		final TypeSerializerConfiguration<?>[] builders = new TypeSerializerConfiguration<?>[serializers.length];
 
 		for (int i = 0; i < serializers.length; i++) {
-			builders[i] = serializers[i].getBuilder();
+			builders[i] = serializers[i].getConfiguration();
 		}
 
 		return builders;
 	}
 
 	/**
-	 * Writes a {@link TypeSerializerBuilder} to the provided data output view.
+	 * Writes a {@link TypeSerializerConfiguration} to the provided data output view.
 	 *
 	 * <p>It is written with a format that allows it to be later read again using
 	 * {@link #readSerializerBuilder(DataInputView, ClassLoader)}.
 	 */
 	public static void writeSerializerBuilder(
 			DataOutputView out,
-			TypeSerializerBuilder<?> builder) throws IOException {
+			TypeSerializerConfiguration<?> builder) throws IOException {
 
-		new TypeSerializerBuilderSerializationProxy<>(builder).write(out);
+		new TypeSerializerConfigSerializationProxy<>(builder).write(out);
 	}
 
 	/**
-	 * Reads from the provided data input view a {@link TypeSerializerBuilder}
+	 * Reads from the provided data input view a {@link TypeSerializerConfiguration}
 	 * that was previously serialized using
-	 * {@link #writeSerializerBuilder(DataOutputView, TypeSerializerBuilder)}.
+	 * {@link #writeSerializerBuilder(DataOutputView, TypeSerializerConfiguration)}.
 	 */
-	public static <T> TypeSerializerBuilder<T> readSerializerBuilder(
+	public static <T> TypeSerializerConfiguration<T> readSerializerBuilder(
 			DataInputView in,
 			ClassLoader userCodeClassLoader) throws IOException {
 
-		final TypeSerializerBuilderSerializationProxy<T> proxy =
-			new TypeSerializerBuilderSerializationProxy<>(userCodeClassLoader);
+		final TypeSerializerConfigSerializationProxy<T> proxy =
+			new TypeSerializerConfigSerializationProxy<>(userCodeClassLoader);
 		proxy.read(in);
 
 		return proxy.getSerializerBuilder();
 	}
 
 	/**
-	 * Writes multiple {@link TypeSerializerBuilder}s to the provided data output view.
+	 * Writes multiple {@link TypeSerializerConfiguration}s to the provided data output view.
 	 *
 	 * <p>It is written with a format that allows it to be later read again using
 	 * {@link #readSerializerBuilders(DataInputView, ClassLoader)}.
 	 */
 	public static void writeSerializerBuilders(
 			DataOutputView out,
-			TypeSerializerBuilder... builders) throws IOException {
+			TypeSerializerConfiguration... builders) throws IOException {
 
 		out.writeInt(builders.length);
 
-		for (TypeSerializerBuilder<?> builder : builders) {
-			new TypeSerializerBuilderSerializationProxy<>(builder).write(out);
+		for (TypeSerializerConfiguration<?> builder : builders) {
+			new TypeSerializerConfigSerializationProxy<>(builder).write(out);
 		}
 	}
 
 	/**
-	 * Reads from the provided data input view a {@link TypeSerializerBuilder}
+	 * Reads from the provided data input view a {@link TypeSerializerConfiguration}
 	 * that was previously serialized using
-	 * {@link #writeSerializerBuilder(DataOutputView, TypeSerializerBuilder)}.
+	 * {@link #writeSerializerBuilder(DataOutputView, TypeSerializerConfiguration)}.
 	 */
-	public static TypeSerializerBuilder<?>[] readSerializerBuilders(
+	public static TypeSerializerConfiguration<?>[] readSerializerBuilders(
 			DataInputView in,
 			ClassLoader userCodeClassLoader) throws IOException {
 
 		int numFields = in.readInt();
-		final TypeSerializerBuilder<?>[] serializers = new TypeSerializerBuilder<?>[numFields];
+		final TypeSerializerConfiguration<?>[] serializers = new TypeSerializerConfiguration<?>[numFields];
 
-		TypeSerializerBuilderSerializationProxy proxy;
+		TypeSerializerConfigSerializationProxy proxy;
 		for (int i = 0; i < numFields; i++) {
-			proxy = new TypeSerializerBuilderSerializationProxy<>(userCodeClassLoader);
+			proxy = new TypeSerializerConfigSerializationProxy<>(userCodeClassLoader);
 			proxy.read(in);
 			serializers[i] = proxy.getSerializerBuilder();
 		}
@@ -131,50 +131,50 @@ public class TypeSerializerBuilderUtils {
 	}
 
 	/**
-	 * Serialization proxy for a {@link TypeSerializerBuilder}.
+	 * Serialization proxy for a {@link TypeSerializerConfiguration}.
 	 */
 	@Internal
-	public static class TypeSerializerBuilderSerializationProxy<T> extends VersionedIOReadableWritable {
+	public static class TypeSerializerConfigSerializationProxy<T> extends VersionedIOReadableWritable {
 
 		public static final int VERSION = 1;
 
 		private ClassLoader userCodeClassLoader;
-		private TypeSerializerBuilder<T> serializerBuilder;
+		private TypeSerializerConfiguration<T> serializerConfig;
 
-		public TypeSerializerBuilderSerializationProxy(TypeSerializerBuilder<T> serializerBuilder) {
-			this.serializerBuilder = checkNotNull(serializerBuilder);
+		public TypeSerializerConfigSerializationProxy(TypeSerializerConfiguration<T> serializerBuilder) {
+			this.serializerConfig = checkNotNull(serializerBuilder);
 		}
 
-		public TypeSerializerBuilderSerializationProxy(ClassLoader userCodeClassLoader) {
+		public TypeSerializerConfigSerializationProxy(ClassLoader userCodeClassLoader) {
 			this.userCodeClassLoader = checkNotNull(userCodeClassLoader);
 		}
 
-		public TypeSerializerBuilder<T> getSerializerBuilder() {
-			return serializerBuilder;
+		public TypeSerializerConfiguration<T> getSerializerBuilder() {
+			return serializerConfig;
 		}
 
 		@Override
 		public void write(DataOutputView out) throws IOException {
 			super.write(out);
 
-			InstantiationUtil.serializeObject(new DataOutputViewStream(out), serializerBuilder.getClass());
-			serializerBuilder.write(out);
+			InstantiationUtil.serializeObject(new DataOutputViewStream(out), serializerConfig.getClass());
+			serializerConfig.write(out);
 		}
 
 		@Override
 		public void read(DataInputView in) throws IOException {
 			super.read(in);
 
-			Class<? extends TypeSerializerBuilder<T>> builderClass;
+			Class<? extends TypeSerializerConfiguration<T>> builderClass;
 			try {
 				builderClass = InstantiationUtil.deserializeObject(new DataInputViewStream(in), userCodeClassLoader);
 			} catch (ClassNotFoundException e) {
-				throw new IOException("Could not find requested TypeSerializerBuilder class in classpath.", e);
+				throw new IOException("Could not find requested TypeSerializerConfiguration class in classpath.", e);
 			}
 
-			serializerBuilder = InstantiationUtil.instantiate(builderClass);
-			serializerBuilder.setUserCodeClassLoader(userCodeClassLoader);
-			serializerBuilder.read(in);
+			serializerConfig = InstantiationUtil.instantiate(builderClass);
+			serializerConfig.setUserCodeClassLoader(userCodeClassLoader);
+			serializerConfig.read(in);
 		}
 
 		@Override

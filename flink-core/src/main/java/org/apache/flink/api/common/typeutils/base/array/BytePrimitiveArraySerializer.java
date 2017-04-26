@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base.array;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
@@ -104,7 +104,7 @@ public final class BytePrimitiveArraySerializer extends TypeSerializerSingleton<
 	}
 
 	@Override
-	public TypeSerializerBuilder<byte[]> getBuilder() {
+	public TypeSerializerConfiguration<byte[]> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(BytePrimitiveArraySerializer.class);
 	}
 }

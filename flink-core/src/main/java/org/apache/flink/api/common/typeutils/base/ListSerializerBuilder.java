@@ -19,9 +19,9 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -35,39 +35,39 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T> The type of element that the created {@link ListSerializer} handles.
  */
-public class ListSerializerBuilder<T> extends TypeSerializerBuilder<List<T>> {
+public class ListSerializerBuilder<T> extends TypeSerializerConfiguration<List<T>> {
 
 	private static final int VERSION = 1;
 
-	private TypeSerializerBuilder<T> elementSerializerBuilder;
+	private TypeSerializerConfiguration<T> elementSerializerBuilder;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public ListSerializerBuilder() {}
 
-	public ListSerializerBuilder(TypeSerializerBuilder<T> elementSerializerBuilder) {
+	public ListSerializerBuilder(TypeSerializerConfiguration<T> elementSerializerBuilder) {
 		this.elementSerializerBuilder = checkNotNull(elementSerializerBuilder);
 	}
 
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, elementSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, elementSerializerBuilder);
 	}
 
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
-		elementSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		elementSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof ListSerializerBuilder) {
 			elementSerializerBuilder.resolve(((ListSerializerBuilder) other).elementSerializerBuilder);
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException();
+			throw new UnresolvableTypeSerializerConfigurationException();
 		}
 	}
 

@@ -87,6 +87,7 @@ public class GenericTypeInfo<T> extends TypeInformation<T> implements AtomicType
 				" is treated as a generic type.");
 		}
 
+		//new KryoSerializerFactory().create(config.getKryoConfiguration());
 		return new KryoSerializer<T>(this.typeClass, config);
 	}
 

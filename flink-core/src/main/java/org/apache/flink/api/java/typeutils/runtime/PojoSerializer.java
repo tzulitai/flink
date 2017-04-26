@@ -29,15 +29,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -67,7 +66,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 	private final ExecutionConfig executionConfig;
 
-	private final HashMap<Class<?>, TypeSerializerBuilder<?>> previousSubclassSerializerBuilders;
+	private final HashMap<Class<?>, TypeSerializerConfiguration<?>> previousSubclassSerializerBuilders;
 
 	private transient HashMap<Class<?>, TypeSerializer<?>> subclassSerializerCache;
 	private transient ClassLoader cl;
@@ -197,8 +196,9 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 			TypeInformation<?> typeInfo = TypeExtractor.createTypeInfo(subclass);
 			result = typeInfo.createSerializer(executionConfig);
+
 			if (previousSubclassSerializerBuilders.containsKey(subclass)) {
-				result.getBuilder().resolve();
+				result.getConfiguration().resolve();
 				previousSubclassSerializerBuilders.remove(subclass);
 			}
 
@@ -632,11 +632,11 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<T> getBuilder() {
+	public TypeSerializerConfiguration<T> getConfiguration() {
 		return new PojoSerializerBuilder<>(
 				clazz,
-				TypeSerializerBuilderUtils.createBuilders(fieldSerializers),
+				TypeSerializerConfigurationUtils.createBuilders(fieldSerializers),
 				registeredClasses,
-				TypeSerializerBuilderUtils.createBuilders(registeredSerializers));
+				TypeSerializerConfigurationUtils.createBuilders(registeredSerializers));
 	}
 }

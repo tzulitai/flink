@@ -21,7 +21,7 @@ package org.apache.flink.runtime.testutils.recordutils;
 
 import java.io.IOException;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
@@ -126,7 +126,7 @@ public final class RecordSerializer extends TypeSerializerSingleton<Record> {
 	// --------------------------------------------------------------------------------------------
 
 	@Override
-	public TypeSerializerBuilder<Record> getBuilder() {
+	public TypeSerializerConfiguration<Record> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(RecordSerializer.class);
 	}
 }

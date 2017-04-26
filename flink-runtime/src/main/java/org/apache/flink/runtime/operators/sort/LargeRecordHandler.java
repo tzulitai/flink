@@ -27,7 +27,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
@@ -89,7 +89,7 @@ public class LargeRecordHandler<T> {
 	
 	private final List<MemorySegment> memory;
 	
-	private TypeSerializerFactory<Tuple> keySerializerFactory;
+	private TypeSerializerFactoryOld<Tuple> keySerializerFactory;
 	
 	private UnilateralSortMerger<Tuple> keySorter;
 	

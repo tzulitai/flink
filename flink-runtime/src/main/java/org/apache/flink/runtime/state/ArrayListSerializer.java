@@ -19,7 +19,7 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -114,8 +114,8 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<ArrayList<T>> getBuilder() {
-		return new ArrayListSerializerBuilder<>(elementSerializer.getBuilder());
+	public TypeSerializerConfiguration<ArrayList<T>> getConfiguration() {
+		return new ArrayListSerializerBuilder<>(elementSerializer.getConfiguration());
 	}
 
 	// --------------------------------------------------------------------

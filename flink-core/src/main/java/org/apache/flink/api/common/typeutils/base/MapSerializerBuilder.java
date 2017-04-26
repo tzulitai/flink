@@ -20,9 +20,9 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -38,18 +38,18 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <V> The type of the map values that the created {@link MapSerializer} serializes.
  */
 @Internal
-public final class MapSerializerBuilder<K, V> extends TypeSerializerBuilder<Map<K, V>> {
+public final class MapSerializerBuilder<K, V> extends TypeSerializerConfiguration<Map<K, V>> {
 
 	private static final int VERSION = 1;
 
-	private TypeSerializerBuilder<K> keySerializerBuilder;
-	private TypeSerializerBuilder<V> valueSerializerBuilder;
+	private TypeSerializerConfiguration<K> keySerializerBuilder;
+	private TypeSerializerConfiguration<V> valueSerializerBuilder;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public MapSerializerBuilder() {}
 
 	@SuppressWarnings("unchecked")
-	public MapSerializerBuilder(TypeSerializerBuilder<K> keySerializerBuilder, TypeSerializerBuilder<V> valueSerializerBuilder) {
+	public MapSerializerBuilder(TypeSerializerConfiguration<K> keySerializerBuilder, TypeSerializerConfiguration<V> valueSerializerBuilder) {
 
 		this.keySerializerBuilder = checkNotNull(
 				keySerializerBuilder,
@@ -63,26 +63,26 @@ public final class MapSerializerBuilder<K, V> extends TypeSerializerBuilder<Map<
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, keySerializerBuilder);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, valueSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, keySerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, valueSerializerBuilder);
 	}
 
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
-		keySerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
-		valueSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		keySerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		valueSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> otherConfig) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> otherConfig) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(otherConfig);
 
 		if (otherConfig instanceof MapSerializerBuilder) {
 			keySerializerBuilder.resolve(((MapSerializerBuilder) otherConfig).keySerializerBuilder);
 			valueSerializerBuilder.resolve(((MapSerializerBuilder) otherConfig).valueSerializerBuilder);
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException();
+			throw new UnresolvableTypeSerializerConfigurationException();
 		}
 	}
 

@@ -23,8 +23,8 @@ import java.io.IOException;
 
 import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -112,11 +112,11 @@ public class IntPairSerializer extends TypeSerializer<IntPair> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<IntPair> getBuilder() {
+	public TypeSerializerConfiguration<IntPair> getConfiguration() {
 		return new BasicTypeSerializerBuilder<>(IntPairSerializer.class);
 	}
 
-	public static final class IntPairSerializerFactory implements TypeSerializerFactory<IntPair> {
+	public static final class IntPairSerializerFactory implements TypeSerializerFactoryOld<IntPair> {
 
 		@Override
 		public void writeParametersToConfig(Configuration config) {}

@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.ByteValue;
@@ -87,7 +87,7 @@ public final class ByteValueSerializer extends TypeSerializerSingleton<ByteValue
 	}
 
 	@Override
-	public TypeSerializerBuilder<ByteValue> getBuilder() {
+	public TypeSerializerConfiguration<ByteValue> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(ByteValueSerializer.class);
 	}
 }

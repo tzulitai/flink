@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.IntValue;
@@ -87,7 +87,7 @@ public final class IntValueSerializer extends TypeSerializerSingleton<IntValue> 
 	}
 
 	@Override
-	public TypeSerializerBuilder<IntValue> getBuilder() {
+	public TypeSerializerConfiguration<IntValue> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(IntValueSerializer.class);
 	}
 }

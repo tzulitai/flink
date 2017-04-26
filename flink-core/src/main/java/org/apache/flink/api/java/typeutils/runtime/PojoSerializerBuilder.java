@@ -21,9 +21,9 @@ package org.apache.flink.api.java.typeutils.runtime;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.InstantiationUtil;
@@ -46,32 +46,32 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> The POJO type that the created {@link PojoSerializer} handles.
  */
 @Internal
-public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
+public final class PojoSerializerBuilder<T> extends TypeSerializerConfiguration<T> {
 
 	private static final int VERSION = 1;
 
 	private Class<T> pojoClass;
-	private TypeSerializerBuilder<?>[] fieldSerializerBuilders;
+	private TypeSerializerConfiguration<?>[] fieldSerializerBuilders;
 
 	private LinkedHashMap<Class<?>, Integer> registeredClasses;
-	private TypeSerializerBuilder<?>[] registeredSerializerBuilders;
+	private TypeSerializerConfiguration<?>[] registeredSerializerBuilders;
 
 	private Field[] fields;
 	private ExecutionConfig executionConfig;
 
-	private HashMap<Class<?>, TypeSerializerBuilder<?>> subclassSerializerBuilders;
+	private HashMap<Class<?>, TypeSerializerConfiguration<?>> subclassSerializerBuilders;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public PojoSerializerBuilder() {}
 
 	public PojoSerializerBuilder(
 			Class<T> pojoClass,
-			TypeSerializerBuilder<?>[] fieldSerializerBuilders,
+			TypeSerializerConfiguration<?>[] fieldSerializerBuilders,
 			LinkedHashMap<Class<?>, Integer> registeredClasses,
-			TypeSerializerBuilder<?>[] registeredSerializerBuilders,
+			TypeSerializerConfiguration<?>[] registeredSerializerBuilders,
 			Field[] fields,
 			ExecutionConfig executionConfig,
-			HashMap<Class<?>, TypeSerializerBuilder<?>> subclassSerializerBuilders) {
+			HashMap<Class<?>, TypeSerializerConfiguration<?>> subclassSerializerBuilders) {
 
 		this.pojoClass = checkNotNull(pojoClass);
 		this.fieldSerializerBuilders = checkNotNull(fieldSerializerBuilders);
@@ -89,7 +89,7 @@ public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 		final DataOutputViewStream outViewWrapper = new DataOutputViewStream(out);
 
 		InstantiationUtil.serializeObject(outViewWrapper, pojoClass);
-		TypeSerializerBuilderUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
+		TypeSerializerConfigurationUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
 
 		out.writeInt(registeredClasses.size());
 		for (Map.Entry<Class<?>, Integer> entry : registeredClasses.entrySet()) {
@@ -97,7 +97,7 @@ public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 			out.writeInt(entry.getValue());
 		}
 
-		TypeSerializerBuilderUtils.writeSerializerBuilders(out, registeredSerializerBuilders);
+		TypeSerializerConfigurationUtils.writeSerializerBuilders(out, registeredSerializerBuilders);
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 			throw new IOException("Could not find requested class in classpath.", e);
 		}
 
-		fieldSerializerBuilders = TypeSerializerBuilderUtils.readSerializerBuilders(in, getUserCodeClassLoader());
+		fieldSerializerBuilders = TypeSerializerConfigurationUtils.readSerializerBuilders(in, getUserCodeClassLoader());
 
 		int numRegisteredClasses = in.readInt();
 		registeredClasses = new LinkedHashMap<>(numRegisteredClasses);
@@ -128,17 +128,17 @@ public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof PojoSerializerBuilder) {
 			if (pojoClass != ((PojoSerializerBuilder) other).pojoClass) {
-				throw new UnresolvableTypeSerializerBuilderException("Cannot resolve different POJO classes. " +
+				throw new UnresolvableTypeSerializerConfigurationException("Cannot resolve different POJO classes. " +
 						"Was " + pojoClass.getName() + ", trying to resolve with " + other.getClass().getName());
 			}
 
 			if (fieldSerializerBuilders.length != ((PojoSerializerBuilder) other).fieldSerializerBuilders.length) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve POJO serializer builders with different number of fields. " +
 						"Had " + fieldSerializerBuilders.length + " fields, " +
 						"trying to resolve with " + ((PojoSerializerBuilder) other).fieldSerializerBuilders.length + " fields.");
@@ -150,8 +150,8 @@ public final class PojoSerializerBuilder<T> extends TypeSerializerBuilder<T> {
 
 			for ()
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
-					"Cannot resolve different TypeSerializerBuilder types. " +
+			throw new UnresolvableTypeSerializerConfigurationException(
+					"Cannot resolve different TypeSerializerConfiguration types. " +
 						"Was " + this.getClass().getName() + ", trying to resolve with " + other.getClass().getName());
 		}
 	}

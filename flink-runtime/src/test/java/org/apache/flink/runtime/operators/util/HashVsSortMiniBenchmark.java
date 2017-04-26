@@ -22,7 +22,7 @@ import org.apache.flink.api.common.functions.FlatJoinFunction;
 import org.apache.flink.api.common.typeutils.GenericPairComparator;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypePairComparator;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.MemoryType;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
@@ -75,8 +75,8 @@ public class HashVsSortMiniBenchmark {
 	private IOManager ioManager;
 	private MemoryManager memoryManager;
 	
-	private TypeSerializerFactory<Tuple2<Integer, String>> serializer1;
-	private TypeSerializerFactory<Tuple2<Integer, String>> serializer2;
+	private TypeSerializerFactoryOld<Tuple2<Integer, String>> serializer1;
+	private TypeSerializerFactoryOld<Tuple2<Integer, String>> serializer2;
 	private TypeComparator<Tuple2<Integer, String>> comparator1;
 	private TypeComparator<Tuple2<Integer, String>> comparator2;
 	private TypePairComparator<Tuple2<Integer, String>, Tuple2<Integer, String>> pairComparator11;

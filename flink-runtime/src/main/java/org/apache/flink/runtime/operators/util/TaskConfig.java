@@ -36,7 +36,7 @@ import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.operators.util.UserCodeWrapper;
 import org.apache.flink.api.common.typeutils.TypeComparatorFactory;
 import org.apache.flink.api.common.typeutils.TypePairComparatorFactory;
-import org.apache.flink.api.common.typeutils.TypeSerializerFactory;
+import org.apache.flink.api.common.typeutils.TypeSerializerFactoryOld;
 import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.DelegatingConfiguration;
@@ -414,22 +414,22 @@ public class TaskConfig implements Serializable {
 		}
 	}
 	
-	public void setInputSerializer(TypeSerializerFactory<?> factory, int inputNum) {
+	public void setInputSerializer(TypeSerializerFactoryOld<?> factory, int inputNum) {
 		setTypeSerializerFactory(factory, INPUT_TYPE_SERIALIZER_FACTORY_PREFIX + inputNum,
 			INPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX + inputNum + SEPARATOR);
 	}
 	
-	public void setBroadcastInputSerializer(TypeSerializerFactory<?> factory, int inputNum) {
+	public void setBroadcastInputSerializer(TypeSerializerFactoryOld<?> factory, int inputNum) {
 		setTypeSerializerFactory(factory, BROADCAST_INPUT_TYPE_SERIALIZER_FACTORY_PREFIX + inputNum,
 			BROADCAST_INPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX + inputNum + SEPARATOR);
 	}
 	
-	public <T> TypeSerializerFactory<T> getInputSerializer(int inputNum, ClassLoader cl) {
+	public <T> TypeSerializerFactoryOld<T> getInputSerializer(int inputNum, ClassLoader cl) {
 		return getTypeSerializerFactory(INPUT_TYPE_SERIALIZER_FACTORY_PREFIX + inputNum,
 			INPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX + inputNum + SEPARATOR, cl);
 	}
 	
-	public <T> TypeSerializerFactory<T> getBroadcastInputSerializer(int inputNum, ClassLoader cl) {
+	public <T> TypeSerializerFactoryOld<T> getBroadcastInputSerializer(int inputNum, ClassLoader cl) {
 		return getTypeSerializerFactory(BROADCAST_INPUT_TYPE_SERIALIZER_FACTORY_PREFIX + inputNum,
 			BROADCAST_INPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX + inputNum + SEPARATOR, cl);
 	}
@@ -543,11 +543,11 @@ public class TaskConfig implements Serializable {
 		}
 	}
 	
-	public void setOutputSerializer(TypeSerializerFactory<?> factory) {
+	public void setOutputSerializer(TypeSerializerFactoryOld<?> factory) {
 		setTypeSerializerFactory(factory, OUTPUT_TYPE_SERIALIZER_FACTORY, OUTPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX);
 	}
 	
-	public <T> TypeSerializerFactory<T> getOutputSerializer(ClassLoader cl) {
+	public <T> TypeSerializerFactoryOld<T> getOutputSerializer(ClassLoader cl) {
 		return getTypeSerializerFactory(OUTPUT_TYPE_SERIALIZER_FACTORY, OUTPUT_TYPE_SERIALIZER_PARAMETERS_PREFIX, cl);
 	}
 	
@@ -912,12 +912,12 @@ public class TaskConfig implements Serializable {
 		return new TaskConfig(new DelegatingConfiguration(this.config, ITERATION_HEAD_FINAL_OUT_CONFIG_PREFIX));
 	}
 	
-	public void setSolutionSetSerializer(TypeSerializerFactory<?> factory) {
+	public void setSolutionSetSerializer(TypeSerializerFactoryOld<?> factory) {
 		setTypeSerializerFactory(factory, ITERATION_SOLUTION_SET_SERIALIZER,
 			ITERATION_SOLUTION_SET_SERIALIZER_PARAMETERS);
 	}
 	
-	public <T> TypeSerializerFactory<T> getSolutionSetSerializer(ClassLoader cl) {
+	public <T> TypeSerializerFactoryOld<T> getSolutionSetSerializer(ClassLoader cl) {
 		return getTypeSerializerFactory(ITERATION_SOLUTION_SET_SERIALIZER,
 			ITERATION_SOLUTION_SET_SERIALIZER_PARAMETERS, cl);
 	}
@@ -1100,7 +1100,7 @@ public class TaskConfig implements Serializable {
 	//                                    Miscellaneous
 	// --------------------------------------------------------------------------------------------
 	
-	private void setTypeSerializerFactory(TypeSerializerFactory<?> factory,
+	private void setTypeSerializerFactory(TypeSerializerFactoryOld<?> factory,
 			String classNameKey, String parametersPrefix)
 	{
 		// sanity check the factory type
@@ -1113,7 +1113,7 @@ public class TaskConfig implements Serializable {
 		factory.writeParametersToConfig(parameters);
 	}
 	
-	private <T> TypeSerializerFactory<T> getTypeSerializerFactory(String classNameKey, String parametersPrefix, ClassLoader cl) {
+	private <T> TypeSerializerFactoryOld<T> getTypeSerializerFactory(String classNameKey, String parametersPrefix, ClassLoader cl) {
 		// check the class name
 		final String className = this.config.getString(classNameKey, null);
 		if (className == null) {
@@ -1122,10 +1122,10 @@ public class TaskConfig implements Serializable {
 		
 		// instantiate the class
 		@SuppressWarnings("unchecked")
-		final Class<TypeSerializerFactory<T>> superClass = (Class<TypeSerializerFactory<T>>) (Class<?>) TypeSerializerFactory.class;
-		final TypeSerializerFactory<T> factory;
+		final Class<TypeSerializerFactoryOld<T>> superClass = (Class<TypeSerializerFactoryOld<T>>) (Class<?>) TypeSerializerFactoryOld.class;
+		final TypeSerializerFactoryOld<T> factory;
 		try {
-			Class<? extends TypeSerializerFactory<T>> clazz = Class.forName(className, true, cl).asSubclass(superClass);
+			Class<? extends TypeSerializerFactoryOld<T>> clazz = Class.forName(className, true, cl).asSubclass(superClass);
 			factory = InstantiationUtil.instantiate(clazz, superClass);
 		}
 		catch (ClassNotFoundException cnfex) {
@@ -1134,7 +1134,7 @@ public class TaskConfig implements Serializable {
 		}
 		catch (ClassCastException ccex) {
 			throw new CorruptConfigurationException("The class noted in the configuration as the serializer factory " +
-					"is no subclass of TypeSerializerFactory.");
+					"is no subclass of TypeSerializerFactoryOld.");
 		}
 		
 		// parameterize the comparator factory

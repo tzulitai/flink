@@ -297,7 +297,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public KryoSerializerBuilder<T> getBuilder() {
+	public KryoSerializerBuilder<T> getConfiguration() {
 		return new KryoSerializerBuilder<>(type, defaults, registrations);
 	}
 

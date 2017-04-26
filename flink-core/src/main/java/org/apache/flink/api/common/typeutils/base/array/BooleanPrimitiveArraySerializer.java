@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base.array;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingletonBuilder;
 import org.apache.flink.core.memory.DataInputView;
@@ -112,7 +112,7 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
 	}
 
 	@Override
-	public TypeSerializerBuilder<boolean[]> getBuilder() {
+	public TypeSerializerConfiguration<boolean[]> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(BooleanPrimitiveArraySerializer.class);
 	}
 }

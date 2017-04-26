@@ -21,7 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import java.io.IOException;
 import java.sql.Time;
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -104,7 +104,7 @@ public final class SqlTimeSerializer extends TypeSerializerSingleton<Time> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<Time> getBuilder() {
+	public TypeSerializerConfiguration<Time> getConfiguration() {
 		return new TypeSerializerSingletonBuilder<>(SqlTimeSerializer.class);
 	}
 }

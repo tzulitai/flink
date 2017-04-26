@@ -20,7 +20,7 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -169,7 +169,7 @@ public class ListSerializer<T> extends TypeSerializer<List<T>> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<List<T>> getBuilder() {
-		return new ListSerializerBuilder<>(elementSerializer.getBuilder());
+	public TypeSerializerConfiguration<List<T>> getConfiguration() {
+		return new ListSerializerBuilder<>(elementSerializer.getConfiguration());
 	}
 }

@@ -18,8 +18,8 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.core.io.IOReadableWritable;
 import org.apache.flink.core.io.VersionMismatchException;
@@ -148,7 +148,7 @@ public class OperatorBackendSerializationProxy extends VersionedIOReadableWritab
 		public void write(DataOutputView out) throws IOException {
 			out.writeUTF(namedState.getName());
 			out.writeByte(namedState.getAssignmentMode().ordinal());
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, namedState.getStateSerializerBuilder());
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, namedState.getStateSerializerBuilder());
 		}
 
 		@Override
@@ -163,7 +163,7 @@ public class OperatorBackendSerializationProxy extends VersionedIOReadableWritab
 			return namedState;
 		}
 
-		protected abstract TypeSerializerBuilder<S> readStateSerializerBuilder(DataInputView in) throws IOException;
+		protected abstract TypeSerializerConfiguration<S> readStateSerializerBuilder(DataInputView in) throws IOException;
 	}
 
 	private class V1StateMetaInfoSerializationProxy<S> extends StateMetaInfoSerializationProxy<S> {
@@ -177,7 +177,7 @@ public class OperatorBackendSerializationProxy extends VersionedIOReadableWritab
 		}
 
 		@Override
-		protected TypeSerializerBuilder<S> readStateSerializerBuilder(DataInputView in) throws IOException {
+		protected TypeSerializerConfiguration<S> readStateSerializerBuilder(DataInputView in) throws IOException {
 			try {
 				return InstantiationUtil.deserializeObject(new DataInputViewStream(in), userCodeClassLoader);
 			} catch (ClassNotFoundException exception) {
@@ -197,8 +197,8 @@ public class OperatorBackendSerializationProxy extends VersionedIOReadableWritab
 		}
 
 		@Override
-		protected TypeSerializerBuilder<S> readStateSerializerBuilder(DataInputView in) throws IOException {
-			return TypeSerializerBuilderUtils.readSerializerBuilder(in, userCodeClassLoader);
+		protected TypeSerializerConfiguration<S> readStateSerializerBuilder(DataInputView in) throws IOException {
+			return TypeSerializerConfigurationUtils.readSerializerBuilder(in, userCodeClassLoader);
 		}
 	}
 }

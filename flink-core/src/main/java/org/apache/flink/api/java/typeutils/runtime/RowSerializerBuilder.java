@@ -18,9 +18,9 @@
 
 package org.apache.flink.api.java.typeutils.runtime;
 
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Row;
@@ -32,52 +32,52 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * Builder for the {@link RowSerializer}.
  */
-public class RowSerializerBuilder extends TypeSerializerBuilder<Row> {
+public class RowSerializerBuilder extends TypeSerializerConfiguration<Row> {
 
 	private static final int VERSION = 1;
 
-	private TypeSerializerBuilder<?>[] fieldSerializerBuilders;
+	private TypeSerializerConfiguration<?>[] fieldSerializerBuilders;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public RowSerializerBuilder() {}
 
-	public RowSerializerBuilder(TypeSerializerBuilder<?>[] fieldSerializerBuilders) {
+	public RowSerializerBuilder(TypeSerializerConfiguration<?>[] fieldSerializerBuilders) {
 		this.fieldSerializerBuilders = checkNotNull(fieldSerializerBuilders);
 	}
 
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
-		TypeSerializerBuilderUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
+		TypeSerializerConfigurationUtils.writeSerializerBuilders(out, fieldSerializerBuilders);
 	}
 
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
-		this.fieldSerializerBuilders = TypeSerializerBuilderUtils.readSerializerBuilders(in, getUserCodeClassLoader());
+		this.fieldSerializerBuilders = TypeSerializerConfigurationUtils.readSerializerBuilders(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) {
+	public void resolve(TypeSerializerConfiguration<?> other) {
 		super.resolve(other);
 
 		if (other instanceof RowSerializerBuilder) {
 			if (fieldSerializerBuilders.length != ((RowSerializerBuilder) other).fieldSerializerBuilders.length) {
-				throw new UnresolvableTypeSerializerBuilderException(
+				throw new UnresolvableTypeSerializerConfigurationException(
 						"The number of fields cannot change. Was " + fieldSerializerBuilders.length + ", " +
 							"trying to resolve with " + ((RowSerializerBuilder) other).fieldSerializerBuilders.length);
 			} else {
 				for (int i = 0; i < fieldSerializerBuilders.length; i++) {
 					try {
 						fieldSerializerBuilders[i].resolve(((RowSerializerBuilder) other).fieldSerializerBuilders[i]);
-					} catch (UnresolvableTypeSerializerBuilderException e) {
-						throw new UnresolvableTypeSerializerBuilderException(
+					} catch (UnresolvableTypeSerializerConfigurationException e) {
+						throw new UnresolvableTypeSerializerConfigurationException(
 								"Serializer builder for field " + i + " could not be resolved", e);
 					}
 				}
 			}
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}
@@ -85,7 +85,7 @@ public class RowSerializerBuilder extends TypeSerializerBuilder<Row> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public RowSerializer build() {
-		return new RowSerializer(TypeSerializerBuilderUtils.buildSerializers(fieldSerializerBuilders));
+		return new RowSerializer(TypeSerializerConfigurationUtils.buildSerializers(fieldSerializerBuilders));
 	}
 
 	@Override

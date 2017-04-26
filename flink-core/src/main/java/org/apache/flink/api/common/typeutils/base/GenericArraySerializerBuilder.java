@@ -19,9 +19,9 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.api.java.typeutils.runtime.DataOutputViewStream;
 import org.apache.flink.core.memory.DataInputView;
@@ -38,18 +38,18 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <C> The component type that the created {@link GenericArraySerializer} handles.
  */
 @Internal
-public class GenericArraySerializerBuilder<C> extends TypeSerializerBuilder<C[]> {
+public class GenericArraySerializerBuilder<C> extends TypeSerializerConfiguration<C[]> {
 
 	private static final int VERSION = 1;
 
 	private Class<C> componentClass;
-	private TypeSerializerBuilder<C> componentSerializerBuilder;
+	private TypeSerializerConfiguration<C> componentSerializerBuilder;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public GenericArraySerializerBuilder() {}
 
 	@SuppressWarnings("unchecked")
-	public GenericArraySerializerBuilder(Class<C> componentClass, TypeSerializerBuilder<C> componentSerializerBuilder) {
+	public GenericArraySerializerBuilder(Class<C> componentClass, TypeSerializerConfiguration<C> componentSerializerBuilder) {
 		this.componentClass = checkNotNull(componentClass);
 		this.componentSerializerBuilder = checkNotNull(componentSerializerBuilder);
 	}
@@ -60,7 +60,7 @@ public class GenericArraySerializerBuilder<C> extends TypeSerializerBuilder<C[]>
 
 		InstantiationUtil.serializeObject(new DataOutputViewStream(out), componentClass);
 
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, componentSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, componentSerializerBuilder);
 	}
 
 	@Override
@@ -73,21 +73,21 @@ public class GenericArraySerializerBuilder<C> extends TypeSerializerBuilder<C[]>
 			throw new IOException("Could not find requested class in classpath.", e);
 		}
 
-		componentSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		componentSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) {
+	public void resolve(TypeSerializerConfiguration<?> other) {
 		super.resolve(other);
 
 		if (other instanceof GenericArraySerializerBuilder) {
 			if (componentClass != ((GenericArraySerializerBuilder) other).componentClass) {
-				throw new UnresolvableTypeSerializerBuilderException("Class of array components cannot change.");
+				throw new UnresolvableTypeSerializerConfigurationException("Class of array components cannot change.");
 			}
 
 			componentSerializerBuilder.resolve(((GenericArraySerializerBuilder) other).componentSerializerBuilder);
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

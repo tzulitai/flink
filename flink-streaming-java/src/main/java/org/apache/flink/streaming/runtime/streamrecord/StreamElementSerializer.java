@@ -20,9 +20,9 @@ package org.apache.flink.streaming.runtime.streamrecord;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -274,42 +274,42 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 
 
 	@Override
-	public TypeSerializerBuilder<StreamElement> getBuilder() {
+	public TypeSerializerConfiguration<StreamElement> getConfiguration() {
 		return null;
 	}
 
-	public static final class StreamElementSerializerBuilder<T> extends TypeSerializerBuilder<StreamElement> {
+	public static final class StreamElementSerializerBuilder<T> extends TypeSerializerConfiguration<StreamElement> {
 
 		private static final int VERSION = 1;
 
-		private TypeSerializerBuilder<T> streamElementSerializerBuilder;
+		private TypeSerializerConfiguration<T> streamElementSerializerBuilder;
 
 		public StreamElementSerializerBuilder() {}
 
-		public StreamElementSerializerBuilder(TypeSerializerBuilder<T> streamElementSerializerBuilder) {
+		public StreamElementSerializerBuilder(TypeSerializerConfiguration<T> streamElementSerializerBuilder) {
 			this.streamElementSerializerBuilder = Preconditions.checkNotNull(streamElementSerializerBuilder);
 		}
 
 		@Override
 		public void write(DataOutputView out) throws IOException {
 			super.write(out);
-			TypeSerializerBuilderUtils.writeSerializerBuilder(out, streamElementSerializerBuilder);
+			TypeSerializerConfigurationUtils.writeSerializerBuilder(out, streamElementSerializerBuilder);
 		}
 
 		@Override
 		public void read(DataInputView in) throws IOException {
 			super.read(in);
-			streamElementSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+			streamElementSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 		}
 
 		@Override
-		public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+		public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 			super.resolve(other);
 
 			if (other instanceof StreamElementSerializerBuilder) {
 				streamElementSerializerBuilder.resolve(((StreamElementSerializerBuilder) other).streamElementSerializerBuilder);
 			} else {
-				throw new UnresolvableTypeSerializerBuilderException();
+				throw new UnresolvableTypeSerializerConfigurationException();
 			}
 		}
 

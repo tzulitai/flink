@@ -28,27 +28,27 @@ import org.apache.flink.core.memory.{DataInputView, DataOutputView}
   */
 @Internal
 final class EitherSerializerBuilder[A, B, T <: Either[A, B]](
-    private var leftSerializerBuilder: TypeSerializerBuilder[A],
-    private var rightSerializerBuilder: TypeSerializerBuilder[B])
-  extends TypeSerializerBuilder[T] {
+                                                              private var leftSerializerBuilder: TypeSerializerConfiguration[A],
+                                                              private var rightSerializerBuilder: TypeSerializerConfiguration[B])
+  extends TypeSerializerConfiguration[T] {
 
   /** This empty nullary constructor is required for deserializing the builder. */
   def this() = this(null, null)
 
   override def write(out: DataOutputView): Unit = {
     super.write(out)
-    TypeSerializerBuilderUtils.writeSerializerBuilder(out, leftSerializerBuilder)
-    TypeSerializerBuilderUtils.writeSerializerBuilder(out, rightSerializerBuilder)
+    TypeSerializerConfigurationUtils.writeSerializerBuilder(out, leftSerializerBuilder)
+    TypeSerializerConfigurationUtils.writeSerializerBuilder(out, rightSerializerBuilder)
   }
 
   override def read(in: DataInputView): Unit = {
     super.read(in)
-    leftSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader)
-    rightSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader)
+    leftSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader)
+    rightSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader)
   }
 
-  @throws[UnresolvableTypeSerializerBuilderException]
-  override def resolve(other: TypeSerializerBuilder[_]): Unit = {
+  @throws[UnresolvableTypeSerializerConfigurationException]
+  override def resolve(other: TypeSerializerConfiguration[_]): Unit = {
     super.resolve(other)
 
     other match {
@@ -56,7 +56,7 @@ final class EitherSerializerBuilder[A, B, T <: Either[A, B]](
         leftSerializerBuilder.resolve(otherEitherSerializerBuilder.leftSerializerBuilder)
         rightSerializerBuilder.resolve(otherEitherSerializerBuilder.leftSerializerBuilder)
       case _ =>
-        throw new UnresolvableTypeSerializerBuilderException(
+        throw new UnresolvableTypeSerializerConfigurationException(
             "Cannot resolve this builder with another builder of type " + other.getClass)
     }
   }

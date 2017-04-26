@@ -19,9 +19,9 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilderUtils;
-import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerBuilderException;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigurationUtils;
+import org.apache.flink.api.common.typeutils.UnresolvableTypeSerializerConfigurationException;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Either;
@@ -36,19 +36,19 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <L> the Left value type that the created {@link EitherSerializer} handles.
  * @param <R> the Right value type that the created {@link EitherSerializer} handles.
  */
-public class EitherSerializerBuilder<L, R> extends TypeSerializerBuilder<Either<L, R>> {
+public class EitherSerializerBuilder<L, R> extends TypeSerializerConfiguration<Either<L, R>> {
 
 	private static final int VERSION = 1;
 
-	private TypeSerializerBuilder<L> leftSerializerBuilder;
-	private TypeSerializerBuilder<R> rightSerializerBuilder;
+	private TypeSerializerConfiguration<L> leftSerializerBuilder;
+	private TypeSerializerConfiguration<R> rightSerializerBuilder;
 
 	/** This empty nullary constructor is required for deserializing the builder. */
 	public EitherSerializerBuilder() {}
 
 	public EitherSerializerBuilder(
-			TypeSerializerBuilder<L> leftSerializerBuilder,
-			TypeSerializerBuilder<R> rightSerializerBuilder) {
+			TypeSerializerConfiguration<L> leftSerializerBuilder,
+			TypeSerializerConfiguration<R> rightSerializerBuilder) {
 
 		this.leftSerializerBuilder = checkNotNull(leftSerializerBuilder);
 		this.rightSerializerBuilder = checkNotNull(rightSerializerBuilder);
@@ -57,26 +57,26 @@ public class EitherSerializerBuilder<L, R> extends TypeSerializerBuilder<Either<
 	@Override
 	public void write(DataOutputView out) throws IOException {
 		super.write(out);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, leftSerializerBuilder);
-		TypeSerializerBuilderUtils.writeSerializerBuilder(out, rightSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, leftSerializerBuilder);
+		TypeSerializerConfigurationUtils.writeSerializerBuilder(out, rightSerializerBuilder);
 	}
 
 	@Override
 	public void read(DataInputView in) throws IOException {
 		super.read(in);
-		leftSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
-		rightSerializerBuilder = TypeSerializerBuilderUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		leftSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
+		rightSerializerBuilder = TypeSerializerConfigurationUtils.readSerializerBuilder(in, getUserCodeClassLoader());
 	}
 
 	@Override
-	public void resolve(TypeSerializerBuilder<?> other) throws UnresolvableTypeSerializerBuilderException {
+	public void resolve(TypeSerializerConfiguration<?> other) throws UnresolvableTypeSerializerConfigurationException {
 		super.resolve(other);
 
 		if (other instanceof EitherSerializerBuilder) {
 			leftSerializerBuilder.resolve(((EitherSerializerBuilder) other).leftSerializerBuilder);
 			rightSerializerBuilder.resolve(((EitherSerializerBuilder) other).rightSerializerBuilder);
 		} else {
-			throw new UnresolvableTypeSerializerBuilderException(
+			throw new UnresolvableTypeSerializerConfigurationException(
 					"Cannot resolve this builder with another builder of type " + other.getClass());
 		}
 	}

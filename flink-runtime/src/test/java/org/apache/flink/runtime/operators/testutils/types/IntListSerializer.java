@@ -23,7 +23,7 @@ import java.util.Arrays;
 
 import org.apache.flink.api.common.typeutils.BasicTypeSerializerBuilder;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerBuilder;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfiguration;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -131,7 +131,7 @@ public class IntListSerializer extends TypeSerializer<IntList> {
 	}
 
 	@Override
-	public TypeSerializerBuilder<IntList> getBuilder() {
+	public TypeSerializerConfiguration<IntList> getConfiguration() {
 		return new BasicTypeSerializerBuilder<>(IntListSerializer.class);
 	}
 }
