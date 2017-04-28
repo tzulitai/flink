@@ -19,7 +19,11 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtil;
+import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -30,7 +34,7 @@ import java.util.Objects;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 @Internal
-public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
+public abstract class TupleSerializerBase<T extends Tuple> extends TypeSerializer<T> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -114,5 +118,31 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 	@Override
 	public boolean canEqual(Object obj) {
 		return obj instanceof TupleSerializerBase;
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Serializer configuration snapshotting & reconfiguring
+	// --------------------------------------------------------------------------------------------
+
+	@Override
+	public TupleSerializerConfigSnapshot snapshotConfiguration() {
+		return new TupleSerializerConfigSnapshot<>(
+				tupleClass,
+				TypeSerializerUtil.snapshotConfigurations(fieldSerializers));
+	}
+
+	@Override
+	protected ReconfigureResult reconfigure(TypeSerializerConfigSnapshot configSnapshot) {
+		if (configSnapshot instanceof TupleSerializerConfigSnapshot) {
+			final TupleSerializerConfigSnapshot config = (TupleSerializerConfigSnapshot) configSnapshot;
+
+			if (tupleClass == config.getTupleClass()
+					&& fieldSerializers.length == config.getNestedSerializerConfigSnapshots().length) {
+				return TypeSerializerUtil.reconfigureMultipleSerializers(
+						config.getNestedSerializerConfigSnapshots(), fieldSerializers);
+			}
+		}
+
+		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
 	}
 }
