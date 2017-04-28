@@ -18,8 +18,8 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.api.common.typeutils.base.IntSerializer
+import org.apache.flink.api.common.typeutils.{ReconfigureResult, TypeSerializer, TypeSerializerConfigSnapshot}
+import org.apache.flink.api.common.typeutils.base.{EnumSerializerConfigSnapshot, IntSerializer}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 
 /**
@@ -66,5 +66,38 @@ class EnumValueSerializer[E <: Enumeration](val enum: E) extends TypeSerializer[
 
   override def canEqual(obj: scala.Any): Boolean = {
     obj.isInstanceOf[EnumValueSerializer[_]]
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // Serializer configuration snapshotting & reconfiguring
+  // --------------------------------------------------------------------------------------------
+
+  override def snapshotConfiguration(): EnumSerializerConfigSnapshot[E] = {
+    new EnumSerializerConfigSnapshot[E](classOf[E])
+  }
+
+  override def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
+    configSnapshot match {
+
+      case enumSerializerConfigSnapshot: EnumSerializerConfigSnapshot[_] =>
+        if (classOf[E] == enumSerializerConfigSnapshot.getEnumClass) {
+          val currentEnumConstants = classOf[E].getEnumConstants
+
+          for ( i <- 0 to currentEnumConstants.length) {
+            // compatible only if new enum constants are only appended,
+            // and original constants must be in the exact same order
+
+            if (currentEnumConstants(i) != enumSerializerConfigSnapshot.getEnumConstants()(i)) {
+              return ReconfigureResult.INCOMPATIBLE
+            }
+          }
+
+          ReconfigureResult.COMPATIBLE
+        } else {
+          ReconfigureResult.INCOMPATIBLE_DATA_TYPE
+        }
+
+      case _ => ReconfigureResult.INCOMPATIBLE_DATA_TYPE
+    }
   }
 }

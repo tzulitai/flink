@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -122,5 +124,38 @@ public final class EnumSerializer<T extends Enum<T>> extends TypeSerializer<T> {
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 		in.defaultReadObject();
 		this.values = enumClass.getEnumConstants();
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Serializer configuration snapshotting & reconfiguring
+	// --------------------------------------------------------------------------------------------
+
+	@Override
+	public EnumSerializerConfigSnapshot snapshotConfiguration() {
+		return new EnumSerializerConfigSnapshot<>(enumClass);
+	}
+
+	@Override
+	public ReconfigureResult reconfigure(TypeSerializerConfigSnapshot configSnapshot) {
+		if (configSnapshot instanceof EnumSerializerConfigSnapshot) {
+			final EnumSerializerConfigSnapshot<?> config = (EnumSerializerConfigSnapshot) configSnapshot;
+
+			if (enumClass == config.getEnumClass()) {
+				// compatible only if new enum constants are only appended,
+				// and original constants must be in the exact same order
+
+				final T[] currentEnumConstants = enumClass.getEnumConstants();
+
+				for (int i = 0; i < currentEnumConstants.length; i++) {
+					if (currentEnumConstants[i] != config.getEnumConstants()[i]) {
+						return ReconfigureResult.INCOMPATIBLE;
+					}
+				}
+
+				return ReconfigureResult.COMPATIBLE;
+			}
+		}
+
+		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
 	}
 }
