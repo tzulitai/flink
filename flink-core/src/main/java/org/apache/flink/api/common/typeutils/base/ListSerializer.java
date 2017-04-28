@@ -19,7 +19,10 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtil;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
@@ -39,7 +42,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> The type of element in the list.
  */
 @Internal
-public class ListSerializer<T> extends TypeSerializer<List<T>> {
+public final class ListSerializer<T> extends TypeSerializer<List<T>> {
 
 	private static final long serialVersionUID = 1119562170939152304L;
 
@@ -165,5 +168,24 @@ public class ListSerializer<T> extends TypeSerializer<List<T>> {
 	@Override
 	public int hashCode() {
 		return elementSerializer.hashCode();
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Serializer configuration snapshotting & reconfiguring
+	// --------------------------------------------------------------------------------------------
+
+	@Override
+	public CollectionSerializerConfigSnapshot snapshotConfiguration() {
+		return new CollectionSerializerConfigSnapshot(elementSerializer.snapshotConfiguration());
+	}
+
+	@Override
+	public ReconfigureResult reconfigure(TypeSerializerConfigSnapshot configSnapshot) {
+		if (configSnapshot instanceof CollectionSerializerConfigSnapshot) {
+			return elementSerializer.reconfigureInternal(
+					((CollectionSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
+		} else {
+			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		}
 	}
 }
