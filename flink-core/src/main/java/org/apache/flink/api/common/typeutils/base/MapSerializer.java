@@ -215,7 +215,7 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 					keySerializer,
 					valueSerializer);
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

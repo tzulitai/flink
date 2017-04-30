@@ -158,7 +158,7 @@ public final class BigDecSerializer extends TypeSerializerSingleton<BigDecimal> 
 		if (configSnapshot instanceof BigDecSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

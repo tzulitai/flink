@@ -101,7 +101,7 @@ public final class DoubleValueSerializer extends TypeSerializerSingleton<DoubleV
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.DoubleSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

@@ -156,6 +156,6 @@ public final class EnumSerializer<T extends Enum<T>> extends TypeSerializer<T> {
 			}
 		}
 
-		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		return ReconfigureResult.INCOMPATIBLE;
 	}
 }

@@ -102,7 +102,7 @@ public final class ByteValueSerializer extends TypeSerializerSingleton<ByteValue
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.ByteSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

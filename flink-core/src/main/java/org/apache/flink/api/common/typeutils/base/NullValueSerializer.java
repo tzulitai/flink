@@ -96,7 +96,7 @@ public final class NullValueSerializer extends TypeSerializerSingleton<NullValue
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.NullSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

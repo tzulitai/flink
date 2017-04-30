@@ -224,10 +224,13 @@ public class MultiplexingStreamRecordSerializer<T> extends TypeSerializer<Stream
 			return typeSerializer.reconfigureInternal(
 				((MultiplexingStreamRecordSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link MultiplexingStreamRecordSerializer}.
+	 */
 	public static final class MultiplexingStreamRecordSerializerConfigSnapshot
 			extends CompositeTypeSerializerConfigSnapshot {
 

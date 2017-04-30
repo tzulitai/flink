@@ -125,7 +125,7 @@ public final class FloatPrimitiveArraySerializer extends TypeSerializerSingleton
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.FloatArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

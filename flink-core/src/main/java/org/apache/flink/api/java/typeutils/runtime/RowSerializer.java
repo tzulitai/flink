@@ -273,7 +273,7 @@ public final class RowSerializer extends TypeSerializer<Row> {
 			return TypeSerializerUtil.reconfigureMultipleSerializers(
 					((RowSerializerConfigSnapshot) configSnapshot).getNestedSerializerConfigSnapshots(), fieldSerializers);
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

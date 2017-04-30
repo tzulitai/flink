@@ -163,10 +163,13 @@ public final class StreamRecordSerializer<T> extends TypeSerializer<StreamRecord
 			return typeSerializer.reconfigureInternal(
 					((StreamRecordSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link StreamRecordSerializer}.
+	 */
 	public static final class StreamRecordSerializerConfigSnapshot extends CompositeTypeSerializerConfigSnapshot {
 
 		private static final int VERSION = 1;

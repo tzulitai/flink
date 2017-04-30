@@ -100,7 +100,7 @@ public final class LongSerializer extends TypeSerializerSingleton<Long> {
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.LongSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

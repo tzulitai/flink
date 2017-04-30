@@ -126,7 +126,7 @@ public final class StringValueSerializer extends TypeSerializerSingleton<StringV
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.StringSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

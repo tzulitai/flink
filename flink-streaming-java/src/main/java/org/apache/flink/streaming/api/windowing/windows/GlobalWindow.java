@@ -152,10 +152,13 @@ public class GlobalWindow extends Window {
 			if (configSnapshot instanceof GlobalWindowSerializerConfigSnapshot) {
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		}
 	}
 
+	/**
+	 * A {@link TypeSerializerConfigSnapshot} specific to the {@link GlobalWindow} serializer.
+	 */
 	public static final class GlobalWindowSerializerConfigSnapshot extends ParameterlessTypeSerializerConfig {}
 }

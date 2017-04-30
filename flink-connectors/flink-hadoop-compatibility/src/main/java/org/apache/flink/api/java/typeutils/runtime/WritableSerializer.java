@@ -21,7 +21,7 @@ package org.apache.flink.api.java.typeutils.runtime;
 
 import com.esotericsoftware.kryo.Kryo;
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.InstantiationTypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.GenericTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -171,11 +171,11 @@ public final class WritableSerializer<T extends Writable> extends TypeSerializer
 			return ReconfigureResult.COMPATIBLE;
 		}
 
-		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		return ReconfigureResult.INCOMPATIBLE;
 	}
 
 	public static final class WritableSerializerConfigSnapshot<T extends Writable>
-			extends InstantiationTypeSerializerConfigSnapshot<T> {
+			extends GenericTypeSerializerConfigSnapshot<T> {
 
 		private static final int VERSION = 1;
 

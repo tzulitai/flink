@@ -101,7 +101,7 @@ public final class IntValueSerializer extends TypeSerializerSingleton<IntValue> 
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.IntSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

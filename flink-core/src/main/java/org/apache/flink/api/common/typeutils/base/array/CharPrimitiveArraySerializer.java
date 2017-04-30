@@ -125,7 +125,7 @@ public final class CharPrimitiveArraySerializer extends TypeSerializerSingleton<
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.CharArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

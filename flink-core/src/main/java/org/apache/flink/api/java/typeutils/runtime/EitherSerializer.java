@@ -206,7 +206,7 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 					leftSerializer,
 					rightSerializer);
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

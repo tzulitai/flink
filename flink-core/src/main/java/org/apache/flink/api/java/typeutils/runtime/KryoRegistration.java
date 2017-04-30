@@ -26,11 +26,15 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.typeutils.runtime.KryoRegistrationSerializerConfigSnapshot;
 import org.apache.flink.util.Preconditions;
 
+import java.io.Serializable;
+
 /**
  * A {@code KryoRegistration} resembles a registered class and its serializer in Kryo.
  */
 @Internal
-public class KryoRegistration {
+public class KryoRegistration implements Serializable {
+
+	private static final long serialVersionUID = 5375110512910892655L;
 
 	/** IMPORTANT: the order of the enumerations must not change, since their ordinals as used for serialization. */
 	public enum SerializerDefinitionType {
@@ -126,10 +130,43 @@ public class KryoRegistration {
 	}
 
 	public boolean isDummy() {
-		return registeredClass == KryoRegistrationSerializerConfigSnapshot.DummyRegisteredClass.class
+		return registeredClass.equals(KryoRegistrationSerializerConfigSnapshot.DummyRegisteredClass.class)
 				|| (serializerClass != null
-						&& serializerClass == KryoRegistrationSerializerConfigSnapshot.DummyKryoSerializerClass.class)
+						&& serializerClass.equals(KryoRegistrationSerializerConfigSnapshot.DummyKryoSerializerClass.class))
 				|| (serializableSerializerInstance != null
 						&& serializableSerializerInstance.getSerializer() instanceof KryoRegistrationSerializerConfigSnapshot.DummyKryoSerializerClass);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) {
+			return true;
+		}
+
+		if (obj == null) {
+			return false;
+		}
+
+		if (obj instanceof KryoRegistration) {
+			KryoRegistration other = (KryoRegistration) obj;
+
+			// we cannot include the Serializers here because they don't implement the equals method
+			return serializerDefinitionType == other.serializerDefinitionType
+				&& registeredClass == other.registeredClass
+				&& serializerClass == other.serializerClass;
+		} else {
+			return false;
+		}
+	}
+
+	@Override
+	public int hashCode() {
+		int result = serializerDefinitionType.hashCode();
+		result = 31 * result + registeredClass.hashCode();
+		if (serializerClass != null) {
+			result = 31 * result + serializerClass.hashCode();
+		}
+
+		return result;
 	}
 }

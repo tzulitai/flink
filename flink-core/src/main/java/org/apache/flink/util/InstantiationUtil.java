@@ -109,9 +109,7 @@ public final class InstantiationUtil {
 	 *                          message about the reason why the instantiation failed.
 	 */
 	public static <T> T instantiate(Class<T> clazz, Class<? super T> castTo) {
-		if (clazz == null) {
-			throw new NullPointerException();
-		}
+		Preconditions.checkArgument(clazz != null);
 		
 		// check if the class is a subclass, if the check is required
 		if (castTo != null && !castTo.isAssignableFrom(clazz)) {
@@ -134,9 +132,7 @@ public final class InstantiationUtil {
 	 *                          message about the reason why the instantiation failed.
 	 */
 	public static <T> T instantiate(Class<T> clazz) {
-		if (clazz == null) {
-			throw new NullPointerException();
-		}
+		Preconditions.checkArgument(clazz != null);
 		
 		// try to instantiate the class
 		try {
@@ -158,7 +154,7 @@ public final class InstantiationUtil {
 				(message == null ? "." : ": " + message), t);
 		}
 	}
-	
+
 	/**
 	 * Checks, whether the given class has a public nullary constructor.
 	 * 

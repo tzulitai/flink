@@ -101,7 +101,7 @@ public class FloatValueSerializer extends TypeSerializerSingleton<FloatValue> {
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.FloatSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

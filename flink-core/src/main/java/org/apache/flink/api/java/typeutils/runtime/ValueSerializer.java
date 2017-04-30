@@ -191,7 +191,7 @@ public final class ValueSerializer<T extends Value> extends TypeSerializer<T> {
 				// in the future, if there are more Kryo registrations, we should try to resolve that
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		} else {
 			return ReconfigureResult.INCOMPATIBLE;

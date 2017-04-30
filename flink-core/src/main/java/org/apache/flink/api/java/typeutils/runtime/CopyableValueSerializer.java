@@ -21,7 +21,7 @@ package org.apache.flink.api.java.typeutils.runtime;
 import java.io.IOException;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.InstantiationTypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.GenericTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -148,11 +148,11 @@ public final class CopyableValueSerializer<T extends CopyableValue<T>> extends T
 			return ReconfigureResult.COMPATIBLE;
 		}
 
-		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		return ReconfigureResult.INCOMPATIBLE;
 	}
 
 	public static final class CopyableValueSerializerConfigSnapshot<T extends CopyableValue<T>>
-			extends InstantiationTypeSerializerConfigSnapshot<T> {
+			extends GenericTypeSerializerConfigSnapshot<T> {
 
 		private static final int VERSION = 1;
 

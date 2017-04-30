@@ -88,6 +88,8 @@ public final class AvroSerializer<T> extends TypeSerializer<T> {
 		this.typeToInstantiate = checkNotNull(typeToInstantiate);
 		
 		InstantiationUtil.checkForInstantiation(typeToInstantiate);
+
+		this.kryoRegistrations = buildKryoRegistrations(type);
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -244,7 +246,7 @@ public final class AvroSerializer<T> extends TypeSerializer<T> {
 
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		} else {
 			return ReconfigureResult.INCOMPATIBLE;

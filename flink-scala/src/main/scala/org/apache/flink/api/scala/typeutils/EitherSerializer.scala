@@ -111,7 +111,9 @@ class EitherSerializer[A, B, T <: Either[A, B]](
   // --------------------------------------------------------------------------------------------
 
   override def snapshotConfiguration(): EitherSerializerConfigSnapshot = {
-    new EitherSerializerConfigSnapshot(leftSerializer.snapshotConfiguration(), rightSerializer.snapshotConfiguration())
+    new EitherSerializerConfigSnapshot(
+      leftSerializer.snapshotConfiguration(),
+      rightSerializer.snapshotConfiguration())
   }
 
   override def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
@@ -122,7 +124,7 @@ class EitherSerializer[A, B, T <: Either[A, B]](
           leftSerializer,
           rightSerializer
         )
-      case _ => ReconfigureResult.INCOMPATIBLE_DATA_TYPE
+      case _ => ReconfigureResult.INCOMPATIBLE
     }
   }
 }

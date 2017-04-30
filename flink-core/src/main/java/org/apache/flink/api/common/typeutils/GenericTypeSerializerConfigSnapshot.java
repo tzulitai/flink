@@ -26,19 +26,19 @@ import org.apache.flink.util.Preconditions;
 import java.io.IOException;
 
 /**
- * Configuration snapshot for serializers which require class instantiation.
+ * Configuration snapshot for serializers for generic types.
  *
  * @param <T> The type to be instantiated.
  */
 @Internal
-public abstract class InstantiationTypeSerializerConfigSnapshot<T> extends TypeSerializerConfigSnapshot {
+public abstract class GenericTypeSerializerConfigSnapshot<T> extends TypeSerializerConfigSnapshot {
 
 	private Class<T> typeClass;
 
 	/** This empty nullary constructor is required for deserializing the configuration. */
-	public InstantiationTypeSerializerConfigSnapshot() {}
+	public GenericTypeSerializerConfigSnapshot() {}
 
-	public InstantiationTypeSerializerConfigSnapshot(Class<T> typeClass) {
+	public GenericTypeSerializerConfigSnapshot(Class<T> typeClass) {
 		this.typeClass = Preconditions.checkNotNull(typeClass);
 	}
 

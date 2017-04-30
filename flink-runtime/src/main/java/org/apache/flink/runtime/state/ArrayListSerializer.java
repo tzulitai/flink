@@ -151,7 +151,7 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 			return elementSerializer.reconfigureInternal(
 					((CollectionSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

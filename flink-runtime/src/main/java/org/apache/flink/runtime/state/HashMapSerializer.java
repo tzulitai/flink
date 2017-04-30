@@ -216,7 +216,7 @@ public final class HashMapSerializer<K, V> extends TypeSerializer<HashMap<K, V>>
 					keySerializer,
 					valueSerializer);
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

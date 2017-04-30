@@ -100,7 +100,7 @@ public final class LongValueArraySerializer extends TypeSerializerSingleton<Long
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.LongArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

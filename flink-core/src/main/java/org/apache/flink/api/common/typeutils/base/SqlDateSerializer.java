@@ -119,7 +119,7 @@ public final class SqlDateSerializer extends TypeSerializerSingleton<Date> {
 		if (configSnapshot instanceof TimestampSerializationFormatConfigSnapshot) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

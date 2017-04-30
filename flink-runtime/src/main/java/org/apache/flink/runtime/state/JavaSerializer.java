@@ -131,7 +131,7 @@ final class JavaSerializer<T extends Serializable> extends TypeSerializer<T> {
 		if (configSnapshot instanceof JavaSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

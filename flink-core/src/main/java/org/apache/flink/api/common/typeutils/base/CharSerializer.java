@@ -100,7 +100,7 @@ public final class CharSerializer extends TypeSerializerSingleton<Character> {
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.CharSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

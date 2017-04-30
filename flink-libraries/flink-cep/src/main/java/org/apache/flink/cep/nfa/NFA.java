@@ -949,7 +949,7 @@ public class NFA<T> implements Serializable {
 			if (configSnapshot instanceof NFASerializerConfigSnapshot) {
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		}
 	}

@@ -118,7 +118,7 @@ public final class BytePrimitiveArraySerializer extends TypeSerializerSingleton<
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.ByteArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

@@ -132,7 +132,7 @@ public final class SqlTimestampSerializer extends TypeSerializerSingleton<Timest
 		if (configSnapshot instanceof SqlTimestampSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

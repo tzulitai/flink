@@ -208,6 +208,6 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 			}
 		}
 
-		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		return ReconfigureResult.INCOMPATIBLE;
 	}
 }

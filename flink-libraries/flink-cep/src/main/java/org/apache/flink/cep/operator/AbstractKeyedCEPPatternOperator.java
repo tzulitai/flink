@@ -492,7 +492,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 						((CollectionSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
 			}
 
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

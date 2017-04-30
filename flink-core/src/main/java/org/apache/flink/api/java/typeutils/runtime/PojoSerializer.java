@@ -33,7 +33,7 @@ import java.util.Objects;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeutils.InstantiationTypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.GenericTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -590,7 +590,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 						} else {
 							// the Pojo does not contain the field; we should never reach here because
 							// the config snapshot would have failed to be restored in the first place
-							return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+							return ReconfigureResult.INCOMPATIBLE;
 						}
 
 						i++;
@@ -659,10 +659,10 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 		//  - the preceding serializer was not a PojoSerializer,
 		//  - the Pojo type is different, or
 		//  - there are new fields in the Pojo.
-		return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+		return ReconfigureResult.INCOMPATIBLE;
 	}
 
-	public static final class PojoSerializerConfigSnapshot<T> extends InstantiationTypeSerializerConfigSnapshot<T> {
+	public static final class PojoSerializerConfigSnapshot<T> extends GenericTypeSerializerConfigSnapshot<T> {
 
 		private static final int VERSION = 1;
 

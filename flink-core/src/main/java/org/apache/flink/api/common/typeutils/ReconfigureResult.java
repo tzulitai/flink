@@ -42,13 +42,7 @@ public enum ReconfigureResult {
 	/**
 	 * Represents that the serializer cannot be reconfigured to be compatible with its predecessor.
 	 */
-	INCOMPATIBLE(2),
-
-	/**
-	 * Represents that the serializer is for data of a different type
-	 * than its predecessor, and is therefore incompatible.
-	 */
-	INCOMPATIBLE_DATA_TYPE(3);
+	INCOMPATIBLE(2);
 
 	private int precedence;
 

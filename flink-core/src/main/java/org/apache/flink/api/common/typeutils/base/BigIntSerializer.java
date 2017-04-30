@@ -163,7 +163,7 @@ public final class BigIntSerializer extends TypeSerializerSingleton<BigInteger> 
 		if (configSnapshot instanceof BigIntSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 

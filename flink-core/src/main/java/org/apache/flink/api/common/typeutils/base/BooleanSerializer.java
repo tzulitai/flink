@@ -99,7 +99,7 @@ public final class BooleanSerializer extends TypeSerializerSingleton<Boolean> {
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.BooleanSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

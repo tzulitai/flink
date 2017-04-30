@@ -285,10 +285,13 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 			return typeSerializer.reconfigureInternal(
 					((StreamElementSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerConfigSnapshot());
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link StreamElementSerializer}.
+	 */
 	public static final class StreamElementSerializerConfigSnapshot extends CompositeTypeSerializerConfigSnapshot {
 
 		private static final int VERSION = 1;

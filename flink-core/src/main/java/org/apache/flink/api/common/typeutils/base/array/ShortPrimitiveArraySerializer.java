@@ -125,7 +125,7 @@ public final class ShortPrimitiveArraySerializer extends TypeSerializerSingleton
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.ShortArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

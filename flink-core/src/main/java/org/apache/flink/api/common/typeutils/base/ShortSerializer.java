@@ -99,7 +99,7 @@ public final class ShortSerializer extends TypeSerializerSingleton<Short> {
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.ShortSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

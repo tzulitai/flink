@@ -27,9 +27,6 @@ import org.apache.flink.util.InstantiationUtil;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * Convenience methods for Kryo

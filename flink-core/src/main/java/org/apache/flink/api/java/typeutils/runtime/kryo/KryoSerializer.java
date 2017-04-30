@@ -283,8 +283,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 			// we cannot include the Serializers here because they don't implement the equals method
 			return other.canEqual(this) &&
 				type == otherKryo.type &&
-				(registeredTypes.equals(otherKryo.registeredTypes) || otherKryo.registeredTypes.isEmpty()) &&
-				(registeredTypesWithSerializerClasses.equals(otherKryo.registeredTypesWithSerializerClasses) || otherKryo.registeredTypesWithSerializerClasses.isEmpty()) &&
+				(kryoRegistrations.equals(otherKryo.kryoRegistrations)) &&
 				(defaultSerializerClasses.equals(otherKryo.defaultSerializerClasses) || otherKryo.defaultSerializerClasses.isEmpty());
 		} else {
 			return false;
@@ -307,11 +306,9 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 		if (obj instanceof KryoSerializer) {
 			KryoSerializer<?> other = (KryoSerializer<?>) obj;
 
-			// we cannot include the Serializers here because they don't implement the equals method
 			return other.canEqual(this) &&
 				type == other.type &&
-				registeredTypes.equals(other.registeredTypes) &&
-				registeredTypesWithSerializerClasses.equals(other.registeredTypesWithSerializerClasses) &&
+				kryoRegistrations.equals(other.kryoRegistrations) &&
 				defaultSerializerClasses.equals(other.defaultSerializerClasses);
 		} else {
 			return false;
@@ -401,7 +398,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 		if (configSnapshot instanceof KryoSerializerConfigSnapshot) {
 			final KryoSerializerConfigSnapshot<T> config = (KryoSerializerConfigSnapshot<T>) configSnapshot;
 
-			if (type != config.getTypeClass()) {
+			if (type.equals(config.getTypeClass())) {
 				LinkedHashMap<String, KryoRegistration> oldRegistrations = config.getKryoRegistrations();
 
 				// reconfigure by assuring that classes which were previously registered are registered
@@ -426,7 +423,7 @@ public class KryoSerializer<T> extends TypeSerializer<T> {
 				// the previous ones they overwrite; we can only signal compatibly and hope for the best
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		} else {
 			return ReconfigureResult.INCOMPATIBLE;

@@ -126,7 +126,7 @@ public class IntPrimitiveArraySerializer extends TypeSerializerSingleton<int[]>{
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.IntArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

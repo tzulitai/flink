@@ -126,7 +126,7 @@ public final class BooleanPrimitiveArraySerializer extends TypeSerializerSinglet
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.BooleanArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

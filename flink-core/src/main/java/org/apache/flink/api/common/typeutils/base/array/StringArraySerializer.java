@@ -129,7 +129,7 @@ public final class StringArraySerializer extends TypeSerializerSingleton<String[
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.StringArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

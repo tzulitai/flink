@@ -107,7 +107,7 @@ public final class VoidNamespaceSerializer extends TypeSerializerSingleton<VoidN
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.VoidSerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

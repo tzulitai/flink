@@ -221,11 +221,14 @@ public class TimeWindow extends Window {
 			if (configSnapshot instanceof TimeWindowSerializerConfig) {
 				return ReconfigureResult.COMPATIBLE;
 			} else {
-				return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+				return ReconfigureResult.INCOMPATIBLE;
 			}
 		}
 	}
 
+	/**
+	 * A {@link TypeSerializerConfigSnapshot} specific to the {@link TimeWindow} serializer.
+	 */
 	public static final class TimeWindowSerializerConfig extends ParameterlessTypeSerializerConfig {}
 
 	// ------------------------------------------------------------------------

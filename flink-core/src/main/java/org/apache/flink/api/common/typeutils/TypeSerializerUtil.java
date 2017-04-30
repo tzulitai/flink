@@ -203,7 +203,7 @@ public class TypeSerializerUtil {
 
 				// config snapshot class, so that we can re-instantiate the
 				// correct type of config snapshot instance when deserializing
-				InstantiationUtil.serializeObject(new DataOutputViewStream(out), serializerConfigSnapshot);
+				InstantiationUtil.serializeObject(new DataOutputViewStream(out), serializerConfigSnapshot.getClass());
 
 				// the actual configuration parameters
 				serializerConfigSnapshot.write(out);

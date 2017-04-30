@@ -100,7 +100,7 @@ public final class IntValueArraySerializer extends TypeSerializerSingleton<IntVa
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.IntArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }

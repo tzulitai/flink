@@ -210,9 +210,6 @@ public abstract class TypeSerializer<T> implements Serializable {
 	 *
 	 *     <li>{@link ReconfigureResult#INCOMPATIBLE}: this serializer cannot resolve the configuration of its
 	 *     predecessor, and therefore is not compatible for data written by the preceding serializer.</li>
-	 *
-	 *     <li>{@link ReconfigureResult#INCOMPATIBLE_DATA_TYPE}: this serializer is for data of a different type
-	 *     than its predecessor, and is therefore incompatible.</li>
 	 * </ul>
 	 *
 	 * <p>This method is guaranteed to only be invoked if the preceding serializer's configuration snapshot is not the

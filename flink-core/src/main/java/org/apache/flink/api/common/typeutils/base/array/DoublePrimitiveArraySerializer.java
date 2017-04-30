@@ -125,7 +125,7 @@ public final class DoublePrimitiveArraySerializer extends TypeSerializerSingleto
 		if (configSnapshot instanceof PlainSerializationFormatConfigs.DoubleArraySerializationFormatConfig) {
 			return ReconfigureResult.COMPATIBLE;
 		} else {
-			return ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
+			return ReconfigureResult.INCOMPATIBLE;
 		}
 	}
 }
