@@ -167,15 +167,15 @@ public abstract class KryoRegistrationSerializerConfigSnapshot<T> extends Instan
 				case CLASS:
 					String serializerClassname = in.readUTF();
 
-					Class<? extends Serializer<RC>> serializerClass;
+					Class serializerClass;
 					try {
-						serializerClass = (Class<? extends Serializer<RC>>) Class.forName(serializerClassname, true, userCodeClassLoader);
+						serializerClass = Class.forName(serializerClassname, true, userCodeClassLoader);
 					} catch (ClassNotFoundException e) {
 						LOG.warn("Cannot find registered Kryo serializer class for class " + registeredClassname +
 								" in classpath; using a dummy Kryo serializer that should be replaced as soon as" +
 								" a new Kryo serializer for the class is present", e);
 
-						serializerClass = (Class<? extends Serializer<RC>>) DummyKryoSerializerClass.class;
+						serializerClass = DummyKryoSerializerClass.class;
 					}
 
 					kryoRegistration = new KryoRegistration(registeredClass, serializerClass);

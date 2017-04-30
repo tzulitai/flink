@@ -226,6 +226,9 @@ public class TimeWindow extends Window {
 		}
 	}
 
+	/**
+	 * A {@link TypeSerializerConfigSnapshot} specific to the {@link TimeWindow} serializer.
+	 */
 	public static final class TimeWindowSerializerConfig extends ParameterlessTypeSerializerConfig {}
 
 	// ------------------------------------------------------------------------

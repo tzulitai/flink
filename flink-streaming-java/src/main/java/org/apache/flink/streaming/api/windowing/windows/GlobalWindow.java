@@ -157,5 +157,8 @@ public class GlobalWindow extends Window {
 		}
 	}
 
+	/**
+	 * A {@link TypeSerializerConfigSnapshot} specific to the {@link GlobalWindow} serializer.
+	 */
 	public static final class GlobalWindowSerializerConfigSnapshot extends ParameterlessTypeSerializerConfig {}
 }

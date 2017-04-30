@@ -104,10 +104,12 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
     new OptionSerializer.OptionSerializerConfigSnapshot(elemSerializer.snapshotConfiguration())
   }
 
-  override protected def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
+  override protected def reconfigure(
+      configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
     configSnapshot match {
       case optionSerializerConfigSnapshot: OptionSerializer.OptionSerializerConfigSnapshot =>
-        elemSerializer.reconfigureInternal(optionSerializerConfigSnapshot.getSingleNestedSerializerConfigSnapshot)
+        elemSerializer.reconfigureInternal(
+          optionSerializerConfigSnapshot.getSingleNestedSerializerConfigSnapshot)
       case _ => ReconfigureResult.INCOMPATIBLE_DATA_TYPE
     }
   }
@@ -115,8 +117,9 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
 
 object OptionSerializer {
 
-  class OptionSerializerConfigSnapshot(var elemSerializerConfigSnapshot: TypeSerializerConfigSnapshot)
-      extends CompositeTypeSerializerConfigSnapshot(elemSerializerConfigSnapshot) {
+  class OptionSerializerConfigSnapshot(
+      private var elemSerializerConfigSnapshot: TypeSerializerConfigSnapshot)
+    extends CompositeTypeSerializerConfigSnapshot(elemSerializerConfigSnapshot) {
 
     /** This empty nullary constructor is required for deserializing the configuration. */
     def this() = this(null)

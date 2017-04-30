@@ -63,13 +63,14 @@ class UnitSerializer extends TypeSerializerSingleton[Unit] {
   // Serializer configuration snapshotting & reconfiguring
   // --------------------------------------------------------------------------------------------
 
-  override def snapshotConfiguration(): PlainSerializationFormatConfigs.VoidSerializationFormatConfig = {
+  override def snapshotConfiguration(): TypeSerializerConfigSnapshot = {
     PlainSerializationFormatConfigs.VOID
   }
 
   override def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
     configSnapshot match {
-      case voidFormatConfig: PlainSerializationFormatConfigs.VoidSerializationFormatConfig => ReconfigureResult.COMPATIBLE
+      case voidFormatConfig: PlainSerializationFormatConfigs.VoidSerializationFormatConfig =>
+        ReconfigureResult.COMPATIBLE
       case _ => ReconfigureResult.INCOMPATIBLE
     }
   }

@@ -110,7 +110,9 @@ class TrySerializer[A](
         throwableSerializer.snapshotConfiguration())
   }
 
-  override protected def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
+  override protected def reconfigure(
+      configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {
+
     configSnapshot match {
       case trySerializerConfigSnapshot: TrySerializer.TrySerializerConfigSnapshot =>
         TypeSerializerUtil.reconfigureMultipleSerializers(
@@ -128,7 +130,8 @@ object TrySerializer {
   class TrySerializerConfigSnapshot(
       private var elemSerializerConfigSnapshot: TypeSerializerConfigSnapshot,
       private var throwableSerializerConfigSnapshot: KryoSerializerConfigSnapshot[Throwable])
-    extends CompositeTypeSerializerConfigSnapshot(elemSerializerConfigSnapshot, throwableSerializerConfigSnapshot) {
+    extends CompositeTypeSerializerConfigSnapshot(
+      elemSerializerConfigSnapshot, throwableSerializerConfigSnapshot) {
 
     /** This empty nullary constructor is required for deserializing the configuration. */
     def this() = this(null, null)

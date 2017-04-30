@@ -289,6 +289,9 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link StreamElementSerializer}.
+	 */
 	public static final class StreamElementSerializerConfigSnapshot extends CompositeTypeSerializerConfigSnapshot {
 
 		private static final int VERSION = 1;

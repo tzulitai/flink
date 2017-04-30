@@ -111,7 +111,9 @@ class EitherSerializer[A, B, T <: Either[A, B]](
   // --------------------------------------------------------------------------------------------
 
   override def snapshotConfiguration(): EitherSerializerConfigSnapshot = {
-    new EitherSerializerConfigSnapshot(leftSerializer.snapshotConfiguration(), rightSerializer.snapshotConfiguration())
+    new EitherSerializerConfigSnapshot(
+      leftSerializer.snapshotConfiguration(),
+      rightSerializer.snapshotConfiguration())
   }
 
   override def reconfigure(configSnapshot: TypeSerializerConfigSnapshot): ReconfigureResult = {

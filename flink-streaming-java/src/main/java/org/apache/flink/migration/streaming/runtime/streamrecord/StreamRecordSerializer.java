@@ -167,6 +167,9 @@ public final class StreamRecordSerializer<T> extends TypeSerializer<StreamRecord
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link StreamRecordSerializer}.
+	 */
 	public static final class StreamRecordSerializerConfigSnapshot extends CompositeTypeSerializerConfigSnapshot {
 
 		private static final int VERSION = 1;

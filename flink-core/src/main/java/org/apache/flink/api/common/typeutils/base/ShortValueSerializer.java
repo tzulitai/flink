@@ -25,7 +25,6 @@ import org.apache.flink.api.common.typeutils.ReconfigureResult;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.types.IntValue;
 import org.apache.flink.types.ShortValue;
 
 @Internal

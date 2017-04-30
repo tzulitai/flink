@@ -88,6 +88,8 @@ public final class AvroSerializer<T> extends TypeSerializer<T> {
 		this.typeToInstantiate = checkNotNull(typeToInstantiate);
 		
 		InstantiationUtil.checkForInstantiation(typeToInstantiate);
+
+		this.kryoRegistrations = buildKryoRegistrations(type);
 	}
 
 	// --------------------------------------------------------------------------------------------

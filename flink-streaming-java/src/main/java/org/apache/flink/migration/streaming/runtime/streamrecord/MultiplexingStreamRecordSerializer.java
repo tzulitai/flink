@@ -228,6 +228,9 @@ public class MultiplexingStreamRecordSerializer<T> extends TypeSerializer<Stream
 		}
 	}
 
+	/**
+	 * Configuration snapshot specific to the {@link MultiplexingStreamRecordSerializer}.
+	 */
 	public static final class MultiplexingStreamRecordSerializerConfigSnapshot
 			extends CompositeTypeSerializerConfigSnapshot {
 
