@@ -52,24 +52,17 @@ public class TypeSerializerUtil {
 
 		Preconditions.checkArgument(serializers.length == configSnapshots.length);
 
-		ReconfigureResult finalResult = ReconfigureResult.COMPATIBLE;
-		ReconfigureResult result;
-		for (int i = 0; i < serializers.length; i++) {
-			result = serializers[i].reconfigureInternal(configSnapshots[i]);
+		// start with COMPATIBLE, which has lowest result precedence; will be overwritten
+		// with results of higher precedence if encountered during the reconfiguration process
+		ReconfigureResult finalReconfigurationResult = ReconfigureResult.COMPATIBLE;
 
-			if (result == ReconfigureResult.INCOMPATIBLE_DATA_TYPE) {
-				// INCOMPATIBLE_DATA_TYPE has highest precedence
-				finalResult = ReconfigureResult.INCOMPATIBLE_DATA_TYPE;
-			} else if (result == ReconfigureResult.INCOMPATIBLE && finalResult != ReconfigureResult.INCOMPATIBLE_DATA_TYPE) {
-				// INCOMPATIBLE only has lower precedence than INCOMPATIBLE_DATA_TYPE
-				finalResult = ReconfigureResult.INCOMPATIBLE;
-			} else if (result == ReconfigureResult.COMPATIBLE_NEW_SCHEMA && finalResult == ReconfigureResult.COMPATIBLE) {
-				// COMPATIBLE_NEW_SCHEMA only has higher precedence than COMPATIBLE
-				finalResult = ReconfigureResult.COMPATIBLE_NEW_SCHEMA;
-			}
+		for (int i = 0; i < configSnapshots.length; i++) {
+			finalReconfigurationResult = ReconfigureResult.resolvePrecedence(
+					finalReconfigurationResult,
+					serializers[i].reconfigureInternal(configSnapshots[i]));
 		}
 
-		return finalResult;
+		return finalReconfigurationResult;
 	}
 
 	/**

@@ -31,23 +31,40 @@ public enum ReconfigureResult {
 	 * Represents that the serializer is reconfigured to be compatible with
 	 * its predecessor, and the serialization schema remains the same.
 	 */
-	COMPATIBLE,
+	COMPATIBLE(0),
 
 	/**
 	 * Represents that the serializer is reconfigured to be compatible with
 	 * its predecessor, but has a new serialization schema.
 	 */
-	COMPATIBLE_NEW_SCHEMA,
+	COMPATIBLE_NEW_SCHEMA(1),
 
 	/**
 	 * Represents that the serializer cannot be reconfigured to be compatible with its predecessor.
 	 */
-	INCOMPATIBLE,
+	INCOMPATIBLE(2),
 
 	/**
 	 * Represents that the serializer is for data of a different type
 	 * than its predecessor, and is therefore incompatible.
 	 */
-	INCOMPATIBLE_DATA_TYPE
+	INCOMPATIBLE_DATA_TYPE(3);
 
+	private int precedence;
+
+	ReconfigureResult(int precedence) {
+		this.precedence = precedence;
+	}
+
+	/**
+	 * Takes two reconfiguration results, and returns the result with higher precedence.
+	 *
+	 * @param first the first reconfiguration result.
+	 * @param second the second reconfiguration result.
+	 *
+	 * @return the result with the higher precedence.
+	 */
+	public static ReconfigureResult resolvePrecedence(ReconfigureResult first, ReconfigureResult second) {
+		return (first.precedence > second.precedence) ? first : second;
+	}
 }
