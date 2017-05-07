@@ -40,6 +40,7 @@ import org.apache.flink.streaming.connectors.kinesis.testutils.KinesisShardIdGen
 import org.apache.flink.streaming.connectors.kinesis.testutils.TestableFlinkKinesisConsumer;
 import org.apache.flink.streaming.connectors.kinesis.util.KinesisConfigUtil;
 import org.apache.flink.streaming.util.serialization.SimpleStringSchema;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -52,10 +53,12 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.io.Serializable;
 
@@ -530,7 +533,7 @@ public class FlinkKinesisConsumerTest {
 	// ----------------------------------------------------------------------
 
 	@Test
-	public void testSnapshotStateShouldNotClearListStateIfSourceNotOpened() throws Exception {
+	public void testUseRestoredStateForSnapshotIfFetcherNotInitialized() throws Exception {
 		Properties config = new Properties();
 		config.setProperty(AWSConfigConstants.AWS_REGION, "us-east-1");
 		config.setProperty(AWSConfigConstants.AWS_ACCESS_KEY_ID, "accessKeyId");
@@ -538,51 +541,56 @@ public class FlinkKinesisConsumerTest {
 
 		OperatorStateStore operatorStateStore = mock(OperatorStateStore.class);
 
-		TestingListState<Serializable> listState = new TestingListState<>();
+		List<Tuple2<KinesisStreamShard, SequenceNumber>> globalUnionState = new ArrayList<>(4);
+		globalUnionState.add(Tuple2.of(
+			new KinesisStreamShard("fakeStream",
+				new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(0))),
+			new SequenceNumber("1")));
+		globalUnionState.add(Tuple2.of(
+			new KinesisStreamShard("fakeStream",
+				new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(1))),
+			new SequenceNumber("1")));
+		globalUnionState.add(Tuple2.of(
+			new KinesisStreamShard("fakeStream",
+				new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(2))),
+			new SequenceNumber("1")));
+		globalUnionState.add(Tuple2.of(
+			new KinesisStreamShard("fakeStream",
+				new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(3))),
+			new SequenceNumber("1")));
+
+		TestingListState<Tuple2<KinesisStreamShard, SequenceNumber>> listState = new TestingListState<>();
+		for (Tuple2<KinesisStreamShard, SequenceNumber> state : globalUnionState) {
+			listState.add(state);
+		}
 
 		FlinkKinesisConsumer<String> consumer = new FlinkKinesisConsumer<>("fakeStream", new SimpleStringSchema(), config);
+		RuntimeContext context = mock(RuntimeContext.class);
+		when(context.getIndexOfThisSubtask()).thenReturn(0);
+		when(context.getNumberOfParallelSubtasks()).thenReturn(2);
+		consumer.setRuntimeContext(context);
 
 		when(operatorStateStore.getUnionListState(Matchers.any(ListStateDescriptor.class))).thenReturn(listState);
 
 		StateInitializationContext initializationContext = mock(StateInitializationContext.class);
 
 		when(initializationContext.getOperatorStateStore()).thenReturn(operatorStateStore);
-		when(initializationContext.isRestored()).thenReturn(false);
+		when(initializationContext.isRestored()).thenReturn(true);
 
 		consumer.initializeState(initializationContext);
 
-		consumer.snapshotState(new StateSnapshotContextSynchronousImpl(123, 123)); //arbitrary checkpoint id and timestamp
+		// only opened, not run
+		consumer.open(new Configuration());
 
-		assertFalse(listState.isClearCalled());
-	}
+		//arbitrary checkpoint id and timestamp
+		consumer.snapshotState(new StateSnapshotContextSynchronousImpl(123, 123));
 
-	@Test
-	public void testSnapshotStateShouldNotClearListStateIfSourceNotRun() throws Exception {
-		Properties config = new Properties();
-		config.setProperty(AWSConfigConstants.AWS_REGION, "us-east-1");
-		config.setProperty(AWSConfigConstants.AWS_ACCESS_KEY_ID, "accessKeyId");
-		config.setProperty(AWSConfigConstants.AWS_SECRET_ACCESS_KEY, "secretKey");
+		Assert.assertTrue(listState.isClearCalled());
 
-		OperatorStateStore operatorStateStore = mock(OperatorStateStore.class);
-
-		TestingListState<Serializable> listState = new TestingListState<>();
-
-		FlinkKinesisConsumer<String> consumer = new FlinkKinesisConsumer<>("fakeStream", new SimpleStringSchema(), config);
-
-		when(operatorStateStore.getUnionListState(Matchers.any(ListStateDescriptor.class))).thenReturn(listState);
-
-		StateInitializationContext initializationContext = mock(StateInitializationContext.class);
-
-		when(initializationContext.getOperatorStateStore()).thenReturn(operatorStateStore);
-		when(initializationContext.isRestored()).thenReturn(false);
-
-		consumer.initializeState(initializationContext);
-
-		consumer.open(new Configuration()); // only opened, not run
-
-		consumer.snapshotState(new StateSnapshotContextSynchronousImpl(123, 123)); //arbitrary checkpoint id and timestamp
-
-		assertFalse(listState.isClearCalled());
+		// the checkpointed list state should contain only the shards that it should subscribe to
+		Assert.assertEquals(globalUnionState.size() / 2, listState.getList().size());
+		Assert.assertTrue(listState.getList().contains(globalUnionState.get(0)));
+		Assert.assertTrue(listState.getList().contains(globalUnionState.get(2)));
 	}
 
 	@Test
@@ -618,8 +626,8 @@ public class FlinkKinesisConsumerTest {
 		// ----------------------------------------------------------------------
 		// mock operator state backend and initial state for initializeState()
 		// ----------------------------------------------------------------------
-		TestingListState<Serializable> listState = new TestingListState<>();
-		for (Serializable state: initialState) {
+		TestingListState<Tuple2<KinesisStreamShard, SequenceNumber>> listState = new TestingListState<>();
+		for (Tuple2<KinesisStreamShard, SequenceNumber> state: initialState) {
 			listState.add(state);
 		}
 
@@ -693,8 +701,6 @@ public class FlinkKinesisConsumerTest {
 			"fakeStream", new Properties(), 10, 2);
 		consumer.open(new Configuration());
 		consumer.run(Mockito.mock(SourceFunction.SourceContext.class));
-
-		Mockito.verify(mockedFetcher).setIsRestoringFromFailure(false);
 	}
 
 	@Test
@@ -718,7 +724,6 @@ public class FlinkKinesisConsumerTest {
 		consumer.open(new Configuration());
 		consumer.run(Mockito.mock(SourceFunction.SourceContext.class));
 
-		Mockito.verify(mockedFetcher).setIsRestoringFromFailure(true);
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> restoredShard : fakeRestoredState.entrySet()) {
 			Mockito.verify(mockedFetcher).registerNewSubscribedShardState(
 				new KinesisStreamShardState(restoredShard.getKey(), restoredShard.getValue()));
@@ -736,7 +741,7 @@ public class FlinkKinesisConsumerTest {
 		// ----------------------------------------------------------------------
 		// mock operator state backend and initial state for initializeState()
 		// ----------------------------------------------------------------------
-		TestingListState<Serializable> listState = new TestingListState<>();
+		TestingListState<Tuple2<KinesisStreamShard, SequenceNumber>> listState = new TestingListState<>();
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> state: fakeRestoredState.entrySet()) {
 			listState.add(Tuple2.of(state.getKey(), state.getValue()));
 		}
@@ -770,7 +775,6 @@ public class FlinkKinesisConsumerTest {
 		consumer.open(new Configuration());
 		consumer.run(Mockito.mock(SourceFunction.SourceContext.class));
 
-		Mockito.verify(mockedFetcher).setIsRestoringFromFailure(true);
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> restoredShard : fakeRestoredState.entrySet()) {
 			Mockito.verify(mockedFetcher).registerNewSubscribedShardState(
 				new KinesisStreamShardState(restoredShard.getKey(), restoredShard.getValue()));
@@ -790,7 +794,7 @@ public class FlinkKinesisConsumerTest {
 		// ----------------------------------------------------------------------
 		// mock operator state backend and initial state for initializeState()
 		// ----------------------------------------------------------------------
-		TestingListState<Serializable> listState = new TestingListState<>();
+		TestingListState<Tuple2<KinesisStreamShard, SequenceNumber>> listState = new TestingListState<>();
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> state: fakeRestoredState.entrySet()) {
 			listState.add(Tuple2.of(state.getKey(), state.getValue()));
 		}
@@ -827,7 +831,6 @@ public class FlinkKinesisConsumerTest {
 		consumer.open(new Configuration());
 		consumer.run(Mockito.mock(SourceFunction.SourceContext.class));
 
-		Mockito.verify(mockedFetcher).setIsRestoringFromFailure(true);
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> restoredShard : fakeRestoredStateForOthers.entrySet()) {
 			// should never get restored state not belonging to itself
 			Mockito.verify(mockedFetcher, never()).registerNewSubscribedShardState(
@@ -876,7 +879,7 @@ public class FlinkKinesisConsumerTest {
 		// ----------------------------------------------------------------------
 		// mock operator state backend and initial state for initializeState()
 		// ----------------------------------------------------------------------
-		TestingListState<Serializable> listState = new TestingListState<>();
+		TestingListState<Tuple2<KinesisStreamShard, SequenceNumber>> listState = new TestingListState<>();
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> state: fakeRestoredState.entrySet()) {
 			listState.add(Tuple2.of(state.getKey(), state.getValue()));
 		}
@@ -915,7 +918,6 @@ public class FlinkKinesisConsumerTest {
 		fakeRestoredState.put(new KinesisStreamShard("fakeStream2",
 				new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(2))),
 			SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM.get());
-		Mockito.verify(mockedFetcher).setIsRestoringFromFailure(true);
 		for (Map.Entry<KinesisStreamShard, SequenceNumber> restoredShard : fakeRestoredState.entrySet()) {
 			Mockito.verify(mockedFetcher).registerNewSubscribedShardState(
 				new KinesisStreamShardState(restoredShard.getKey(), restoredShard.getValue()));
