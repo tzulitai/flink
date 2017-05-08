@@ -17,6 +17,8 @@
 
 package org.apache.flink.streaming.connectors.kafka.internals;
 
+import org.apache.flink.annotation.VisibleForTesting;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,7 +70,7 @@ public abstract class AbstractPartitionDiscoverer {
 	 * to keep track of only the largest partition id because Kafka partition numbers are only
 	 * allowed to be increased and has incremental ids.
 	 */
-	private final Map<String, Integer> topicsToLargestDiscoveredPartitionId;
+	private Map<String, Integer> topicsToLargestDiscoveredPartitionId;
 
 	public AbstractPartitionDiscoverer(
 			KafkaTopicsDescriptor topicsDescriptor,
@@ -196,7 +198,7 @@ public abstract class AbstractPartitionDiscoverer {
 	 */
 	public boolean setAndCheckDiscoveredPartition(KafkaTopicPartition partition) {
 		if (isUndiscoveredPartition(partition)) {
-			topicsToLargestDiscoveredPartitionId.put(partition.getTopic(), partition.getPartition());
+				topicsToLargestDiscoveredPartitionId.put(partition.getTopic(), partition.getPartition());
 
 			return shouldAssignToThisSubtask(partition, indexOfThisSubtask, numParallelSubtasks);
 		}
@@ -248,7 +250,7 @@ public abstract class AbstractPartitionDiscoverer {
 			||  partition.getPartition() > topicsToLargestDiscoveredPartitionId.get(partition.getTopic());
 	}
 
-	private static boolean shouldAssignToThisSubtask(KafkaTopicPartition partition, int indexOfThisSubtask, int numParallelSubtasks) {
+	public static boolean shouldAssignToThisSubtask(KafkaTopicPartition partition, int indexOfThisSubtask, int numParallelSubtasks) {
 		return Math.abs(partition.hashCode() % numParallelSubtasks) == indexOfThisSubtask;
 	}
 }

@@ -17,9 +17,12 @@
  */
 package org.apache.flink.streaming.connectors.kafka;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -176,7 +179,7 @@ public class FlinkKafkaConsumerBaseFrom12MigrationTest {
 		assertTrue(consumerFunction.getSubscribedPartitionsToStartOffsets().isEmpty());
 
 		// assert that no state was restored
-		assertTrue(consumerFunction.getRestoredState() == null);
+		assertTrue(consumerFunction.getRestoredState().isEmpty());
 
 		consumerOperator.close();
 		consumerOperator.cancel();
@@ -208,10 +211,11 @@ public class FlinkKafkaConsumerBaseFrom12MigrationTest {
 		testHarness.open();
 
 		// the expected state in "kafka-consumer-migration-test-flink1.2-snapshot-empty-state";
-		// since the state is empty, the consumer should reflect on the startup mode to determine start offsets.
+		// all new partitions after the snapshot are considered as partitions that were created while the
+		// consumer wasn't running, and should start from the earliest offset
 		final HashMap<KafkaTopicPartition, Long> expectedSubscribedPartitionsWithStartOffsets = new HashMap<>();
 		for (KafkaTopicPartition partition : PARTITION_STATE.keySet()) {
-			expectedSubscribedPartitionsWithStartOffsets.put(partition, KafkaTopicPartitionStateSentinel.GROUP_OFFSET);
+			expectedSubscribedPartitionsWithStartOffsets.put(partition, KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET);
 		}
 
 		// assert that there are partitions and is identical to expected list
@@ -219,7 +223,12 @@ public class FlinkKafkaConsumerBaseFrom12MigrationTest {
 		assertTrue(!consumerFunction.getSubscribedPartitionsToStartOffsets().isEmpty());
 		Assert.assertEquals(expectedSubscribedPartitionsWithStartOffsets, consumerFunction.getSubscribedPartitionsToStartOffsets());
 
-		assertTrue(consumerFunction.getRestoredState() == null);
+		// the new partitions should have been considered as restored state
+		assertTrue(consumerFunction.getRestoredState() != null);
+		assertTrue(!consumerFunction.getSubscribedPartitionsToStartOffsets().isEmpty());
+		for (Map.Entry<KafkaTopicPartition, Long> expectedEntry : expectedSubscribedPartitionsWithStartOffsets.entrySet()) {
+			assertEquals(expectedEntry.getValue(), consumerFunction.getRestoredState().get(expectedEntry.getKey()));
+		}
 
 		consumerOperator.close();
 		consumerOperator.cancel();
@@ -311,6 +320,7 @@ public class FlinkKafkaConsumerBaseFrom12MigrationTest {
 			} catch (Exception e) {
 				// ignore
 			}
+			when(mockPartitionDiscoverer.setAndCheckDiscoveredPartition(any(KafkaTopicPartition.class))).thenReturn(true);
 
 			return mockPartitionDiscoverer;
 		}

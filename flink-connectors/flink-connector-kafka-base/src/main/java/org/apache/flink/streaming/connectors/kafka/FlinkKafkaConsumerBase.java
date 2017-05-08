@@ -174,8 +174,8 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 	 */
 	private boolean restoredFromOldState;
 
-	/** Reference to the thread that invoked run(). This is used to interrupt partition discovery on shutdown */
-	private transient volatile Thread runThread;
+	/** Discovery loop, executed in a separate thread */
+	private transient volatile Thread discoveryLoopThread;
 
 	/** Flag indicating whether the consumer is still running */
 	private volatile boolean running = true;
@@ -386,12 +386,24 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 
 		subscribedPartitionsToStartOffsets = new HashMap<>();
 
+		List<KafkaTopicPartition> allPartitions = partitionDiscoverer.discoverPartitions();
+
 		if (restoredState != null) {
+			for (KafkaTopicPartition partition : allPartitions) {
+				if (!restoredState.containsKey(partition)) {
+					restoredState.put(partition, KafkaTopicPartitionStateSentinel.EARLIEST_OFFSET);
+				}
+			}
+
 			for (Map.Entry<KafkaTopicPartition, Long> restoredStateEntry : restoredState.entrySet()) {
 				if (!restoredFromOldState) {
 					// seed the partition discoverer with the union state while filtering out
 					// restored partitions that should not be subscribed by this subtask
-					if (partitionDiscoverer.setAndCheckDiscoveredPartition(restoredStateEntry.getKey())) {
+					if (AbstractPartitionDiscoverer.shouldAssignToThisSubtask(
+							restoredStateEntry.getKey(),
+							getRuntimeContext().getIndexOfThisSubtask(),
+							getRuntimeContext().getNumberOfParallelSubtasks())) {
+
 						subscribedPartitionsToStartOffsets.put(restoredStateEntry.getKey(), restoredStateEntry.getValue());
 					}
 				} else {
@@ -406,7 +418,7 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 		} else {
 			// use the partition discoverer to fetch the initial seed partitions,
 			// and set their initial offsets depending on the startup mode
-			for (KafkaTopicPartition seedPartition : partitionDiscoverer.discoverPartitions()) {
+			for (KafkaTopicPartition seedPartition : allPartitions) {
 				if (startupMode != StartupMode.SPECIFIC_OFFSETS) {
 					subscribedPartitionsToStartOffsets.put(seedPartition, startupMode.getStateSentinel());
 				} else {
@@ -485,8 +497,6 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 			throw new Exception("The partitions were not set for the consumer");
 		}
 
-		this.runThread = Thread.currentThread();
-
 		// mark the subtask as temporarily idle if there are no initial seed partitions;
 		// once this subtask discovers some partitions and starts collecting records, the subtask's
 		// status will automatically be triggered back to be active.
@@ -515,75 +525,73 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 
 		// depending on whether we were restored with the current state version (1.3),
 		// remaining logic branches off into 2 paths:
-		//  1) New state - main fetcher loop executed as separate thread, with this
-		//                 thread running the partition discovery loop
-		//  2) Old state - partition discovery is disabled, simply going into the main fetcher loop
+		//  1) New state - partition discovery loop executed as separate thread, with this
+		//                 thread running the main fetcher loop
+		//  2) Old state - partition discovery is disabled and only the main fetcher loop is executed
 
 		if (!restoredFromOldState) {
-			final AtomicReference<Exception> fetcherErrorRef = new AtomicReference<>();
-			Thread fetcherThread = new Thread(new Runnable() {
+			final AtomicReference<Exception> discoveryLoopErrorRef = new AtomicReference<>();
+			this.discoveryLoopThread = new Thread(new Runnable() {
 				@Override
 				public void run() {
 					try {
-						// run the fetcher' main work method
-						kafkaFetcher.runFetchLoop();
+						// --------------------- partition discovery loop ---------------------
+
+						List<KafkaTopicPartition> discoveredPartitions;
+
+						// throughout the loop, we always eagerly check if we are still running before
+						// performing the next operation, so that we can escape the loop as soon as possible
+
+						while (running) {
+							if (LOG.isDebugEnabled()) {
+								LOG.debug("Consumer subtask {} is trying to discover new partitions ...");
+							}
+
+							try {
+								discoveredPartitions = partitionDiscoverer.discoverPartitions();
+							} catch (AbstractPartitionDiscoverer.WakeupException | AbstractPartitionDiscoverer.ClosedException e) {
+								// the partition discoverer may have been closed or woken up before or during the discovery;
+								// this would only happen if the consumer was canceled; simply escape the loop
+								break;
+							}
+
+							// no need to add the discovered partitions if we were closed during the meantime
+							if (running && !discoveredPartitions.isEmpty()) {
+								fetcher.addDiscoveredPartitions(discoveredPartitions);
+							}
+
+							// do not waste any time sleeping if we're not running anymore
+							if (running && discoveryIntervalMillis != 0) {
+								try {
+									Thread.sleep(discoveryIntervalMillis);
+								} catch (InterruptedException iex) {
+									// may be interrupted if the consumer was canceled midway; simply escape the loop
+									break;
+								}
+							}
+						}
 					} catch (Exception e) {
-						fetcherErrorRef.set(e);
+						discoveryLoopErrorRef.set(e);
 					} finally {
-						// calling cancel will also let the partition discovery loop escape
+						// calling cancel will also let the fetcher loop escape
 						cancel();
 					}
 				}
 			});
-			fetcherThread.start();
 
-			// --------------------- partition discovery loop ---------------------
-
-			List<KafkaTopicPartition> discoveredPartitions;
-
-			// throughout the loop, we always eagerly check if we are still running before
-			// performing the next operation, so that we can escape the loop as soon as possible
-
-			while (running) {
-				if (LOG.isDebugEnabled()) {
-					LOG.debug("Consumer subtask {} is trying to discover new partitions ...");
-				}
-
-				try {
-					discoveredPartitions = partitionDiscoverer.discoverPartitions();
-				} catch (AbstractPartitionDiscoverer.WakeupException | AbstractPartitionDiscoverer.ClosedException e) {
-					// the partition discoverer may have been closed or woken up before or during the discovery;
-					// this would only happen if the consumer was canceled; simply escape the loop
-					break;
-				}
-
-				// no need to add the discovered partitions if we were closed during the meantime
-				if (running && !discoveredPartitions.isEmpty()) {
-					fetcher.addDiscoveredPartitions(discoveredPartitions);
-				}
-
-				// do not waste any time sleeping if we're not running anymore
-				if (running && discoveryIntervalMillis != 0) {
-					try {
-						Thread.sleep(discoveryIntervalMillis);
-					} catch (InterruptedException iex) {
-						// may be interrupted if the consumer was canceled midway; simply escape the loop
-						break;
-					}
-				}
-			}
+			discoveryLoopThread.start();
+			fetcher.runFetchLoop();
 
 			// --------------------------------------------------------------------
 
 			// make sure that the partition discoverer is properly closed
 			partitionDiscoverer.close();
-
-			fetcherThread.join();
+			discoveryLoopThread.join();
 
 			// rethrow any fetcher errors
-			final Exception fetcherError = fetcherErrorRef.get();
-			if (fetcherError != null) {
-				throw new RuntimeException(fetcherError);
+			final Exception discoveryLoopError = discoveryLoopErrorRef.get();
+			if (discoveryLoopError != null) {
+				throw new RuntimeException(discoveryLoopError);
 			}
 		} else {
 			// won't be using the discoverer
@@ -599,16 +607,17 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 		// this would let the main discovery loop escape as soon as possible
 		running = false;
 
-		if (partitionDiscoverer != null) {
-			// we cannot close the discoverer here, as it is error-prone to concurrent access;
-			// only wakeup the discoverer, the discovery loop will clean itself up after it escapes
-			partitionDiscoverer.wakeup();
-		}
+		if (discoveryLoopThread != null) {
 
-		// the main discovery loop may currently be sleeping in-between
-		// consecutive discoveries; interrupt to shutdown faster
-		if (runThread != null) {
-			runThread.interrupt();
+			if (partitionDiscoverer != null) {
+				// we cannot close the discoverer here, as it is error-prone to concurrent access;
+				// only wakeup the discoverer, the discovery loop will clean itself up after it escapes
+				partitionDiscoverer.wakeup();
+			}
+
+			// the discovery loop may currently be sleeping in-between
+			// consecutive discoveries; interrupt to shutdown faster
+			discoveryLoopThread.interrupt();
 		}
 
 		// abort the fetcher, if there is one
@@ -715,12 +724,8 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 
 		restoredFromOldState = true;
 
-		if (restoredOffsets.isEmpty()) {
-			restoredState = null;
-		} else {
-			restoredState = new TreeMap<>(new KafkaTopicPartition.Comparator());
-			restoredState.putAll(restoredOffsets);
-		}
+		restoredState = new TreeMap<>(new KafkaTopicPartition.Comparator());
+		restoredState.putAll(restoredOffsets);
 	}
 
 	@Override
