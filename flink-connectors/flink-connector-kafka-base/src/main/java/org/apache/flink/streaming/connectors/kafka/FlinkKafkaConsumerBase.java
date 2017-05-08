@@ -755,8 +755,8 @@ public abstract class FlinkKafkaConsumerBase<T> extends RichParallelSourceFuncti
 				}
 
 				@SuppressWarnings("unchecked")
-				HashMap<KafkaTopicPartition, Long> offsets =
-					(HashMap<KafkaTopicPartition, Long>) pendingOffsetsToCommit.remove(posInMap);
+				Map<KafkaTopicPartition, Long> offsets =
+					(Map<KafkaTopicPartition, Long>) pendingOffsetsToCommit.remove(posInMap);
 
 				// remove older checkpoints in map
 				for (int i = 0; i < posInMap; i++) {
