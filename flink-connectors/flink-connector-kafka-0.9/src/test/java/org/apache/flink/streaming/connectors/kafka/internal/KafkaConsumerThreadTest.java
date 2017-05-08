@@ -635,7 +635,7 @@ public class KafkaConsumerThreadTest {
 
 		testThread.setOffsetsToCommit(new HashMap<TopicPartition, OffsetAndMetadata>());
 
-		// the wakeup the setOffsetsToCommit() call should have been buffered, and not called on the consumer
+		// the wakeup in the setOffsetsToCommit() call should have been buffered, and not called on the consumer
 		verify(mockConsumer, never()).wakeup();
 
 		continueAssigmentLatch.trigger();
@@ -664,7 +664,7 @@ public class KafkaConsumerThreadTest {
 	/**
 	 * A testable {@link KafkaConsumerThread} that injects multiple latches exactly before and after
 	 * partition reassignment, so that tests are eligible to setup various conditions before the reassignment happens
-	 * and inspect reqssignment results after it is completed.
+	 * and inspect reassignment results after it is completed.
 	 */
 	private static class TestKafkaConsumerThread extends KafkaConsumerThread {
 

@@ -125,7 +125,7 @@ public abstract class AbstractPartitionDiscoverer {
 			try {
 				List<KafkaTopicPartition> newDiscoveredPartitions;
 
-				// (1) get all possible partitions, based on whether we are subscribed to fixed topics or a topic patern
+				// (1) get all possible partitions, based on whether we are subscribed to fixed topics or a topic pattern
 				if (topicsDescriptor.isFixedTopics()) {
 					newDiscoveredPartitions = getAllPartitionsForTopics(topicsDescriptor.getFixedTopics());
 				} else {
