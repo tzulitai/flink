@@ -17,8 +17,6 @@
 
 package org.apache.flink.streaming.connectors.kafka.internals;
 
-import org.apache.flink.annotation.VisibleForTesting;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;

@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.connectors.kafka;
 
 import org.apache.commons.collections.map.LinkedMap;
+import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.OperatorStateStore;
@@ -129,6 +130,11 @@ public class FlinkKafkaConsumerBaseTest {
 		listState.add(Tuple2.of(new KafkaTopicPartition("def", 7), 987654321L));
 
 		FlinkKafkaConsumerBase<String> consumer = getConsumer(null, new LinkedMap(), true);
+		StreamingRuntimeContext context = mock(StreamingRuntimeContext.class);
+		when(context.getNumberOfParallelSubtasks()).thenReturn(1);
+		when(context.getIndexOfThisSubtask()).thenReturn(0);
+		consumer.setRuntimeContext(context);
+
 		// mock old 1.2 state (empty)
 		when(operatorStateStore.getSerializableListState(Matchers.any(String.class))).thenReturn(new TestingListState<Serializable>());
 		// mock 1.3 state
