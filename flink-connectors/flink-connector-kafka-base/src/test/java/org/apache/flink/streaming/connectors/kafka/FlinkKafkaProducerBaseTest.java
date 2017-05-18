@@ -22,6 +22,7 @@ import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.core.testutils.MultiShotLatch;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.operators.StreamSink;
+import org.apache.flink.streaming.connectors.kafka.partitioner.FlinkKafkaPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.util.OneInputStreamOperatorTestHarness;
 import org.apache.flink.configuration.Configuration;
@@ -85,7 +86,7 @@ public class FlinkKafkaProducerBaseTest {
 	 */
 	@Test
 	public void testPartitionerOpenedWithDeterminatePartitionList() throws Exception {
-		KafkaPartitioner mockPartitioner = mock(KafkaPartitioner.class);
+		FlinkKafkaPartitioner mockPartitioner = mock(FlinkKafkaPartitioner.class);
 
 		RuntimeContext mockRuntimeContext = mock(RuntimeContext.class);
 		when(mockRuntimeContext.getIndexOfThisSubtask()).thenReturn(0);
@@ -108,9 +109,7 @@ public class FlinkKafkaProducerBaseTest {
 
 		producer.open(new Configuration());
 
-		// the out-of-order partitions list should be sorted before provided to the custom partitioner's open() method
-		int[] correctPartitionList = {0, 1, 2, 3};
-		verify(mockPartitioner).open(0, 1, correctPartitionList);
+		verify(mockPartitioner).open(0, 1);
 	}
 
 	/**
@@ -333,7 +332,7 @@ public class FlinkKafkaProducerBaseTest {
 		private boolean isFlushed;
 
 		@SuppressWarnings("unchecked")
-		DummyFlinkKafkaProducer(Properties producerConfig, KafkaPartitioner partitioner) {
+		DummyFlinkKafkaProducer(Properties producerConfig, FlinkKafkaPartitioner partitioner) {
 
 			super(DUMMY_TOPIC, (KeyedSerializationSchema<T>) mock(KeyedSerializationSchema.class), producerConfig, partitioner);
 

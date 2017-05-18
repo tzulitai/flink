@@ -45,7 +45,7 @@ public abstract class KafkaTableSinkTestBase {
 	private static final String TOPIC = "testTopic";
 	protected static final String[] FIELD_NAMES = new String[] {"field1", "field2"};
 	private static final TypeInformation[] FIELD_TYPES = new TypeInformation[] { Types.INT(), Types.STRING() };
-	private static final KafkaPartitioner<Row> PARTITIONER = new CustomPartitioner();
+	private static final FlinkKafkaPartitioner<Row> PARTITIONER = new CustomPartitioner();
 	private static final FlinkKafkaPartitioner<Row> FLINK_PARTITIONER = new FlinkCustomPartitioner();
 	private static final Properties PROPERTIES = createSinkProperties();
 	@SuppressWarnings("unchecked")
@@ -113,7 +113,7 @@ public abstract class KafkaTableSinkTestBase {
 	}
 
 	protected abstract KafkaTableSink createTableSink(String topic, Properties properties,
-			KafkaPartitioner<Row> partitioner, FlinkKafkaProducerBase<Row> kafkaProducer);
+			FlinkKafkaPartitioner<Row> partitioner, FlinkKafkaProducerBase<Row> kafkaProducer);
 
 	protected abstract KafkaTableSink createTableSinkWithFlinkPartitioner(String topic,
 			Properties properties, FlinkKafkaPartitioner<Row> partitioner, FlinkKafkaProducerBase<Row> kafkaProducer);
@@ -134,9 +134,9 @@ public abstract class KafkaTableSinkTestBase {
 		return properties;
 	}
 
-	private static class CustomPartitioner extends KafkaPartitioner<Row> implements Serializable {
+	private static class CustomPartitioner extends FlinkKafkaPartitioner<Row> implements Serializable {
 		@Override
-		public int partition(Row next, byte[] serializedKey, byte[] serializedValue, int numPartitions) {
+		public int partition(Row record, byte[] key, byte[] value, String targetTopic, int[] partitions) {
 			return 0;
 		}
 	}
