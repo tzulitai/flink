@@ -611,7 +611,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 									fieldToConfigSnapshotEntry.getValue().f0,
 									UnloadableDummyTypeSerializer.class,
 									fieldToConfigSnapshotEntry.getValue().f1,
-									(TypeSerializer) fieldSerializers[fieldIndex]);
+									fieldSerializers[fieldIndex]);
 
 							if (compatResult.isRequiresMigration()) {
 								requiresMigration = true;
@@ -660,7 +660,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 								previousRegisteredSerializerConfig.f0,
 								UnloadableDummyTypeSerializer.class,
 								previousRegisteredSerializerConfig.f1,
-								(TypeSerializer) reorderedRegisteredSubclassSerializers[i]);
+								reorderedRegisteredSubclassSerializers[i]);
 
 						if (compatResult.isRequiresMigration()) {
 							requiresMigration = true;
@@ -689,7 +689,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 								previousCachedEntry.getValue().f0,
 								UnloadableDummyTypeSerializer.class,
 								previousCachedEntry.getValue().f1,
-								(TypeSerializer) cachedSerializer);
+								cachedSerializer);
 
 						if (compatResult.isRequiresMigration()) {
 							requiresMigration = true;

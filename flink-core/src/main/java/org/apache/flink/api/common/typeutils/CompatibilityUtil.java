@@ -49,8 +49,9 @@ public class CompatibilityUtil {
 	 * 
 	 * @return the final resolved compatibility result
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T> CompatibilityResult<T> resolveCompatibilityResult(
-			TypeSerializer<T> precedingSerializer,
+			TypeSerializer<?> precedingSerializer,
 			Class<?> dummySerializerClassTag,
 			TypeSerializerConfigSnapshot precedingSerializerConfigSnapshot,
 			TypeSerializer<T> newSerializer) {
@@ -64,7 +65,11 @@ public class CompatibilityUtil {
 				if (precedingSerializer != null && !(precedingSerializer.getClass().equals(dummySerializerClassTag))) {
 					// if the preceding serializer exists and is not a dummy, use
 					// that for converting instead of the provided convert deserializer
-					return CompatibilityResult.requiresMigration(precedingSerializer);
+					try {
+						return CompatibilityResult.requiresMigration((TypeSerializer<T>) precedingSerializer);
+					} catch (ClassCastException e) {
+						throw new RuntimeException("");
+					}
 				} else if (initialResult.getConvertDeserializer() != null) {
 					return initialResult;
 				} else {

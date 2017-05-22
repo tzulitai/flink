@@ -90,8 +90,7 @@ class CRowSerializer(val rowSerializer: TypeSerializer[Row]) extends TypeSeriali
     configSnapshot match {
       case crowSerializerConfigSnapshot: CRowSerializer.CRowSerializerConfigSnapshot =>
         val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-          crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f0
-            .asInstanceOf[TypeSerializer[Row]],
+          crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f0,
           classOf[UnloadableDummyTypeSerializer[_]],
           crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f1,
           rowSerializer)

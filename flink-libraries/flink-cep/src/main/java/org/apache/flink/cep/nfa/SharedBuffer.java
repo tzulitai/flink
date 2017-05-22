@@ -1131,19 +1131,19 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 						((SharedBufferSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
 				CompatibilityResult<K> keyCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<K>) serializerConfigSnapshots.get(0).f0,
+						serializerConfigSnapshots.get(0).f0,
 						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(0).f1,
 						keySerializer);
 
 				CompatibilityResult<V> valueCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<V>) serializerConfigSnapshots.get(1).f0,
+						serializerConfigSnapshots.get(1).f0,
 						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(1).f1,
 						valueSerializer);
 
 				CompatibilityResult<DeweyNumber> versionCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<DeweyNumber>) serializerConfigSnapshots.get(2).f0,
+						serializerConfigSnapshots.get(2).f0,
 						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(2).f1,
 						versionSerializer);

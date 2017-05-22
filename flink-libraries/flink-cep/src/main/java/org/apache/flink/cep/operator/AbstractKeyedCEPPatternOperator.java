@@ -488,7 +488,6 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 			return new CollectionSerializerConfigSnapshot<>(elementSerializer);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public CompatibilityResult<PriorityQueue<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 			if (configSnapshot instanceof CollectionSerializerConfigSnapshot) {
@@ -496,7 +495,7 @@ public abstract class AbstractKeyedCEPPatternOperator<IN, KEY, OUT>
 					((CollectionSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerAndConfig();
 
 				CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<T>) previousElemSerializerAndConfig.f0,
+						previousElemSerializerAndConfig.f0,
 						UnloadableDummyTypeSerializer.class,
 						previousElemSerializerAndConfig.f1,
 						elementSerializer);

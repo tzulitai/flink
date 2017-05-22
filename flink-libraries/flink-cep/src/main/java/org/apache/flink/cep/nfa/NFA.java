@@ -1067,7 +1067,6 @@ public class NFA<T> implements Serializable {
 			return new NFASerializerConfigSnapshot<>(eventSerializer, sharedBufferSerializer);
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		public CompatibilityResult<NFA<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 			if (configSnapshot instanceof NFASerializerConfigSnapshot) {
@@ -1075,16 +1074,17 @@ public class NFA<T> implements Serializable {
 						((NFASerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
 				CompatibilityResult<T> eventCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<T>) serializersAndConfigs.get(0).f0,
+						serializersAndConfigs.get(0).f0,
 						UnloadableDummyTypeSerializer.class,
 						serializersAndConfigs.get(0).f1,
 						eventSerializer);
 
-				CompatibilityResult<SharedBuffer<String, T>> sharedBufCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<SharedBuffer<String, T>>) serializersAndConfigs.get(1).f0,
-						UnloadableDummyTypeSerializer.class,
-						serializersAndConfigs.get(1).f1,
-						sharedBufferSerializer);
+				CompatibilityResult<SharedBuffer<String, T>> sharedBufCompatResult =
+						CompatibilityUtil.resolveCompatibilityResult(
+								serializersAndConfigs.get(1).f0,
+								UnloadableDummyTypeSerializer.class,
+								serializersAndConfigs.get(1).f1,
+								sharedBufferSerializer);
 
 				if (!sharedBufCompatResult.isRequiresMigration() && !eventCompatResult.isRequiresMigration()) {
 					return CompatibilityResult.compatible();

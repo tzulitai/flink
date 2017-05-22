@@ -110,8 +110,7 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
       case optionSerializerConfigSnapshot
           : OptionSerializer.OptionSerializerConfigSnapshot[A] =>
         val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-          optionSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f0
-              .asInstanceOf[TypeSerializer[A]],
+          optionSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f0,
           classOf[UnloadableDummyTypeSerializer[_]],
           optionSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f1,
           elemSerializer)

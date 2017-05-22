@@ -161,7 +161,6 @@ public final class StreamRecordSerializer<T> extends TypeSerializer<StreamRecord
 		return new StreamRecordSerializerConfigSnapshot<>(typeSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<StreamRecord<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof StreamRecordSerializerConfigSnapshot) {
@@ -169,7 +168,7 @@ public final class StreamRecordSerializer<T> extends TypeSerializer<StreamRecord
 				((StreamRecordSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerAndConfig();
 
 			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<T>) previousTypeSerializerAndConfig.f0,
+					previousTypeSerializerAndConfig.f0,
 					UnloadableDummyTypeSerializer.class,
 					previousTypeSerializerAndConfig.f1,
 					typeSerializer);

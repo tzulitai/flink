@@ -123,13 +123,13 @@ class EitherSerializer[A, B, T <: Either[A, B]](
           eitherSerializerConfig.getNestedSerializersAndConfigs
 
         val leftCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-          previousLeftRightSerWithConfigs.get(0).f0.asInstanceOf[TypeSerializer[A]],
+          previousLeftRightSerWithConfigs.get(0).f0,
           classOf[UnloadableDummyTypeSerializer[_]],
           previousLeftRightSerWithConfigs.get(0).f1,
           leftSerializer)
 
         val rightCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-          previousLeftRightSerWithConfigs.get(1).f0.asInstanceOf[TypeSerializer[B]],
+          previousLeftRightSerWithConfigs.get(1).f0,
           classOf[UnloadableDummyTypeSerializer[_]],
           previousLeftRightSerWithConfigs.get(1).f1,
           rightSerializer)

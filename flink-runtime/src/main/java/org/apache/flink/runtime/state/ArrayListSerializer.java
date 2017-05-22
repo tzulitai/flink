@@ -149,7 +149,6 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 		return new CollectionSerializerConfigSnapshot<>(elementSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<ArrayList<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof CollectionSerializerConfigSnapshot) {
@@ -157,7 +156,7 @@ final public class ArrayListSerializer<T> extends TypeSerializer<ArrayList<T>> {
 				((CollectionSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerAndConfig();
 
 			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<T>) previousElemSerializerAndConfig.f0,
+					previousElemSerializerAndConfig.f0,
 					UnloadableDummyTypeSerializer.class,
 					previousElemSerializerAndConfig.f1,
 					elementSerializer);

@@ -146,14 +146,14 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 
 					TypeSerializer<Object>[] convertFieldSerializers = new TypeSerializer[fieldSerializers.length];
 					boolean requiresMigration = false;
-					CompatibilityResult compatResult;
+					CompatibilityResult<Object> compatResult;
 					int i = 0;
 					for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> f : previousFieldSerializersAndConfigs) {
 						compatResult = CompatibilityUtil.resolveCompatibilityResult(
 								f.f0,
 								UnloadableDummyTypeSerializer.class,
 								f.f1,
-								(TypeSerializer) fieldSerializers[i]);
+								fieldSerializers[i]);
 
 						if (compatResult.isRequiresMigration()) {
 							requiresMigration = true;

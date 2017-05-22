@@ -200,7 +200,6 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 		return new EitherSerializerConfigSnapshot<>(leftSerializer, rightSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<Either<L, R>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof EitherSerializerConfigSnapshot) {
@@ -208,13 +207,13 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 				((EitherSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
 			CompatibilityResult<L> leftCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<L>) previousLeftRightSerializersAndConfigs.get(0).f0,
+					previousLeftRightSerializersAndConfigs.get(0).f0,
 					UnloadableDummyTypeSerializer.class,
 					previousLeftRightSerializersAndConfigs.get(0).f1,
 					leftSerializer);
 
 			CompatibilityResult<R> rightCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<R>) previousLeftRightSerializersAndConfigs.get(1).f0,
+					previousLeftRightSerializersAndConfigs.get(1).f0,
 					UnloadableDummyTypeSerializer.class,
 					previousLeftRightSerializersAndConfigs.get(1).f1,
 					rightSerializer);

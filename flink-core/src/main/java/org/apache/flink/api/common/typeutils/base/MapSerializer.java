@@ -209,7 +209,6 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 		return new MapSerializerConfigSnapshot<>(keySerializer, valueSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<Map<K, V>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof MapSerializerConfigSnapshot) {
@@ -217,13 +216,13 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 				((MapSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
 			CompatibilityResult<K> keyCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<K>) previousKvSerializersAndConfigs.get(0).f0,
+					previousKvSerializersAndConfigs.get(0).f0,
 					UnloadableDummyTypeSerializer.class,
 					previousKvSerializersAndConfigs.get(0).f1,
 					keySerializer);
 
 			CompatibilityResult<V> valueCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<V>) previousKvSerializersAndConfigs.get(1).f0,
+					previousKvSerializersAndConfigs.get(1).f0,
 					UnloadableDummyTypeSerializer.class,
 					previousKvSerializersAndConfigs.get(1).f1,
 					valueSerializer);

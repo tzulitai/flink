@@ -260,7 +260,6 @@ public final class RowSerializer extends TypeSerializer<Row> {
 		return new RowSerializerConfigSnapshot(fieldSerializers);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<Row> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof RowSerializerConfigSnapshot) {
@@ -278,7 +277,7 @@ public final class RowSerializer extends TypeSerializer<Row> {
 							f.f0,
 							UnloadableDummyTypeSerializer.class,
 							f.f1,
-							(TypeSerializer) fieldSerializers[i]);
+							fieldSerializers[i]);
 
 					if (compatResult.isRequiresMigration()) {
 						requireMigration = true;

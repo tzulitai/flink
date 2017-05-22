@@ -202,7 +202,6 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 		return new GenericArraySerializerConfigSnapshot<>(componentClass, componentSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<C[]> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof GenericArraySerializerConfigSnapshot) {
@@ -213,7 +212,7 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 					config.getSingleNestedSerializerAndConfig();
 
 				CompatibilityResult<C> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-						(TypeSerializer<C>) previousComponentSerializerAndConfig.f0,
+						previousComponentSerializerAndConfig.f0,
 						UnloadableDummyTypeSerializer.class,
 						previousComponentSerializerAndConfig.f1,
 						componentSerializer);

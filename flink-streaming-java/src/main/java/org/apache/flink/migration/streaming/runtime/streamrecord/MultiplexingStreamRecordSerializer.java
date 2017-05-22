@@ -222,7 +222,6 @@ public class MultiplexingStreamRecordSerializer<T> extends TypeSerializer<Stream
 		return new MultiplexingStreamRecordSerializerConfigSnapshot<>(typeSerializer);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public CompatibilityResult<StreamElement> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof MultiplexingStreamRecordSerializerConfigSnapshot) {
@@ -230,7 +229,7 @@ public class MultiplexingStreamRecordSerializer<T> extends TypeSerializer<Stream
 				((MultiplexingStreamRecordSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerAndConfig();
 
 			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-					(TypeSerializer<T>) previousTypeSerializerAndConfig.f0,
+					previousTypeSerializerAndConfig.f0,
 					UnloadableDummyTypeSerializer.class,
 					previousTypeSerializerAndConfig.f1,
 					typeSerializer);
