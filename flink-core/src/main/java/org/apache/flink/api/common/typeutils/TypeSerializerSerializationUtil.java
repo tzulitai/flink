@@ -21,7 +21,6 @@ package org.apache.flink.api.common.typeutils;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.io.VersionedIOReadableWritable;
-import org.apache.flink.core.memory.ByteArrayInputStreamWithPos;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
@@ -32,6 +31,8 @@ import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InvalidClassException;
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ public class TypeSerializerSerializationUtil {
 	 * Writes a {@link TypeSerializer} to the provided data output view.
 	 *
 	 * <p>It is written with a format that can be later read again using
-	 * {@link #tryReadSerializer(DataInputView, ClassLoader, boolean)}.
+	 * {@link #tryReadSerializerWithResilience(DataInputView, ClassLoader, boolean)}.
 	 *
 	 * @param out the data output view.
 	 * @param serializer the serializer to write.
@@ -59,7 +60,15 @@ public class TypeSerializerSerializationUtil {
 	 * @throws IOException
 	 */
 	public static <T> void writeSerializer(DataOutputView out, TypeSerializer<T> serializer) throws IOException {
-		new TypeSerializerSerializationUtil.TypeSerializerSerializationProxy<>(serializer).write(out);
+		try (
+			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			DataOutputViewStreamWrapper bufferWrapper = new DataOutputViewStreamWrapper(buffer)) {
+
+			new TypeSerializerSerializationUtil.TypeSerializerSerializationProxy<>(serializer).write(bufferWrapper);
+
+			out.writeInt(buffer.size());
+			out.write(buffer.toByteArray(), 0, buffer.size());
+		}
 	}
 
 	/**
@@ -77,8 +86,8 @@ public class TypeSerializerSerializationUtil {
 	 *
 	 * @return the deserialized serializer.
 	 */
-	public static <T> TypeSerializer<T> tryReadSerializer(DataInputView in, ClassLoader userCodeClassLoader) {
-		return tryReadSerializer(in, userCodeClassLoader, false);
+	public static <T> TypeSerializer<T> tryReadSerializerWithResilience(DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
+		return tryReadSerializerWithResilience(in, userCodeClassLoader, false);
 	}
 
 	/**
@@ -100,7 +109,33 @@ public class TypeSerializerSerializationUtil {
 	 *
 	 * @return the deserialized serializer.
 	 */
-	public static <T> TypeSerializer<T> tryReadSerializer(DataInputView in, ClassLoader userCodeClassLoader, boolean useDummyPlaceholder) {
+	public static <T> TypeSerializer<T> tryReadSerializerWithResilience(
+			DataInputView in,
+			ClassLoader userCodeClassLoader,
+			boolean useDummyPlaceholder) throws IOException {
+
+		int numSerializerBytes = in.readInt();
+
+		byte[] serializerBytes = new byte[numSerializerBytes];
+		in.readFully(serializerBytes);
+
+		try (
+			ByteArrayInputStream buffer = new ByteArrayInputStream(serializerBytes);
+			DataInputViewStreamWrapper bufferWrapper = new DataInputViewStreamWrapper(buffer)) {
+
+			return tryReadSerializer(bufferWrapper, userCodeClassLoader, useDummyPlaceholder);
+		}
+	}
+
+	public static <T> TypeSerializer<T> tryReadSerializer(DataInputView in, ClassLoader userCodeClassLoader) {
+		return tryReadSerializer(in, userCodeClassLoader, false);
+	}
+
+	public static <T> TypeSerializer<T> tryReadSerializer(
+			DataInputView in,
+			ClassLoader userCodeClassLoader,
+			boolean useDummyPlaceholder) {
+
 		final TypeSerializerSerializationUtil.TypeSerializerSerializationProxy<T> proxy =
 			new TypeSerializerSerializationUtil.TypeSerializerSerializationProxy<>(userCodeClassLoader, useDummyPlaceholder);
 
@@ -138,21 +173,10 @@ public class TypeSerializerSerializationUtil {
 			DataOutputView out,
 			List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigs) throws IOException {
 
-		try (
-			ByteArrayOutputStreamWithPos bufferWithPos = new ByteArrayOutputStreamWithPos();
-			DataOutputViewStreamWrapper bufferWrapper = new DataOutputViewStreamWrapper(bufferWithPos)) {
-
-			out.writeInt(serializersAndConfigs.size());
-			for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> serAndConfSnapshot : serializersAndConfigs) {
-				out.writeInt(bufferWithPos.getPosition());
-				writeSerializer(bufferWrapper, serAndConfSnapshot.f0);
-
-				out.writeInt(bufferWithPos.getPosition());
-				writeSerializerConfigSnapshot(bufferWrapper, serAndConfSnapshot.f1);
-			}
-
-			out.writeInt(bufferWithPos.getPosition());
-			out.write(bufferWithPos.getBuf(), 0, bufferWithPos.getPosition());
+		out.writeInt(serializersAndConfigs.size());
+		for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> serAndConfSnapshot : serializersAndConfigs) {
+			writeSerializer(out, serAndConfSnapshot.f0);
+			writeSerializerConfigSnapshot(out, serAndConfSnapshot.f1);
 		}
 	}
 
@@ -175,37 +199,14 @@ public class TypeSerializerSerializationUtil {
 
 		int numSerializersAndConfigSnapshots = in.readInt();
 
-		int[] offsets = new int[numSerializersAndConfigSnapshots * 2];
-
-		for (int i = 0; i < numSerializersAndConfigSnapshots; i++) {
-			offsets[i * 2] = in.readInt();
-			offsets[i * 2 + 1] = in.readInt();
-		}
-
-		int totalBytes = in.readInt();
-		byte[] buffer = new byte[totalBytes];
-		in.readFully(buffer);
-
 		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigSnapshots =
 			new ArrayList<>(numSerializersAndConfigSnapshots);
 
-		TypeSerializer<?> serializer;
-		TypeSerializerConfigSnapshot configSnapshot;
-		try (
-			ByteArrayInputStreamWithPos bufferWithPos = new ByteArrayInputStreamWithPos(buffer);
-			DataInputViewStreamWrapper bufferWrapper = new DataInputViewStreamWrapper(bufferWithPos)) {
-
-			for (int i = 0; i < numSerializersAndConfigSnapshots; i++) {
-
-				bufferWithPos.setPosition(offsets[i * 2]);
-				serializer = tryReadSerializer(bufferWrapper, userCodeClassLoader);
-
-				bufferWithPos.setPosition(offsets[i * 2 + 1]);
-				configSnapshot = readSerializerConfigSnapshot(bufferWrapper, userCodeClassLoader);
-
-				serializersAndConfigSnapshots.add(
-					new Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>(serializer, configSnapshot));
-			}
+		for (int i = 0; i < numSerializersAndConfigSnapshots; i++) {
+			serializersAndConfigSnapshots.add(new Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>(
+				tryReadSerializerWithResilience(in, userCodeClassLoader),
+				readSerializerConfigSnapshot(in, userCodeClassLoader))
+			);
 		}
 
 		return serializersAndConfigSnapshots;
