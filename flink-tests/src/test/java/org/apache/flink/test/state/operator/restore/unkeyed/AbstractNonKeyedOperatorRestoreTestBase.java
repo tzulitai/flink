@@ -22,6 +22,10 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.test.state.operator.restore.AbstractOperatorRestoreTestBase;
 import org.apache.flink.test.state.operator.restore.ExecutionMode;
+import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.apache.flink.test.state.operator.restore.unkeyed.NonKeyedJob.createFirstStatefulMap;
 import static org.apache.flink.test.state.operator.restore.unkeyed.NonKeyedJob.createSecondStatefulMap;
@@ -30,9 +34,23 @@ import static org.apache.flink.test.state.operator.restore.unkeyed.NonKeyedJob.c
 import static org.apache.flink.test.state.operator.restore.unkeyed.NonKeyedJob.createThirdStatefulMap;
 
 /**
- * All classes extending this class will use the same savepoint and migration job.
+ * Base class for all non-keyed operator restore tests. Subclasses should define the paths of the
+ * savepoints to be tested against.
  */
 public abstract class AbstractNonKeyedOperatorRestoreTestBase extends AbstractOperatorRestoreTestBase {
+
+	private final String savepointPath;
+
+	@Parameterized.Parameters(name = "Migrate Savepoint: {0}")
+	public static Collection<String> parameters () {
+		return Arrays.asList(
+			"nonKeyed-flink1.2",
+			"nonKeyed-flink1.3");
+	}
+
+	public AbstractNonKeyedOperatorRestoreTestBase(String savepointPath) {
+		this.savepointPath = savepointPath;
+	}
 
 	@Override
 	public void createMigrationJob(StreamExecutionEnvironment env) {
@@ -53,7 +71,7 @@ public abstract class AbstractNonKeyedOperatorRestoreTestBase extends AbstractOp
 	}
 
 	@Override
-	protected final String getMigrationSavepointName() {
-		return "nonKeyed";
+	protected String getMigrationSavepointName() {
+		return savepointPath;
 	}
 }
