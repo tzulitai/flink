@@ -175,14 +175,19 @@ public class RegisteredOperatorBackendStateMetaInfo<S> {
 				return false;
 			}
 
+			if (!(obj instanceof Snapshot)) {
+				return false;
+			}
+
+			Snapshot snapshot = (Snapshot)obj;
+
 			// need to check for nulls because serializer and config snapshots may be null on restore
-			return (obj instanceof Snapshot)
-				&& name.equals(((Snapshot) obj).getName())
-				&& assignmentMode.equals(((Snapshot) obj).getAssignmentMode())
-				&& ((partitionStateSerializer == null && ((Snapshot) obj).getPartitionStateSerializer() == null)
-					|| partitionStateSerializer.equals(((Snapshot) obj).getPartitionStateSerializer()))
-				&& ((partitionStateSerializerConfigSnapshot == null && ((Snapshot) obj).getPartitionStateSerializerConfigSnapshot() == null)
-					|| partitionStateSerializerConfigSnapshot.equals(((Snapshot) obj).getPartitionStateSerializerConfigSnapshot()));
+			return name.equals(snapshot.getName())
+				&& assignmentMode.equals(snapshot.getAssignmentMode())
+				&& ((partitionStateSerializer == null && (snapshot.getPartitionStateSerializer() == null)
+					|| (partitionStateSerializer != null && partitionStateSerializer.equals(snapshot.getPartitionStateSerializer())))
+				&& ((partitionStateSerializerConfigSnapshot == null && (snapshot.getPartitionStateSerializerConfigSnapshot() == null)
+					|| (partitionStateSerializerConfigSnapshot != null && partitionStateSerializerConfigSnapshot.equals(snapshot.getPartitionStateSerializerConfigSnapshot())))));
 		}
 
 		@Override
