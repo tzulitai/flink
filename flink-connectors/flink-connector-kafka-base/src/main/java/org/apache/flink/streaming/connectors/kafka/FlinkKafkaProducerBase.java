@@ -341,7 +341,9 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 
 	@Override
 	public void initializeState(FunctionInitializationContext context) throws Exception {
-		// nothing to do
+		if (flinkKafkaPartitioner != null) {
+			flinkKafkaPartitioner.initializeState(context);
+		}
 	}
 
 	@Override
@@ -360,6 +362,10 @@ public abstract class FlinkKafkaProducerBase<IN> extends RichSinkFunction<IN> im
 				// if the flushed requests has errors, we should propagate it also and fail the checkpoint
 				checkErroneous();
 			}
+		}
+
+		if (flinkKafkaPartitioner != null) {
+			flinkKafkaPartitioner.snapshotState(ctx);
 		}
 	}
 

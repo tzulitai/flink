@@ -18,6 +18,10 @@
 
 package org.apache.flink.streaming.connectors.kafka.partitioner;
 
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.util.Preconditions;
 
 import java.util.HashMap;
@@ -60,8 +64,11 @@ public class FlinkFixedPartitioner<T> extends FlinkKafkaPartitioner<T> {
 	private static final long serialVersionUID = -6002230350113297637L;
 
 	private int parallelInstanceId;
+	private int parallelInstances;
 
-	private Map<String, Integer> topicToFixedPartition;
+	private FixedTargetPartitionsState fixedTargetPartitionsState;
+
+	private ListState<FixedTargetPartitionsState> checkpointedUnionState;
 
 	@Override
 	public void open(int parallelInstanceId, int parallelInstances) {
@@ -69,7 +76,9 @@ public class FlinkFixedPartitioner<T> extends FlinkKafkaPartitioner<T> {
 		Preconditions.checkArgument(parallelInstances > 0, "Number of subtasks must be larger than 0.");
 
 		this.parallelInstanceId = parallelInstanceId;
-		this.topicToFixedPartition = new HashMap<>();
+		this.parallelInstances = parallelInstances;
+
+		this.fixedTargetPartitionsState = new FixedTargetPartitionsState(this.parallelInstanceId);
 	}
 
 	@Override
@@ -78,13 +87,87 @@ public class FlinkFixedPartitioner<T> extends FlinkKafkaPartitioner<T> {
 			partitions != null && partitions.length > 0,
 			"Partitions of the target topic is empty.");
 
-		if (topicToFixedPartition.containsKey(targetTopic)) {
-			return topicToFixedPartition.get(targetTopic);
+		if (fixedTargetPartitionsState.hasFixedTargetPartitionFor(targetTopic)) {
+			return fixedTargetPartitionsState.getFixedTargetPartition(targetTopic);
 		}
 
 		int targetPartition = partitions[parallelInstanceId % partitions.length];
-		topicToFixedPartition.put(targetTopic, targetPartition);
+		fixedTargetPartitionsState.setFixedTargetPartition(targetTopic, targetPartition);
 
 		return targetPartition;
+	}
+
+	@Override
+	public void initializeState(FunctionInitializationContext context) throws Exception {
+		this.checkpointedUnionState = context.getOperatorStateStore().getUnionListState(
+			new ListStateDescriptor<>("FixedTargetPartitionsState", FixedTargetPartitionsState.class));
+
+		if (context.isRestored()) {
+			for (FixedTargetPartitionsState targetPartitionsState : checkpointedUnionState.get()) {
+				if (targetPartitionsState.getParallelInstanceId() % parallelInstances == parallelInstanceId) {
+					for (Map.Entry<String, Integer> stateEntry : targetPartitionsState.getTopicToFixedPartition().entrySet()) {
+						if (!this.fixedTargetPartitionsState.hasFixedTargetPartitionFor(stateEntry.getKey())
+								|| targetPartitionsState.getParallelInstanceId() == this.parallelInstanceId) {
+							this.fixedTargetPartitionsState.setFixedTargetPartition(stateEntry.getKey(), stateEntry.getValue());
+						}
+					}
+				}
+			}
+		}
+	}
+
+	@Override
+	public void snapshotState(FunctionSnapshotContext context) throws Exception {
+		this.checkpointedUnionState.clear();
+		checkpointedUnionState.add(fixedTargetPartitionsState);
+	}
+
+	/**
+	 * POJO.
+	 */
+	public static class FixedTargetPartitionsState {
+
+		private int parallelInstanceId;
+
+		private Map<String, Integer> topicToFixedPartition;
+
+		public FixedTargetPartitionsState() {}
+
+		public FixedTargetPartitionsState(int parallelInstanceId, Map<String, Integer> topicToFixedPartition) {
+			this.parallelInstanceId = parallelInstanceId;
+			this.topicToFixedPartition = topicToFixedPartition;
+		}
+
+		public FixedTargetPartitionsState(int parallelInstanceId) {
+			this(parallelInstanceId, new HashMap<>());
+		}
+
+		public int getParallelInstanceId() {
+			return parallelInstanceId;
+		}
+
+		public void setParallelInstanceId(int parallelInstanceId) {
+			this.parallelInstanceId = parallelInstanceId;
+		}
+
+		public Map<String, Integer> getTopicToFixedPartition() {
+			return topicToFixedPartition;
+		}
+
+		public void setTopicToFixedPartition(Map<String, Integer> topicToFixedPartition) {
+			this.topicToFixedPartition = topicToFixedPartition;
+		}
+
+		public boolean hasFixedTargetPartitionFor(String targetTopic) {
+			return topicToFixedPartition.containsKey(targetTopic);
+		}
+
+		public int getFixedTargetPartition(String targetTopic) {
+			return topicToFixedPartition.get(targetTopic);
+		}
+
+		public void setFixedTargetPartition(String targetTopic, int targetPartition) {
+			this.topicToFixedPartition.put(targetTopic, targetPartition);
+		}
 	}
 }

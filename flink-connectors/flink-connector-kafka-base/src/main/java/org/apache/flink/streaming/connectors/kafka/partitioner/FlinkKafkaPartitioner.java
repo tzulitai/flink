@@ -17,13 +17,17 @@
 
 package org.apache.flink.streaming.connectors.kafka.partitioner;
 
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
+
 import java.io.Serializable;
 
 /**
  * A {@link FlinkKafkaPartitioner} wraps logic on how to partition records
  * across partitions of multiple Kafka topics.
  */
-public abstract class FlinkKafkaPartitioner<T> implements Serializable {
+public abstract class FlinkKafkaPartitioner<T> implements Serializable, CheckpointedFunction {
 
 	private static final long serialVersionUID = -9086719227828020494L;
 
@@ -36,6 +40,16 @@ public abstract class FlinkKafkaPartitioner<T> implements Serializable {
 	 */
 	public void open(int parallelInstanceId, int parallelInstances) {
 		// overwrite this method if needed.
+	}
+
+	@Override
+	public void initializeState(FunctionInitializationContext context) throws Exception {
+		// overwrite this method if the partitioner is stateful and needs to participate in Flink's checkpointing
+	}
+
+	@Override
+	public void snapshotState(FunctionSnapshotContext context) throws Exception {
+		// overwrite this method if the partitioner is stateful and needs to participate in Flink's checkpointing
 	}
 
 	/**
