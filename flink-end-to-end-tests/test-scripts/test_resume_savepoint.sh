@@ -84,17 +84,17 @@ wait_job_running $STATE_MACHINE_JOB
 
 # then, run the events generator
 EVENTS_GEN_JOB=$($FLINK_DIR/bin/flink run -d -c org.apache.flink.streaming.examples.statemachine.KafkaEventsGeneratorJob $FLINK_DIR/examples/streaming/StateMachineExample.jar \
-  --kafka-topic test-input --sleep 100 \
+  --kafka-topic test-input --sleep 30 \
   | grep "Job has been submitted with JobID" | sed 's/.* //g')
 
 wait_job_running $EVENTS_GEN_JOB
 
 function get_metric_state_machine_processed_records {
-  cat $FLINK_DIR/log/flink-*-taskexecutor-*.log | grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" | sed 's/.* //g' | tail -1
+  grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log | sed 's/.* //g' | tail -1
 }
 
 function get_num_metric_samples {
-  cat $FLINK_DIR/log/flink-*-taskexecutor-*.log | grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" | wc -l
+  grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log | wc -l
 }
 
 # monitor the numRecordsIn metric of the state machine operator;
