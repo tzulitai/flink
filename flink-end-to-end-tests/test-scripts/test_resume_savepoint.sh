@@ -29,6 +29,10 @@ echo "metrics.reporter.slf4j.interval: 5 SECONDS" >> $FLINK_DIR/conf/flink-conf.
 
 start_cluster
 
+echo $FLINK_DIR
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+ls -alrth $FLINK_DIR/log/
+
 # get Kafka 0.10.0
 mkdir -p $TEST_DATA_DIR
 if [ -z "$3" ]; then
