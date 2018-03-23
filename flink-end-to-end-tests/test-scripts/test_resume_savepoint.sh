@@ -24,6 +24,11 @@ cp $FLINK_DIR/conf/flink-conf.yaml $FLINK_DIR/conf/flink-conf.yaml.bak
 sed -i -e 's/taskmanager.numberOfTaskSlots: 1/taskmanager.numberOfTaskSlots: 2/' $FLINK_DIR/conf/flink-conf.yaml
 
 # modify configuration to use SLF4J reporter; we will be using this to monitor the state machine progress
+if [ ! -f $FLINK_DIR/opt/flink-metrics-slf4j-1.6-SNAPSHOT.jar ]; then
+  echo "Unable to use the SLF4J reporter; reporter dependency not found."
+  exit 1
+fi
+
 cp $FLINK_DIR/opt/flink-metrics-slf4j-1.6-SNAPSHOT.jar $FLINK_DIR/lib/
 echo "metrics.reporter.slf4j.class: org.apache.flink.metrics.slf4j.Slf4jReporter" >> $FLINK_DIR/conf/flink-conf.yaml
 echo "metrics.reporter.slf4j.interval: 5 SECONDS" >> $FLINK_DIR/conf/flink-conf.yaml
