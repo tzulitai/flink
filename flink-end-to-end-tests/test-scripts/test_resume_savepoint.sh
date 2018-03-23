@@ -103,16 +103,7 @@ EVENTS_GEN_JOB=$($FLINK_DIR/bin/flink run -d -c org.apache.flink.streaming.examp
 wait_job_running $EVENTS_GEN_JOB
 
 function get_metric_state_machine_processed_records {
-  cat $FLINK_DIR/log/*taskexecutor*.log
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  STAGE_1=$(grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log)
-  echo $STAGE_1
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  STAGE_2=$(echo $STAGE_1 | sed 's/.* //g')
-  echo $STAGE_2
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  STAGE_3=$(echo $STAGE_2 | tail -1)
-  echo $STAGE_3
+  grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log | sed 's/.* //g' | tail -1
 }
 
 function get_num_metric_samples {
@@ -122,6 +113,7 @@ function get_num_metric_samples {
 # monitor the numRecordsIn metric of the state machine operator;
 # only proceed to savepoint when the operator has processed 200 records
 while : ; do
+  cat $FLINK_DIR/log/*taskexecutor*.log
   NUM_RECORDS=$(get_metric_state_machine_processed_records)
 
   if [ -z $NUM_RECORDS ]; then
