@@ -103,7 +103,16 @@ EVENTS_GEN_JOB=$($FLINK_DIR/bin/flink run -d -c org.apache.flink.streaming.examp
 wait_job_running $EVENTS_GEN_JOB
 
 function get_metric_state_machine_processed_records {
-  grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log | sed 's/.* //g' | tail -1
+  cat $FLINK_DIR/log/*taskexecutor*.log
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  STAGE_1=$(grep ".State machine job.Flat Map -> Sink: Print to Std. Out.0.numRecordsIn:" $FLINK_DIR/log/*taskexecutor*.log)
+  echo $STAGE_1
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  STAGE_2=$(echo $STAGE_1 | sed 's/.* //g')
+  echo $STAGE_2
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  STAGE_3=$(echo $STAGE_2 | tail -1)
+  echo $STAGE_3
 }
 
 function get_num_metric_samples {
