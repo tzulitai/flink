@@ -23,6 +23,13 @@ source "$(dirname "$0")"/common.sh
 cp $FLINK_DIR/conf/flink-conf.yaml $FLINK_DIR/conf/flink-conf.yaml.bak
 sed -i -e 's/taskmanager.numberOfTaskSlots: 1/taskmanager.numberOfTaskSlots: 2/' $FLINK_DIR/conf/flink-conf.yaml
 
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+cat $FLINK_DIR/conf/flink-conf.yaml
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+ls -alrth $FLINK_DIR/
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+ls -alrth $FLINK_DIR/opt/
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 # modify configuration to use SLF4J reporter; we will be using this to monitor the state machine progress
 if [ ! -f $FLINK_DIR/opt/flink-metrics-slf4j-1.6-SNAPSHOT.jar ]; then
   echo "Unable to use the SLF4J reporter; reporter dependency not found."
