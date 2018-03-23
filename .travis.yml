@@ -41,7 +41,26 @@ matrix:
         - TEST="misc"
         - PROFILE="-Dhadoop.version=2.8.3 -Dinclude_hadoop_aws"
         - CACHE_NAME=JDK8_H280_M
-
+    - jdk: "oraclejdk8"
+          env:
+            - TEST="misc"
+            - PROFILE="-Dhadoop.version=2.8.3 -Dinclude_hadoop_aws"
+            - CACHE_NAME=JDK8_H280_M
+    - jdk: "oraclejdk8"
+          env:
+            - TEST="misc"
+            - PROFILE="-Dhadoop.version=2.8.3 -Dinclude_hadoop_aws"
+            - CACHE_NAME=JDK8_H280_M
+    - jdk: "oraclejdk8"
+          env:
+            - TEST="misc"
+            - PROFILE="-Dhadoop.version=2.8.3 -Dinclude_hadoop_aws"
+            - CACHE_NAME=JDK8_H280_M
+    - jdk: "oraclejdk8"
+          env:
+            - TEST="misc"
+            - PROFILE="-Dhadoop.version=2.8.3 -Dinclude_hadoop_aws"
+            - CACHE_NAME=JDK8_H280_M
 git:
   depth: 100
 
