@@ -783,7 +783,8 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 	/**
 	 * The {@link TypeSerializerConfigSnapshot} serializer configuration to be stored with the managed state.
 	 */
-	public static final class SharedBufferSerializerConfigSnapshot<K, V> extends CompositeTypeSerializerConfigSnapshot {
+	public static final class SharedBufferSerializerConfigSnapshot<K extends Serializable, V>
+			extends CompositeTypeSerializerConfigSnapshot<SharedBuffer<K, V>> {
 
 		private static final int VERSION = 1;
 
@@ -1065,7 +1066,7 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 		}
 
 		@Override
-		public TypeSerializerConfigSnapshot snapshotConfiguration() {
+		public TypeSerializerConfigSnapshot<SharedBuffer<K, V>> snapshotConfiguration() {
 			return new SharedBufferSerializerConfigSnapshot<>(
 					keySerializer,
 					valueSerializer,
@@ -1073,10 +1074,10 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 		}
 
 		@Override
-		public CompatibilityResult<SharedBuffer<K, V>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+		public CompatibilityResult<SharedBuffer<K, V>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 			if (configSnapshot instanceof SharedBufferSerializerConfigSnapshot) {
 				List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializerConfigSnapshots =
-						((SharedBufferSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
+						((SharedBufferSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
 
 				CompatibilityResult<K> keyCompatResult = CompatibilityUtil.resolveCompatibilityResult(
 						serializerConfigSnapshots.get(0).f0,
