@@ -39,7 +39,6 @@ import org.apache.flink.api.common.typeutils.GenericTypeSerializerConfigSnapshot
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.core.memory.ByteArrayInputStreamWithPos;
@@ -620,8 +619,6 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 							reorderedFields[i] = fields[fieldIndex];
 
 							compatResult = CompatibilityUtil.resolveCompatibilityResult(
-								fieldToConfigSnapshotEntry.getValue().f0,
-								UnloadableDummyTypeSerializer.class,
 								fieldToConfigSnapshotEntry.getValue().f1,
 								fieldSerializers[fieldIndex]);
 
@@ -663,8 +660,6 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> previousRegisteredSerializerConfig : previousRegistrations.values()) {
 						// check compatibility of subclass serializer
 						compatResult = CompatibilityUtil.resolveCompatibilityResult(
-								previousRegisteredSerializerConfig.f0,
-								UnloadableDummyTypeSerializer.class,
 								previousRegisteredSerializerConfig.f1,
 								reorderedRegisteredSubclassSerializers[i]);
 
@@ -688,8 +683,6 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 						// check compatibility of cached subclass serializer
 						compatResult = CompatibilityUtil.resolveCompatibilityResult(
-								previousCachedEntry.getValue().f0,
-								UnloadableDummyTypeSerializer.class,
 								previousCachedEntry.getValue().f1,
 								cachedSerializer);
 

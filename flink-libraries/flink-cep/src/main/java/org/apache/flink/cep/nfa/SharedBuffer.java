@@ -21,10 +21,8 @@ package org.apache.flink.cep.nfa;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
@@ -1080,20 +1078,14 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 						((SharedBufferSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
 
 				CompatibilityResult<K> keyCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(0).f0,
-						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(0).f1,
 						keySerializer);
 
 				CompatibilityResult<V> valueCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(1).f0,
-						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(1).f1,
 						valueSerializer);
 
 				CompatibilityResult<DeweyNumber> versionCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(2).f0,
-						UnloadableDummyTypeSerializer.class,
 						serializerConfigSnapshots.get(2).f1,
 						versionSerializer);
 

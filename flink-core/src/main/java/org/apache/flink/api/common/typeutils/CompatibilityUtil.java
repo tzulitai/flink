@@ -19,8 +19,6 @@ package org.apache.flink.api.common.typeutils;
 
 import org.apache.flink.annotation.Internal;
 
-import javax.annotation.Nullable;
-
 /**
  * Utilities related to serializer compatibility.
  */
@@ -44,8 +42,6 @@ public class CompatibilityUtil {
 	 *      If yes, use that for state migration and simply return the result.
 	 *   6. If all of above fails, state migration is required but could not be performed; throw exception.
 	 *
-	 * @param precedingSerializer the preceding serializer used to write the data, null if none could be retrieved
-	 * @param dummySerializerClassTag any class tags that identifies the preceding serializer as a dummy placeholder
 	 * @param precedingSerializerConfigSnapshot configuration snapshot of the preceding serializer
 	 * @param newSerializer the new serializer to ensure compatibility with
 	 *
@@ -55,8 +51,6 @@ public class CompatibilityUtil {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> CompatibilityResult<T> resolveCompatibilityResult(
-			@Nullable TypeSerializer<?> precedingSerializer,
-			Class<?> dummySerializerClassTag,
 			TypeSerializerConfigSnapshot precedingSerializerConfigSnapshot,
 			TypeSerializer<T> newSerializer) {
 

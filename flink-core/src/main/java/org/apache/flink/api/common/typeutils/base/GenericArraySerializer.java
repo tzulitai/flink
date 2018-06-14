@@ -26,7 +26,6 @@ import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -211,8 +210,6 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 					config.getSingleNestedSerializerAndConfig();
 
 				CompatibilityResult<C> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-						previousComponentSerializerAndConfig.f0,
-						UnloadableDummyTypeSerializer.class,
 						previousComponentSerializerAndConfig.f1,
 						componentSerializer);
 

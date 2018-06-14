@@ -23,7 +23,6 @@ import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -206,14 +205,10 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 				((EitherSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
 
 			CompatibilityResult<L> leftCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					previousLeftRightSerializersAndConfigs.get(0).f0,
-					UnloadableDummyTypeSerializer.class,
 					previousLeftRightSerializersAndConfigs.get(0).f1,
 					leftSerializer);
 
 			CompatibilityResult<R> rightCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					previousLeftRightSerializersAndConfigs.get(1).f0,
-					UnloadableDummyTypeSerializer.class,
 					previousLeftRightSerializersAndConfigs.get(1).f1,
 					rightSerializer);
 

@@ -24,7 +24,6 @@ import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -147,11 +146,7 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 					CompatibilityResult<Object> compatResult;
 					int i = 0;
 					for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> f : previousFieldSerializersAndConfigs) {
-						compatResult = CompatibilityUtil.resolveCompatibilityResult(
-								f.f0,
-								UnloadableDummyTypeSerializer.class,
-								f.f1,
-								fieldSerializers[i]);
+						compatResult = CompatibilityUtil.resolveCompatibilityResult(f.f1, fieldSerializers[i]);
 
 						if (compatResult.isRequiresMigration()) {
 							return CompatibilityResult.requiresMigration();
