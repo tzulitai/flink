@@ -130,13 +130,7 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
       elemSerializer)
 
     if (compatResult.isRequiresMigration) {
-      if (compatResult.getConvertDeserializer != null) {
-        CompatibilityResult.requiresMigration(
-          new OptionSerializer[A](
-            new TypeDeserializerAdapter(compatResult.getConvertDeserializer)))
-      } else {
-        CompatibilityResult.requiresMigration()
-      }
+      CompatibilityResult.requiresMigration()
     } else {
       CompatibilityResult.compatible()
     }

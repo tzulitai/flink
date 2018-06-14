@@ -1026,14 +1026,6 @@ public class NFA<T> implements Serializable {
 
 				if (!sharedBufCompatResult.isRequiresMigration() && !eventCompatResult.isRequiresMigration()) {
 					return CompatibilityResult.compatible();
-				} else {
-					if (eventCompatResult.getConvertDeserializer() != null &&
-						sharedBufCompatResult.getConvertDeserializer() != null) {
-						return CompatibilityResult.requiresMigration(
-							new NFASerializer<>(
-								new TypeDeserializerAdapter<>(eventCompatResult.getConvertDeserializer()),
-								new TypeDeserializerAdapter<>(sharedBufCompatResult.getConvertDeserializer())));
-					}
 				}
 			}
 

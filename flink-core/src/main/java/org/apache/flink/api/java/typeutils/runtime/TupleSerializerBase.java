@@ -22,7 +22,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -145,8 +144,6 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 
 				if (previousFieldSerializersAndConfigs.size() == fieldSerializers.length) {
 
-					TypeSerializer<Object>[] convertFieldSerializers = new TypeSerializer[fieldSerializers.length];
-					boolean requiresMigration = false;
 					CompatibilityResult<Object> compatResult;
 					int i = 0;
 					for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> f : previousFieldSerializersAndConfigs) {
@@ -157,25 +154,13 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 								fieldSerializers[i]);
 
 						if (compatResult.isRequiresMigration()) {
-							requiresMigration = true;
-
-							if (compatResult.getConvertDeserializer() != null) {
-								convertFieldSerializers[i] =
-									new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer());
-							} else {
-								return CompatibilityResult.requiresMigration();
-							}
+							return CompatibilityResult.requiresMigration();
 						}
 
 						i++;
 					}
 
-					if (!requiresMigration) {
-						return CompatibilityResult.compatible();
-					} else {
-						return CompatibilityResult.requiresMigration(
-							createSerializerInstance(tupleClass, convertFieldSerializers));
-					}
+					return CompatibilityResult.compatible();
 				}
 			}
 		}

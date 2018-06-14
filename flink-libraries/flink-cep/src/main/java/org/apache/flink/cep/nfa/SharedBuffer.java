@@ -1100,16 +1100,7 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 				if (!keyCompatResult.isRequiresMigration() && !valueCompatResult.isRequiresMigration() && !versionCompatResult.isRequiresMigration()) {
 					return CompatibilityResult.compatible();
 				} else {
-					if (keyCompatResult.getConvertDeserializer() != null
-							&& valueCompatResult.getConvertDeserializer() != null
-							&& versionCompatResult.getConvertDeserializer() != null) {
-						return CompatibilityResult.requiresMigration(
-								new SharedBufferSerializer<>(
-										new TypeDeserializerAdapter<>(keyCompatResult.getConvertDeserializer()),
-										new TypeDeserializerAdapter<>(valueCompatResult.getConvertDeserializer()),
-										new TypeDeserializerAdapter<>(versionCompatResult.getConvertDeserializer())
-								));
-					}
+					return CompatibilityResult.requiresMigration();
 				}
 			}
 

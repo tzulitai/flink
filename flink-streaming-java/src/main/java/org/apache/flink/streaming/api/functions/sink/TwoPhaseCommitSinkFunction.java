@@ -27,7 +27,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -788,13 +787,6 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 
 				if (!txnCompatResult.isRequiresMigration() && !contextCompatResult.isRequiresMigration()) {
 					return CompatibilityResult.compatible();
-				} else {
-					if (txnCompatResult.getConvertDeserializer() != null && contextCompatResult.getConvertDeserializer() != null) {
-						return CompatibilityResult.requiresMigration(
-								new StateSerializer<>(
-										new TypeDeserializerAdapter<>(txnCompatResult.getConvertDeserializer()),
-										new TypeDeserializerAdapter<>(contextCompatResult.getConvertDeserializer())));
-					}
 				}
 			}
 

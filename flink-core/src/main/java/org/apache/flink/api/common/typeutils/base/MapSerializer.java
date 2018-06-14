@@ -21,7 +21,6 @@ package org.apache.flink.api.common.typeutils.base;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -231,11 +230,6 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 
 			if (!keyCompatResult.isRequiresMigration() && !valueCompatResult.isRequiresMigration()) {
 				return CompatibilityResult.compatible();
-			} else if (keyCompatResult.getConvertDeserializer() != null && valueCompatResult.getConvertDeserializer() != null) {
-				return CompatibilityResult.requiresMigration(
-					new MapSerializer<>(
-						new TypeDeserializerAdapter<>(keyCompatResult.getConvertDeserializer()),
-						new TypeDeserializerAdapter<>(valueCompatResult.getConvertDeserializer())));
 			}
 		}
 

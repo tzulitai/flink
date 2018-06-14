@@ -21,7 +21,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -274,8 +273,6 @@ public final class RowSerializer extends TypeSerializer<Row> {
 				((RowSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
 			if (previousFieldSerializersAndConfigs.size() == fieldSerializers.length) {
-				boolean requireMigration = false;
-				TypeSerializer<?>[] convertDeserializers = new TypeSerializer<?>[fieldSerializers.length];
 
 				CompatibilityResult<?> compatResult;
 				int i = 0;
@@ -287,25 +284,13 @@ public final class RowSerializer extends TypeSerializer<Row> {
 							fieldSerializers[i]);
 
 					if (compatResult.isRequiresMigration()) {
-						requireMigration = true;
-
-						if (compatResult.getConvertDeserializer() == null) {
-							// one of the field serializers cannot provide a fallback deserializer
-							return CompatibilityResult.requiresMigration();
-						} else {
-							convertDeserializers[i] =
-								new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer());
-						}
+						return CompatibilityResult.requiresMigration();
 					}
 
 					i++;
 				}
 
-				if (requireMigration) {
-					return CompatibilityResult.requiresMigration(new RowSerializer(convertDeserializers));
-				} else {
-					return CompatibilityResult.compatible();
-				}
+				return CompatibilityResult.compatible();
 			}
 		}
 

@@ -24,7 +24,6 @@ import java.lang.reflect.Array;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -219,11 +218,6 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 
 				if (!compatResult.isRequiresMigration()) {
 					return CompatibilityResult.compatible();
-				} else if (compatResult.getConvertDeserializer() != null) {
-					return CompatibilityResult.requiresMigration(
-						new GenericArraySerializer<>(
-							componentClass,
-							new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer())));
 				}
 			}
 		}
