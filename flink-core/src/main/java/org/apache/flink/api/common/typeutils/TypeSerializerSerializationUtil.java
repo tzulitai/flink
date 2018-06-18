@@ -202,7 +202,7 @@ public class TypeSerializerSerializationUtil {
 			new ArrayList<>(numSerializersAndConfigSnapshots);
 
 		TypeSerializer<?> serializer;
-		TypeSerializerConfigSnapshot configSnapshot;
+		TypeSerializerConfigSnapshot<?> configSnapshot;
 		try (
 			ByteArrayInputStreamWithPos bufferWithPos = new ByteArrayInputStreamWithPos(buffer);
 			DataInputViewStreamWrapper bufferWrapper = new DataInputViewStreamWrapper(bufferWithPos)) {
@@ -215,8 +215,14 @@ public class TypeSerializerSerializationUtil {
 				bufferWithPos.setPosition(offsets[i * 2 + 1]);
 				configSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(bufferWrapper, userCodeClassLoader);
 
-				serializersAndConfigSnapshots.add(
-					new Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>(serializer, configSnapshot));
+				// check if the restored config snapshot is of a legacy config snapshot class that
+				// cannot be used as a restore serializer factory. If so, replace the config snapshot
+				// with a dummy BackwardsCompatibleConfigSnapshot.
+				if (configSnapshot instanceof UnrestorableSerializerConfigSnapshot) {
+					configSnapshot = new BackwardsCompatibleConfigSnapshot<>(configSnapshot, serializer);
+				}
+
+				serializersAndConfigSnapshots.add(new Tuple2<>(serializer, configSnapshot));
 			}
 		}
 
