@@ -798,7 +798,7 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 	public static final class StateSerializerConfigSnapshot<TXN, CONTEXT>
 			extends CompositeTypeSerializerConfigSnapshot<State<TXN, CONTEXT>> {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		/** This empty nullary constructor is required for deserializing the configuration. */
 		public StateSerializerConfigSnapshot() {}
@@ -812,6 +812,19 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 		@Override
 		public int getVersion() {
 			return VERSION;
+		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected TypeSerializer<State<TXN, CONTEXT>> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+			return new StateSerializer<>(
+				(TypeSerializer<TXN>) restoredNestedSerializers[0],
+				(TypeSerializer<CONTEXT>) restoredNestedSerializers[1]);
 		}
 	}
 }

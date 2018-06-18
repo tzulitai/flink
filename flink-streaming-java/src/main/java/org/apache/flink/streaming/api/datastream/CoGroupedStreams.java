@@ -584,7 +584,7 @@ public class CoGroupedStreams<T1, T2> {
 	public static class UnionSerializerConfigSnapshot<T1, T2>
 			extends CompositeTypeSerializerConfigSnapshot<TaggedUnion<T1, T2>> {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		/** This empty nullary constructor is required for deserializing the configuration. */
 		public UnionSerializerConfigSnapshot() {}
@@ -596,6 +596,19 @@ public class CoGroupedStreams<T1, T2> {
 		@Override
 		public int getVersion() {
 			return VERSION;
+		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected TypeSerializer<TaggedUnion<T1, T2>> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+			return new UnionSerializer<>(
+				(TypeSerializer<T1>) restoredNestedSerializers[0],
+				(TypeSerializer<T2>) restoredNestedSerializers[1]);
 		}
 	}
 

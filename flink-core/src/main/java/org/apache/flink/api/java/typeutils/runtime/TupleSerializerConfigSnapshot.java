@@ -21,6 +21,7 @@ package org.apache.flink.api.java.typeutils.runtime;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.UnrestorableSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.InstantiationUtil;
@@ -32,7 +33,9 @@ import java.io.IOException;
  * Snapshot of a tuple serializer's configuration.
  */
 @Internal
-public final class TupleSerializerConfigSnapshot<T> extends CompositeTypeSerializerConfigSnapshot<T> {
+public final class TupleSerializerConfigSnapshot<T>
+		extends CompositeTypeSerializerConfigSnapshot<T>
+		implements UnrestorableSerializerConfigSnapshot {
 
 	private static final int VERSION = 1;
 

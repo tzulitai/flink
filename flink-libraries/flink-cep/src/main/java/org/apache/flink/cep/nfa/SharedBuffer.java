@@ -801,6 +801,20 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 		public int getVersion() {
 			return VERSION;
 		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected TypeSerializer<SharedBuffer<K, V>> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+			return new SharedBufferSerializer<>(
+				(TypeSerializer<K>) restoredNestedSerializers[0],
+				(TypeSerializer<V>) restoredNestedSerializers[1],
+				(TypeSerializer<DeweyNumber>) restoredNestedSerializers[2]);
+		}
 	}
 
 	/**

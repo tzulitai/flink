@@ -21,6 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.UnrestorableSerializerConfigSnapshot;
 
 import java.util.Collection;
 
@@ -31,7 +32,8 @@ import java.util.Collection;
  */
 @Internal
 public final class CollectionSerializerConfigSnapshot<C extends Collection<T>, T>
-		extends CompositeTypeSerializerConfigSnapshot<C> {
+		extends CompositeTypeSerializerConfigSnapshot<C>
+		implements UnrestorableSerializerConfigSnapshot {
 
 	private static final int VERSION = 1;
 

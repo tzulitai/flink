@@ -311,7 +311,7 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 	 */
 	public static final class StreamElementSerializerConfigSnapshot<T> extends CompositeTypeSerializerConfigSnapshot<StreamElement> {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		/** This empty nullary constructor is required for deserializing the configuration. */
 		public StreamElementSerializerConfigSnapshot() {}
@@ -323,6 +323,17 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 		@Override
 		public int getVersion() {
 			return VERSION;
+		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected TypeSerializer<StreamElement> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+			return new StreamElementSerializer<>((TypeSerializer<T>) restoredNestedSerializers[0]);
 		}
 	}
 }

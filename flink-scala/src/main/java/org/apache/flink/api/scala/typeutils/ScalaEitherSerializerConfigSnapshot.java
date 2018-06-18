@@ -43,4 +43,12 @@ public class ScalaEitherSerializerConfigSnapshot<E extends Either<L, R>, L, R>
 	public int getVersion() {
 		return VERSION;
 	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	protected TypeSerializer<E> restoreSerializer(TypeSerializer<?>... restoredNestedSerializers) {
+		return new EitherSerializer<>(
+			(TypeSerializer<L>) restoredNestedSerializers[0],
+			(TypeSerializer<R>) restoredNestedSerializers[1]);
+	}
 }

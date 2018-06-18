@@ -294,18 +294,28 @@ public final class RowSerializer extends TypeSerializer<Row> {
 
 	public static final class RowSerializerConfigSnapshot extends CompositeTypeSerializerConfigSnapshot<Row> {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		/** This empty nullary constructor is required for deserializing the configuration. */
 		public RowSerializerConfigSnapshot() {}
 
-		public RowSerializerConfigSnapshot(TypeSerializer[] fieldSerializers) {
+		public RowSerializerConfigSnapshot(TypeSerializer<?>[] fieldSerializers) {
 			super(fieldSerializers);
 		}
 
 		@Override
 		public int getVersion() {
 			return VERSION;
+		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@Override
+		protected TypeSerializer<Row> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+			return new RowSerializer(restoredNestedSerializers);
 		}
 	}
 }

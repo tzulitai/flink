@@ -763,7 +763,7 @@ public class NFA<T> implements Serializable {
 	 */
 	public static final class NFASerializerConfigSnapshot<T> extends CompositeTypeSerializerConfigSnapshot<NFA<T>> {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		/** This empty constructor is required for deserializing the configuration. */
 		public NFASerializerConfigSnapshot() {}
@@ -778,6 +778,24 @@ public class NFA<T> implements Serializable {
 		@Override
 		public int getVersion() {
 			return VERSION;
+		}
+
+		@Override
+		public int[] getCompatibleVersions() {
+			return new int[]{VERSION, 1};
+		}
+
+		@Override
+		protected boolean containsSerializers() {
+			return getReadVersion() < 2;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected TypeSerializer<NFA<T>> restoreSerializer(TypeSerializer<?>... restoredNestedSerializers) {
+			return new NFASerializer<>(
+				(TypeSerializer<T>) restoredNestedSerializers[0],
+				(TypeSerializer<SharedBuffer<String, T>>) restoredNestedSerializers[1]);
 		}
 	}
 
