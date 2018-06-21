@@ -26,6 +26,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -587,7 +588,7 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 	 */
 	@VisibleForTesting
 	@Internal
-	public static final class StateSerializer<TXN, CONTEXT> extends TypeSerializer<State<TXN, CONTEXT>> {
+	public static final class StateSerializer<TXN, CONTEXT> extends CompositeTypeSerializer<State<TXN, CONTEXT>> {
 
 		private static final long serialVersionUID = 1L;
 
@@ -597,6 +598,12 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 		public StateSerializer(
 				TypeSerializer<TXN> transactionSerializer,
 				TypeSerializer<CONTEXT> contextSerializer) {
+
+			super(
+				new StateSerializerConfigSnapshot<>(transactionSerializer, contextSerializer),
+				transactionSerializer,
+				contextSerializer);
+
 			this.transactionSerializer = checkNotNull(transactionSerializer);
 			this.contextSerializer = checkNotNull(contextSerializer);
 		}

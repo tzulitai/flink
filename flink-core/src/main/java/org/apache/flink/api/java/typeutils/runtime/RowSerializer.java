@@ -20,6 +20,7 @@ package org.apache.flink.api.java.typeutils.runtime;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -42,7 +43,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * Serializer for {@link Row}.
  */
 @Internal
-public final class RowSerializer extends TypeSerializer<Row> {
+public final class RowSerializer extends CompositeTypeSerializer<Row> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -54,6 +55,9 @@ public final class RowSerializer extends TypeSerializer<Row> {
 
 	@SuppressWarnings("unchecked")
 	public RowSerializer(TypeSerializer<?>[] fieldSerializers) {
+
+		super(new RowSerializerConfigSnapshot(fieldSerializers), fieldSerializers);
+
 		this.fieldSerializers = (TypeSerializer<Object>[]) checkNotNull(fieldSerializers);
 		this.arity = fieldSerializers.length;
 		this.nullMask = new boolean[fieldSerializers.length];

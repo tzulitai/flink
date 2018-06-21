@@ -18,8 +18,8 @@
 package org.apache.flink.api.scala.typeutils
 
 import org.apache.flink.annotation.Internal
-import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.api.java.typeutils.runtime.TupleSerializerBase
+import org.apache.flink.api.common.typeutils.{CompatibilityResult, TypeSerializer, TypeSerializerConfigSnapshot}
+import org.apache.flink.api.java.typeutils.runtime.{TupleSerializerBase, TupleSerializerConfigSnapshot}
 import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 import org.apache.flink.types.NullFieldException
 
@@ -32,7 +32,10 @@ import org.apache.flink.types.NullFieldException
 abstract class CaseClassSerializer[T <: Product](
     clazz: Class[T],
     scalaFieldSerializers: Array[TypeSerializer[_]])
-  extends TupleSerializerBase[T](clazz, scalaFieldSerializers)
+  extends TupleSerializerBase[T](
+    clazz,
+    new CaseClassSerializerConfigSnapshot[T](clazz, scalaFieldSerializers),
+    scalaFieldSerializers)
   with Cloneable {
 
   @transient var fields : Array[AnyRef] = _
@@ -79,15 +82,6 @@ abstract class CaseClassSerializer[T <: Product](
 
   override def createOrReuseInstance(fields: Array[Object], reuse: T) : T = {
     createInstance(fields)
-  }
-
-  override def createSerializerInstance(
-      tupleClass: Class[T],
-      fieldSerializers: Array[TypeSerializer[_]]): TupleSerializerBase[T] = {
-    this.getClass
-      .getConstructors()(0)
-      .newInstance(tupleClass, fieldSerializers)
-      .asInstanceOf[CaseClassSerializer[T]]
   }
 
   def copy(from: T, reuse: T): T = {
@@ -137,5 +131,24 @@ abstract class CaseClassSerializer[T <: Product](
     if (fields == null) {
       fields = new Array[AnyRef](arity)
     }
+  }
+
+  override def ensureCompatibility(
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): CompatibilityResult[T] = {
+
+    val result = super.ensureCompatibility(configSnapshot)
+
+    if (!result.isRequiresMigration && clazz.equals()) {
+
+    }
+  }
+
+  override def isComparableSnapshot(
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): Boolean = {
+
+    configSnapshot.isInstanceOf[CaseClassSerializerConfigSnapshot[T]] ||
+      configSnapshot.isInstanceOf[TupleSerializerConfigSnapshot[_]]
   }
 }

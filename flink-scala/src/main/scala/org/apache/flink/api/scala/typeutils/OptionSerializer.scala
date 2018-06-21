@@ -27,7 +27,9 @@ import org.apache.flink.core.memory.{DataInputView, DataOutputView}
 @Internal
 @SerialVersionUID(-8635243274072627338L)
 class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
-  extends TypeSerializer[Option[A]] {
+  extends CompositeTypeSerializer[Option[A]](
+    new ScalaOptionSerializerConfigSnapshot[A](elemSerializer),
+    elemSerializer) {
 
   override def duplicate: OptionSerializer[A] = {
     val duplicatedElemSerializer = elemSerializer.duplicate()
@@ -97,41 +99,11 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
     elemSerializer.hashCode()
   }
 
-  // --------------------------------------------------------------------------------------------
-  // Serializer configuration snapshotting & compatibility
-  // --------------------------------------------------------------------------------------------
+  override def isComparableSnapshot(
+      configSnapshot: TypeSerializerConfigSnapshot[_]): Boolean = {
 
-  override def snapshotConfiguration(): ScalaOptionSerializerConfigSnapshot[A] = {
-    new ScalaOptionSerializerConfigSnapshot[A](elemSerializer)
-  }
-
-  override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[Option[A]] = {
-
-    configSnapshot match {
-      case optionSerializerConfigSnapshot
-          : ScalaOptionSerializerConfigSnapshot[A] =>
-        ensureCompatibility(optionSerializerConfigSnapshot)
-      case legacyOptionSerializerConfigSnapshot
-          : OptionSerializer.OptionSerializerConfigSnapshot[A] =>
-        ensureCompatibility(legacyOptionSerializerConfigSnapshot)
-      case _ => CompatibilityResult.requiresMigration()
-    }
-  }
-
-  private def ensureCompatibility(
-      compositeConfigSnapshot: CompositeTypeSerializerConfigSnapshot[Option[A]])
-      : CompatibilityResult[Option[A]] = {
-
-    val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-      compositeConfigSnapshot.getSingleNestedSerializerAndConfig.f1,
-      elemSerializer)
-
-    if (compatResult.isRequiresMigration) {
-      CompatibilityResult.requiresMigration()
-    } else {
-      CompatibilityResult.compatible()
-    }
+    configSnapshot.isInstanceOf[ScalaOptionSerializerConfigSnapshot[A]] ||
+      configSnapshot.isInstanceOf[OptionSerializer.OptionSerializerConfigSnapshot[A]]
   }
 }
 
@@ -145,10 +117,22 @@ object OptionSerializer {
       extends CompositeTypeSerializerConfigSnapshot[Option[A]] {
 
     override def getVersion: Int = OptionSerializerConfigSnapshot.VERSION
+
+    override def restoreSerializer(
+        restoredNestedSerializers: TypeSerializer[_]*
+      ): TypeSerializer[Option[A]] = {
+
+      new OptionSerializer[A](
+        restoredNestedSerializers(0).asInstanceOf[TypeSerializer[A]])
+    }
+
+    override def containsSerializers(): Boolean = {
+      getReadVersion < 2
+    }
   }
 
   object OptionSerializerConfigSnapshot {
-    val VERSION = 1
+    val VERSION = 2
   }
 
 }

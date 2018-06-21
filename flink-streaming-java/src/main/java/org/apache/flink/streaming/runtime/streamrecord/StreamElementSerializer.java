@@ -19,12 +19,9 @@
 package org.apache.flink.streaming.runtime.streamrecord;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -45,7 +42,7 @@ import static java.util.Objects.requireNonNull;
  * @param <T> The type of value in the StreamRecord
  */
 @Internal
-public final class StreamElementSerializer<T> extends TypeSerializer<StreamElement> {
+public final class StreamElementSerializer<T> extends CompositeTypeSerializer<StreamElement> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -59,6 +56,9 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 	private final TypeSerializer<T> typeSerializer;
 
 	public StreamElementSerializer(TypeSerializer<T> serializer) {
+
+		super(new StreamElementSerializerConfigSnapshot<>(serializer), serializer);
+
 		if (serializer instanceof StreamElementSerializer) {
 			throw new RuntimeException("StreamRecordSerializer given to StreamRecordSerializer as value TypeSerializer: " + serializer);
 		}
@@ -268,42 +268,6 @@ public final class StreamElementSerializer<T> extends TypeSerializer<StreamEleme
 	@Override
 	public int hashCode() {
 		return typeSerializer.hashCode();
-	}
-
-	// --------------------------------------------------------------------------------------------
-	// Serializer configuration snapshotting & compatibility
-	//
-	// This serializer may be used by Flink internal operators that need to checkpoint
-	// buffered records. Therefore, it may be part of managed state and need to implement
-	// the configuration snapshot and compatibility methods.
-	// --------------------------------------------------------------------------------------------
-
-	@Override
-	public StreamElementSerializerConfigSnapshot<T> snapshotConfiguration() {
-		return new StreamElementSerializerConfigSnapshot<>(typeSerializer);
-	}
-
-	@Override
-	public CompatibilityResult<StreamElement> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
-		Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> previousTypeSerializerAndConfig;
-
-		// we are compatible for data written by ourselves or the legacy MultiplexingStreamRecordSerializer
-		if (configSnapshot instanceof StreamElementSerializerConfigSnapshot) {
-			previousTypeSerializerAndConfig =
-				((StreamElementSerializerConfigSnapshot<?>) configSnapshot).getSingleNestedSerializerAndConfig();
-		} else {
-			return CompatibilityResult.requiresMigration();
-		}
-
-		CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-				previousTypeSerializerAndConfig.f1,
-				typeSerializer);
-
-		if (!compatResult.isRequiresMigration()) {
-			return CompatibilityResult.compatible();
-		} else {
-			return CompatibilityResult.requiresMigration();
-		}
 	}
 
 	/**

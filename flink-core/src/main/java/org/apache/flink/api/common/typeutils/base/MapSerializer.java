@@ -21,6 +21,7 @@ package org.apache.flink.api.common.typeutils.base;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -45,7 +46,7 @@ import java.util.HashMap;
  * @param <V> The type of the values in the map.
  */
 @Internal
-public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
+public final class MapSerializer<K, V> extends CompositeTypeSerializer<Map<K, V>> {
 
 	private static final long serialVersionUID = -6885593032367050078L;
 	
@@ -62,6 +63,12 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 	 * @param valueSerializer The serializer for the values in the map
 	 */
 	public MapSerializer(TypeSerializer<K> keySerializer, TypeSerializer<V> valueSerializer) {
+
+		super(
+			new MapSerializerConfigSnapshot<>(keySerializer, valueSerializer),
+			keySerializer,
+			valueSerializer);
+
 		this.keySerializer = Preconditions.checkNotNull(keySerializer, "The key serializer cannot be null");
 		this.valueSerializer = Preconditions.checkNotNull(valueSerializer, "The value serializer cannot be null.");
 	}

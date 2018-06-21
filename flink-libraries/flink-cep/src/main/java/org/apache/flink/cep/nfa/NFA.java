@@ -20,6 +20,7 @@ package org.apache.flink.cep.nfa;
 
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -802,7 +803,7 @@ public class NFA<T> implements Serializable {
 	/**
 	 * A {@link TypeSerializer} for {@link NFA} that uses Java Serialization.
 	 */
-	public static class NFASerializer<T> extends TypeSerializer<NFA<T>> {
+	public static class NFASerializer<T> extends CompositeTypeSerializer<NFA<T>> {
 
 		private static final long serialVersionUID = 2098282423980597010L;
 
@@ -817,6 +818,12 @@ public class NFA<T> implements Serializable {
 		public NFASerializer(
 				TypeSerializer<T> typeSerializer,
 				TypeSerializer<SharedBuffer<String, T>> sharedBufferSerializer) {
+
+			super(
+				new NFASerializerConfigSnapshot<>(typeSerializer, sharedBufferSerializer),
+				typeSerializer,
+				sharedBufferSerializer);
+
 			this.eventSerializer = typeSerializer;
 			this.sharedBufferSerializer = sharedBufferSerializer;
 		}
@@ -1014,34 +1021,6 @@ public class NFA<T> implements Serializable {
 		@Override
 		public int hashCode() {
 			return 37 * sharedBufferSerializer.hashCode() + eventSerializer.hashCode();
-		}
-
-		@Override
-		public TypeSerializerConfigSnapshot<NFA<T>> snapshotConfiguration() {
-			return new NFASerializerConfigSnapshot<>(eventSerializer, sharedBufferSerializer);
-		}
-
-		@Override
-		public CompatibilityResult<NFA<T>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
-			if (configSnapshot instanceof NFASerializerConfigSnapshot) {
-				List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigs =
-						((NFASerializerConfigSnapshot<?>) configSnapshot).getNestedSerializersAndConfigs();
-
-				CompatibilityResult<T> eventCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializersAndConfigs.get(0).f1,
-						eventSerializer);
-
-				CompatibilityResult<SharedBuffer<String, T>> sharedBufCompatResult =
-						CompatibilityUtil.resolveCompatibilityResult(
-								serializersAndConfigs.get(1).f1,
-								sharedBufferSerializer);
-
-				if (!sharedBufCompatResult.isRequiresMigration() && !eventCompatResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
-				}
-			}
-
-			return CompatibilityResult.requiresMigration();
 		}
 
 		private void serializeStates(Set<State<T>> states, DataOutputView out) throws IOException {

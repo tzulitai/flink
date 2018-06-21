@@ -114,10 +114,22 @@ object CRowSerializer {
     def this() = this(null)
 
     override def getVersion: Int = CRowSerializerConfigSnapshot.VERSION
+
+    override def restoreSerializer(
+        restoredNestedSerializers: TypeSerializer[_]*
+      ): TypeSerializer[CRow] = {
+
+      new CRowSerializer(
+        restoredNestedSerializers(0).asInstanceOf[TypeSerializer[Row]])
+    }
+
+    override def containsSerializers(): Boolean = {
+      getReadVersion < 2
+    }
   }
 
   object CRowSerializerConfigSnapshot {
-    val VERSION = 1
+    val VERSION = 2
   }
 
 }

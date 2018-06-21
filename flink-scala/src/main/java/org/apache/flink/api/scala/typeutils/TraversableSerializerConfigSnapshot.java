@@ -23,6 +23,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 
 import scala.collection.TraversableOnce;
+import scala.collection.generic.CanBuildFrom;
+import scala.collection.mutable.Builder;
 
 /**
  * A {@link TypeSerializerConfigSnapshot} for the Scala {@link TraversableSerializer}.
@@ -34,7 +36,7 @@ import scala.collection.TraversableOnce;
 public class TraversableSerializerConfigSnapshot<T extends TraversableOnce<E>, E>
 		extends CompositeTypeSerializerConfigSnapshot<T> {
 
-	private static final int VERSION = 1;
+	private static final int VERSION = 2;
 
 	/** This empty nullary constructor is required for deserializing the configuration. */
 	public TraversableSerializerConfigSnapshot() {}
@@ -46,5 +48,31 @@ public class TraversableSerializerConfigSnapshot<T extends TraversableOnce<E>, E
 	@Override
 	public int getVersion() {
 		return VERSION;
+	}
+
+	@Override
+	protected boolean containsSerializers() {
+		return getReadVersion() < 2;
+	}
+
+	@Override
+	protected TypeSerializer<T> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+		return new TraversableSerializer<T, E>((TypeSerializer<E>) restoredNestedSerializers[0]) {
+
+			private static final long serialVersionUID = -4553874422526425327L;
+
+			@Override
+			public CanBuildFrom<T, E, T> getCbf() {
+				return new CanBuildFrom<T, E, T>() {
+					@Override
+					public Builder<E, T> apply() {
+						return null;
+					}
+
+					@Override
+					public Builder<E, T> apply(T t) {
+						return null;
+					}};
+			}};
 	}
 }

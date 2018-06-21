@@ -20,6 +20,7 @@ package org.apache.flink.cep.nfa;
 
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
@@ -820,7 +821,8 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 	/**
 	 * A {@link TypeSerializer} for the {@link SharedBuffer}.
 	 */
-	public static class SharedBufferSerializer<K extends Serializable, V> extends TypeSerializer<SharedBuffer<K, V>> {
+	public static class SharedBufferSerializer<K extends Serializable, V>
+			extends CompositeTypeSerializer<SharedBuffer<K, V>> {
 
 		private static final long serialVersionUID = -3254176794680331560L;
 
@@ -838,6 +840,12 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 				final TypeSerializer<K> keySerializer,
 				final TypeSerializer<V> valueSerializer,
 				final TypeSerializer<DeweyNumber> versionSerializer) {
+
+			super(
+				new SharedBufferSerializerConfigSnapshot<>(keySerializer, valueSerializer, versionSerializer),
+				keySerializer,
+				valueSerializer,
+				versionSerializer);
 
 			this.keySerializer = keySerializer;
 			this.valueSerializer = valueSerializer;
@@ -1075,42 +1083,6 @@ public class SharedBuffer<K extends Serializable, V> implements Serializable {
 		@Override
 		public int hashCode() {
 			return 37 * keySerializer.hashCode() + valueSerializer.hashCode();
-		}
-
-		@Override
-		public TypeSerializerConfigSnapshot<SharedBuffer<K, V>> snapshotConfiguration() {
-			return new SharedBufferSerializerConfigSnapshot<>(
-					keySerializer,
-					valueSerializer,
-					versionSerializer);
-		}
-
-		@Override
-		public CompatibilityResult<SharedBuffer<K, V>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
-			if (configSnapshot instanceof SharedBufferSerializerConfigSnapshot) {
-				List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializerConfigSnapshots =
-						((SharedBufferSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
-
-				CompatibilityResult<K> keyCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(0).f1,
-						keySerializer);
-
-				CompatibilityResult<V> valueCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(1).f1,
-						valueSerializer);
-
-				CompatibilityResult<DeweyNumber> versionCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						serializerConfigSnapshots.get(2).f1,
-						versionSerializer);
-
-				if (!keyCompatResult.isRequiresMigration() && !valueCompatResult.isRequiresMigration() && !versionCompatResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
-				} else {
-					return CompatibilityResult.requiresMigration();
-				}
-			}
-
-			return CompatibilityResult.requiresMigration();
 		}
 	}
 }

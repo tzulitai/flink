@@ -31,6 +31,7 @@ import java.util.Collection;
  * @param <T> Type of the element.
  */
 @Internal
+@Deprecated
 public final class CollectionSerializerConfigSnapshot<C extends Collection<T>, T>
 		extends CompositeTypeSerializerConfigSnapshot<C>
 		implements UnrestorableSerializerConfigSnapshot {
@@ -47,5 +48,10 @@ public final class CollectionSerializerConfigSnapshot<C extends Collection<T>, T
 	@Override
 	public int getVersion() {
 		return VERSION;
+	}
+
+	@Override
+	protected TypeSerializer<C> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
+		throw new UnsupportedOperationException();
 	}
 }
