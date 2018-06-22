@@ -22,9 +22,13 @@ import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapsh
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
 import scala.collection.TraversableOnce;
 import scala.collection.generic.CanBuildFrom;
-import scala.collection.mutable.Builder;
+import scala.collection.immutable.List$;
+
+import java.io.IOException;
 
 /**
  * A {@link TypeSerializerConfigSnapshot} for the Scala {@link TraversableSerializer}.
@@ -38,11 +42,39 @@ public class TraversableSerializerConfigSnapshot<T extends TraversableOnce<E>, E
 
 	private static final int VERSION = 2;
 
+	private T collectionClass;
+
 	/** This empty nullary constructor is required for deserializing the configuration. */
 	public TraversableSerializerConfigSnapshot() {}
 
-	public TraversableSerializerConfigSnapshot(TypeSerializer<E> elementSerializer) {
+	public TraversableSerializerConfigSnapshot(
+			T collectionClass,
+			TypeSerializer<E> elementSerializer) {
+
 		super(elementSerializer);
+		this.collectionClass = collectionClass;
+	}
+
+	@Override
+	public void write(DataOutputView out) throws IOException {
+		super.write(out);
+		out.writeUTF(collectionClass.toString());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void read(DataInputView in) throws IOException {
+		super.read(in);
+
+		if (getReadVersion() >= 2) {
+			String cbfClassname = in.readUTF();
+
+			try {
+				//this.collectionClass = (Class<T>) Class.forName(cbfClassname, true, getUserCodeClassLoader());
+			} catch (Exception e) {
+				throw new RuntimeException("Oops", e);
+			}
+		}
 	}
 
 	@Override
@@ -55,24 +87,17 @@ public class TraversableSerializerConfigSnapshot<T extends TraversableOnce<E>, E
 		return getReadVersion() < 2;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected TypeSerializer<T> restoreSerializer(TypeSerializer<?>[] restoredNestedSerializers) {
-		return new TraversableSerializer<T, E>((TypeSerializer<E>) restoredNestedSerializers[0]) {
+		return new TraversableSerializer<T, E>(collectionClass, (TypeSerializer<E>) restoredNestedSerializers[0]) {
 
 			private static final long serialVersionUID = -4553874422526425327L;
 
 			@Override
 			public CanBuildFrom<T, E, T> getCbf() {
-				return new CanBuildFrom<T, E, T>() {
-					@Override
-					public Builder<E, T> apply() {
-						return null;
-					}
-
-					@Override
-					public Builder<E, T> apply(T t) {
-						return null;
-					}};
-			}};
+				return collectionClass.getClass().OnceCanBuildFrom();
+			}
+		};
 	}
 }

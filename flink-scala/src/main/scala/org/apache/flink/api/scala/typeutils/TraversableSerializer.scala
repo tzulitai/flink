@@ -31,7 +31,7 @@ import scala.collection.generic.CanBuildFrom
 @Internal
 @SerialVersionUID(7522917416391312410L)
 abstract class TraversableSerializer[T <: TraversableOnce[E], E](
-    var elementSerializer: TypeSerializer[E])
+    var collectionClass: Class[T], var elementSerializer: TypeSerializer[E])
   extends TypeSerializer[T] with Cloneable {
 
   def getCbf: CanBuildFrom[T, E, T]
@@ -153,7 +153,7 @@ abstract class TraversableSerializer[T <: TraversableOnce[E], E](
   }
 
   override def snapshotConfiguration(): TraversableSerializerConfigSnapshot[T, E] = {
-    new TraversableSerializerConfigSnapshot[T, E](elementSerializer)
+    new TraversableSerializerConfigSnapshot[T, E](cbf().result(), elementSerializer)
   }
 
   override def ensureCompatibility(

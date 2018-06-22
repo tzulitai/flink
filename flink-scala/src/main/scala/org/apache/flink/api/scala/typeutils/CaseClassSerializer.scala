@@ -137,11 +137,7 @@ abstract class CaseClassSerializer[T <: Product](
       configSnapshot: TypeSerializerConfigSnapshot[_]
     ): CompatibilityResult[T] = {
 
-    val result = super.ensureCompatibility(configSnapshot)
-
-    if (!result.isRequiresMigration && clazz.equals()) {
-
-    }
+    super.ensureCompatibility(configSnapshot)
   }
 
   override def isComparableSnapshot(

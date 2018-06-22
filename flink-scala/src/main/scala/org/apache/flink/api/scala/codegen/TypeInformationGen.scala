@@ -230,7 +230,7 @@ private[flink] trait TypeInformationGen[C <: Context] {
       new TraversableTypeInfo($collectionClass, elementTpe) {
         def createSerializer(executionConfig: ExecutionConfig) = {
           new TraversableSerializer[${desc.tpe}, ${desc.elem.tpe}](
-              elementTpe.createSerializer(executionConfig)) {
+              $collectionClass, elementTpe.createSerializer(executionConfig)) {
             def getCbf = implicitly[CanBuildFrom[${desc.tpe}, ${desc.elem.tpe}, ${desc.tpe}]]
           }
         }

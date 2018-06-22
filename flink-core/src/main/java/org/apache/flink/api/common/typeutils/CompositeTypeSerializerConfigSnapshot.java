@@ -87,11 +87,11 @@ public abstract class CompositeTypeSerializerConfigSnapshot<T> extends TypeSeria
 	}
 
 	public List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> getNestedSerializersAndConfigs() {
-		return nestedSerializersAndConfigs;
+		return null;
 	}
 
 	public Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> getSingleNestedSerializerAndConfig() {
-		return nestedSerializersAndConfigs.get(0);
+		return null;
 	}
 
 	@Override
@@ -104,13 +104,12 @@ public abstract class CompositeTypeSerializerConfigSnapshot<T> extends TypeSeria
 			return false;
 		}
 
-		return (obj.getClass().equals(getClass()))
-				&& nestedSerializersAndConfigs.equals(((CompositeTypeSerializerConfigSnapshot) obj).getNestedSerializersAndConfigs());
+		return (obj.getClass().equals(getClass()));
 	}
 
 	@Override
 	public int hashCode() {
-		return nestedSerializersAndConfigs.hashCode();
+		return 0;
 	}
 
 	@Override

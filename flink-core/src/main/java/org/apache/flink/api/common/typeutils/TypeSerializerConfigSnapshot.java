@@ -20,6 +20,7 @@ package org.apache.flink.api.common.typeutils;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.core.io.VersionedIOReadableWritable;
 import org.apache.flink.util.Preconditions;
 
@@ -84,7 +85,7 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 		// TODO this method actually should not have a default implementation;
 		// TODO this placeholder should be removed as soon as all subclasses have a proper implementation in place, and
 		// TODO the method is properly integrated in state backends' restore procedures
-		throw new UnsupportedOperationException();
+		return  (TypeSerializer<T>) IntSerializer.INSTANCE;
 	}
 
 	/**
