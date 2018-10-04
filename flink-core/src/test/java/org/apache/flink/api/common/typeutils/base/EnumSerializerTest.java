@@ -103,7 +103,7 @@ public class EnumSerializerTest extends TestLogger {
 		TypeSerializerConfigSnapshot restoredConfig;
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			restoredConfig = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), serializer);
 		}
 
 		CompatibilityResult<PublicEnum> compatResult = serializer.ensureCompatibility(restoredConfig);

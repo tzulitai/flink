@@ -21,11 +21,7 @@ package org.apache.flink.api.common.typeutils;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.core.io.VersionedIOReadableWritable;
-import org.apache.flink.core.memory.DataInputView;
-import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
-
-import java.io.IOException;
 
 /**
  * A {@code TypeSerializerConfigSnapshot} is a point-in-time view of a {@link TypeSerializer's} configuration.
@@ -71,8 +67,12 @@ import java.io.IOException;
  * deserialize the configuration snapshot from its binary form.
  *
  * @param <T> The data type that the originating serializer of this configuration serializes.
+ *
+ * @deprecated This class has been deprecated since Flink 1.7, and will eventually be removed.
+ *             Please refer to, and use {@link TypeSerializerSnapshot} instead.
  */
 @PublicEvolving
+@Deprecated
 public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadableWritable {
 
 	/** The user code class loader; only relevant if this configuration instance was deserialized from binary form. */
@@ -96,7 +96,16 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 	 */
 	public TypeSerializer<T> restoreSerializer() {
 		// TODO this implementation is only a placeholder; the intention is to have no default implementation
-		return serializer;
+		if (serializer != null) {
+			return this.serializer;
+		} else {
+			throw new IllegalStateException("Trying to return ");
+		}
+	}
+
+	@Internal
+	public boolean needsPriorSerializerPersisted() {
+		return true;
 	}
 
 	/**
@@ -106,7 +115,7 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 	 * TODO be returned by the restoreSerializer() method.
 	 */
 	@Internal
-	public final void setSerializer(TypeSerializer<T> serializer) {
+	public void setPriorSerializer(TypeSerializer<T> serializer) {
 		this.serializer = Preconditions.checkNotNull(serializer);
 	}
 
@@ -123,23 +132,6 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 			return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 		} else {
 			return TypeSerializerSchemaCompatibility.compatibleAfterReconfiguration(newSerializer);
-		}
-	}
-
-	@Override
-	public void write(DataOutputView out) throws IOException {
-		// bump the version; we use this to know that there is a serializer to read as part of the config
-		out.writeInt(getVersion() + 1);
-
-		TypeSerializerSerializationUtil.writeSerializer(out, this.serializer);
-	}
-
-	@Override
-	public void read(DataInputView in) throws IOException {
-		super.read(in);
-
-		if (getReadVersion() == getVersion() + 1) {
-			this.serializer = TypeSerializerSerializationUtil.tryReadSerializer(in, getUserCodeClassLoader(), true);
 		}
 	}
 

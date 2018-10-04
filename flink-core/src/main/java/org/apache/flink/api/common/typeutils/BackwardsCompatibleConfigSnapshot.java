@@ -19,15 +19,12 @@
 package org.apache.flink.api.common.typeutils;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * A utility {@link TypeSerializerConfigSnapshot} that is used for backwards compatibility purposes.
@@ -49,23 +46,12 @@ import java.util.Objects;
 public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSnapshot<T> {
 
 	/**
-	 * The actual serializer config snapshot. This may be {@code null} when reading a
-	 * savepoint from Flink <= 1.2.
-	 */
-	@Nullable
-	private TypeSerializerConfigSnapshot<T> wrappedConfigSnapshot;
-
-	/**
 	 * The serializer instance written in savepoints.
 	 */
 	@Nonnull
 	private TypeSerializer<T> serializerInstance;
 
-	public BackwardsCompatibleConfigSnapshot(
-			@Nullable TypeSerializerConfigSnapshot<?> wrappedConfigSnapshot,
-			TypeSerializer<T> serializerInstance) {
-
-		this.wrappedConfigSnapshot = (TypeSerializerConfigSnapshot<T>) wrappedConfigSnapshot;
+	public BackwardsCompatibleConfigSnapshot(TypeSerializer<T> serializerInstance) {
 		this.serializerInstance = Preconditions.checkNotNull(serializerInstance);
 	}
 
@@ -94,20 +80,14 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 
 	@Override
 	public <NS extends TypeSerializer<T>> TypeSerializerSchemaCompatibility<T, NS> resolveSchemaCompatibility(NS newSerializer) {
-		if (wrappedConfigSnapshot != null) {
-			return wrappedConfigSnapshot.resolveSchemaCompatibility(newSerializer);
-		} else {
-			// if there is no configuration snapshot to check against,
-			// then we can only assume that the new serializer is compatible as is
-			return TypeSerializerSchemaCompatibility.compatibleAsIs();
-		}
+		// if there is no configuration snapshot to check against,
+		// then we can only assume that the new serializer is compatible as is
+		return TypeSerializerSchemaCompatibility.compatibleAsIs();
 	}
 
 	@Override
 	public int hashCode() {
-		int result = (wrappedConfigSnapshot != null) ? wrappedConfigSnapshot.hashCode() : 0;
-		result = 31 * result + serializerInstance.hashCode();
-		return result;
+		return serializerInstance.hashCode();
 	}
 
 	@Override
@@ -122,12 +102,6 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 
 		BackwardsCompatibleConfigSnapshot<?> that = (BackwardsCompatibleConfigSnapshot<?>) o;
 
-		return Objects.equals(that.wrappedConfigSnapshot, wrappedConfigSnapshot)
-			&& that.serializerInstance.equals(serializerInstance);
-	}
-
-	@VisibleForTesting
-	public TypeSerializerConfigSnapshot<?> getWrappedConfigSnapshot() {
-		return wrappedConfigSnapshot;
+		return that.serializerInstance.equals(serializerInstance);
 	}
 }

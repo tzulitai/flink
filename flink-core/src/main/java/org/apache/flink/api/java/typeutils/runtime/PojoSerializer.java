@@ -931,7 +931,8 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					fieldSerializer = TypeSerializerSerializationUtil.tryReadSerializer(inViewWrapper, getUserCodeClassLoader(), true);
 
 					inWithPos.setPosition(fieldSerializerOffsets[i * 2 + 1]);
-					fieldSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(inViewWrapper, getUserCodeClassLoader());
+					fieldSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+						inViewWrapper, getUserCodeClassLoader(), fieldSerializer);
 
 					fieldToSerializerConfigSnapshot.put(
 						fieldName,
@@ -957,7 +958,8 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					registeredSubclassSerializer = TypeSerializerSerializationUtil.tryReadSerializer(inViewWrapper, getUserCodeClassLoader(), true);
 
 					inWithPos.setPosition(registeredSerializerOffsets[i * 2 + 1]);
-					registeredSubclassSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(inViewWrapper, getUserCodeClassLoader());
+					registeredSubclassSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+						inViewWrapper, getUserCodeClassLoader(), registeredSubclassSerializer);
 
 					this.registeredSubclassesToSerializerConfigSnapshots.put(
 						registeredSubclass,
@@ -983,7 +985,8 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					cachedSubclassSerializer = TypeSerializerSerializationUtil.tryReadSerializer(inViewWrapper, getUserCodeClassLoader(), true);
 
 					inWithPos.setPosition(cachedSerializerOffsets[i * 2 + 1]);
-					cachedSubclassSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(inViewWrapper, getUserCodeClassLoader());
+					cachedSubclassSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+						inViewWrapper, getUserCodeClassLoader(), cachedSubclassSerializer);
 
 					this.nonRegisteredSubclassesToSerializerConfigSnapshots.put(
 						cachedSubclass,

@@ -117,7 +117,7 @@ public abstract class SerializerTestBase<T> extends TestLogger {
 		TypeSerializerConfigSnapshot restoredConfig;
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			restoredConfig = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), getSerializer());
 		}
 
 		CompatibilityResult strategy = getSerializer().ensureCompatibility(restoredConfig);

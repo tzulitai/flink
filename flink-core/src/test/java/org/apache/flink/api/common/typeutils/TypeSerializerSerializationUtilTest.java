@@ -165,7 +165,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		TypeSerializerConfigSnapshot<?> restoredConfigs;
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			restoredConfigs = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), null);
 		}
 
 		assertEquals(configSnapshot1, restoredConfigs);
@@ -188,7 +188,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			// read using a dummy classloader
 			TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), new URLClassLoader(new URL[0], null));
+				new DataInputViewStreamWrapper(in), new URLClassLoader(new URL[0], null), null);
 			fail("Expected a ClassNotFoundException wrapped in IOException");
 		} catch (IOException expected) {
 			// test passes
@@ -231,11 +231,11 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		Assert.assertTrue(restored.get(0).f0 instanceof UnloadableDummyTypeSerializer);
 		Assert.assertEquals(
 			IntSerializer.INSTANCE.snapshotConfiguration(),
-			((BackwardsCompatibleConfigSnapshot) restored.get(0).f1).getWrappedConfigSnapshot());
+			restored.get(0).f1);
 		Assert.assertTrue(restored.get(1).f0 instanceof UnloadableDummyTypeSerializer);
 		Assert.assertEquals(
 			DoubleSerializer.INSTANCE.snapshotConfiguration(),
-			((BackwardsCompatibleConfigSnapshot) restored.get(1).f1).getWrappedConfigSnapshot());
+			restored.get(1).f1);
 	}
 
 	/**

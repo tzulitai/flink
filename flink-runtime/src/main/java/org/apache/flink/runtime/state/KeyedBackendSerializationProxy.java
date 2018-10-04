@@ -151,14 +151,14 @@ public class KeyedBackendSerializationProxy<K> extends VersionedIOReadableWritab
 
 		// only starting from version 3, we have the key serializer and its config snapshot written
 		if (readVersion >= 6) {
-			this.keySerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(in, userCodeClassLoader);
+			this.keySerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+				in, userCodeClassLoader, null);
 		} else if (readVersion >= 3) {
 			Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> keySerializerAndConfig =
 					TypeSerializerSerializationUtil.readSerializersAndConfigsWithResilience(in, userCodeClassLoader).get(0);
 			this.keySerializerConfigSnapshot = keySerializerAndConfig.f1;
 		} else {
 			this.keySerializerConfigSnapshot = new BackwardsCompatibleConfigSnapshot<>(
-				null,
 				TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader, true));
 		}
 		this.keySerializer = null;

@@ -111,7 +111,8 @@ public class EnumSerializerUpgradeTest extends TestLogger {
 			ByteArrayInputStream inBuffer = new ByteArrayInputStream(snapshotBytes);
 			DataInputViewStreamWrapper inputViewStreamWrapper = new DataInputViewStreamWrapper(inBuffer)) {
 
-			restoredSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(inputViewStreamWrapper, classLoader2);
+			restoredSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+				inputViewStreamWrapper, classLoader2, enumSerializer);
 		}
 
 		EnumSerializer enumSerializer2 = new EnumSerializer(classLoader2.loadClass(ENUM_NAME));
