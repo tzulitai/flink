@@ -19,6 +19,8 @@
 package org.apache.flink.api.common.typeutils;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
 
 /**
  * A {@code TypeSerializerSnapshot} is a point-in-time view of a {@link TypeSerializer's} configuration.
@@ -65,18 +67,15 @@ import org.apache.flink.annotation.PublicEvolving;
  * @param <T> The data type that the originating serializer of this configuration serializes.
  */
 @PublicEvolving
-public abstract class TypeSerializerSnapshot<T> extends TypeSerializerConfigSnapshot<T> {
+public abstract class TypeSerializerSnapshot<T> implements PersistedTypeSerializer {
 
-	@Override
-	public final boolean needsPriorSerializerPersisted() {
-		return false;
-	}
-
-	@Override
-	public final void setPriorSerializer(TypeSerializer<T> serializer) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
 	public abstract TypeSerializer<T> restoreSerializer();
+
+	public abstract TypeSerializerSchemaCompatibility<T> resolveSchemaCompatibility(TypeSerializer<T> newSerializer);
+
+	public abstract int getVersion();
+
+	public abstract void write(DataOutputView out);
+
+	public abstract void read(int version, DataInputView in, ClassLoader userCodeClassLoader);
 }

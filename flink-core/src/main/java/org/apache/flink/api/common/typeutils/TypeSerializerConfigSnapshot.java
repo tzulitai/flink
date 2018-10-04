@@ -73,7 +73,7 @@ import org.apache.flink.util.Preconditions;
  */
 @PublicEvolving
 @Deprecated
-public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadableWritable {
+public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadableWritable implements PersistedTypeSerializer {
 
 	/** The user code class loader; only relevant if this configuration instance was deserialized from binary form. */
 	private ClassLoader userCodeClassLoader;

@@ -62,7 +62,7 @@ public class CompatibilityUtil {
 	public static <T> CompatibilityResult<T> resolveCompatibilityResult(
 			@Nullable TypeSerializer<?> precedingSerializer,
 			Class<?> dummySerializerClassTag,
-			TypeSerializerConfigSnapshot precedingSerializerConfigSnapshot,
+			PersistedTypeSerializer precedingSerializerConfigSnapshot,
 			TypeSerializer<T> newSerializer) {
 
 		if (precedingSerializerConfigSnapshot != null
