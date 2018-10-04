@@ -215,14 +215,8 @@ public class TypeSerializerSerializationUtil {
 
 				bufferWithPos.setPosition(offsets[i * 2 + 1]);
 
-				// the config snapshot is replaced with a dummy one, which wraps
-				// the actual config snapshot and the deserialized serializer.
-				// this is for backwards compatibility reasons, since before Flink 1.6, some serializers
-				// do not return config snapshots that can be used as a factory for themselves.
-				configSnapshot = new BackwardsCompatibleConfigSnapshot<>(
-					TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-						bufferWrapper, userCodeClassLoader),
-					serializer);
+				configSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+						bufferWrapper, userCodeClassLoader, serializer);
 
 				serializersAndConfigSnapshots.add(new Tuple2<>(serializer, configSnapshot));
 			}

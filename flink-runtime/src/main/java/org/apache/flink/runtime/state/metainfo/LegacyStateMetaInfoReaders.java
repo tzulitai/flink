@@ -108,12 +108,10 @@ public class LegacyStateMetaInfoReaders {
 			serializerConfigSnapshotMap.put(
 				StateMetaInfoSnapshot.CommonSerializerKeys.NAMESPACE_SERIALIZER.toString(),
 				new BackwardsCompatibleConfigSnapshot<>(
-					null,
 					TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader, true)));
 			serializerConfigSnapshotMap.put(
 				StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER.toString(),
 				new BackwardsCompatibleConfigSnapshot<>(
-					null,
 					TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader, true)));
 
 			return new StateMetaInfoSnapshot(
@@ -213,7 +211,7 @@ public class LegacyStateMetaInfoReaders {
 					optionsMap,
 					Collections.singletonMap(
 						StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER.toString(),
-						new BackwardsCompatibleConfigSnapshot<>(null, stateSerializer)));
+						new BackwardsCompatibleConfigSnapshot<>(stateSerializer)));
 			} catch (ClassNotFoundException exception) {
 				throw new IOException(exception);
 			} finally {

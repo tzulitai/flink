@@ -216,7 +216,8 @@ public class StateMetaInfoSnapshotReadersWriters {
 			for (int i = 0; i < numSerializerConfigSnapshots; ++i) {
 				serializerConfigsMap.put(
 					inputView.readUTF(),
-					TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(inputView, userCodeClassLoader));
+					TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
+						inputView, userCodeClassLoader, null));
 			}
 
 			return new StateMetaInfoSnapshot(stateName, stateType, optionsMap, serializerConfigsMap);

@@ -147,7 +147,8 @@ class EnumValueSerializerUpgradeTest extends TestLogger with JUnitSuiteLike {
 
     val snapshot2 = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
       input,
-      classLoader2)
+      classLoader2,
+      enumValueSerializer)
     val enum2 = instantiateEnum[Enumeration](classLoader2, enumName)
 
     val enumValueSerializer2 = new EnumValueSerializer(enum2)

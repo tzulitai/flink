@@ -308,7 +308,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		// read configuration again from bytes
 		try(ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			pojoSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer2);
 		}
 
 		CompatibilityResult<SubTestUserClassA> compatResult = pojoSerializer2.ensureCompatibility(pojoSerializerConfigSnapshot);
@@ -349,7 +349,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		// read configuration from bytes
 		try(ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			pojoSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer);
 		}
 
 		CompatibilityResult<TestUserClass> compatResult = pojoSerializer.ensureCompatibility(pojoSerializerConfigSnapshot);
@@ -393,7 +393,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		// read configuration from bytes
 		try(ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			pojoSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer);
 		}
 
 		// reconfigure - check reconfiguration result and that subclass serializer cache is repopulated
@@ -454,7 +454,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		// read configuration from bytes
 		try(ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			pojoSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
-				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader());
+				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer);
 		}
 
 		// reconfigure - check reconfiguration result and that
@@ -576,7 +576,8 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 					new DataInputViewStreamWrapper(in),
 					new ArtificialCNFExceptionThrowingClassLoader(
 						Thread.currentThread().getContextClassLoader(),
-						cnfThrowingClassnames));
+						cnfThrowingClassnames),
+					pojoSerializer);
 		}
 
 		Assert.assertFalse(pojoSerializer.ensureCompatibility(deserializedConfig).isRequiresMigration());

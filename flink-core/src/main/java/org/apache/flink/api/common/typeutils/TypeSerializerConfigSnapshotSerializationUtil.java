@@ -24,9 +24,8 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.Preconditions;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Utility methods for serialization of {@link TypeSerializerConfigSnapshot}.
@@ -37,7 +36,7 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 	 * Writes a {@link TypeSerializerConfigSnapshot} to the provided data output view.
 	 *
 	 * <p>It is written with a format that can be later read again using
-	 * {@link #readSerializerConfigSnapshot(DataInputView, ClassLoader)}.
+	 * {@link #readSerializerConfigSnapshot(DataInputView, ClassLoader, TypeSerializer)}.
 	 *
 	 * @param out the data output view
 	 * @param serializerConfigSnapshot the serializer configuration snapshot to write
@@ -63,42 +62,16 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 	 *
 	 * @throws IOException
 	 */
-	public static TypeSerializerConfigSnapshot readSerializerConfigSnapshot(
+	public static <T> TypeSerializerConfigSnapshot<T> readSerializerConfigSnapshot(
 			DataInputView in,
-			ClassLoader userCodeClassLoader) throws IOException {
+			ClassLoader userCodeClassLoader,
+			@Nullable TypeSerializer<T> existingPriorSerializer) throws IOException {
 
-		final TypeSerializerConfigSnapshotSerializationProxy proxy = new TypeSerializerConfigSnapshotSerializationProxy(userCodeClassLoader);
+		final TypeSerializerConfigSnapshotSerializationProxy<T> proxy =
+			new TypeSerializerConfigSnapshotSerializationProxy<>(userCodeClassLoader, existingPriorSerializer);
 		proxy.read(in);
 
 		return proxy.getSerializerConfigSnapshot();
-	}
-
-	/**
-	 * Reads from a data input view multiple {@link TypeSerializerConfigSnapshot}s that was previously
-	 * written using {@link TypeSerializerConfigSnapshotSerializationUtil#writeSerializerConfigSnapshot(DataOutputView, TypeSerializerConfigSnapshot, TypeSerializer)}.
-	 *
-	 * @param in the data input view
-	 * @param userCodeClassLoader the user code class loader to use
-	 *
-	 * @return the read serializer configuration snapshots
-	 *
-	 * @throws IOException
-	 */
-	public static List<TypeSerializerConfigSnapshot<?>> readSerializerConfigSnapshots(
-			DataInputView in,
-			ClassLoader userCodeClassLoader) throws IOException {
-
-		int numFields = in.readInt();
-		final List<TypeSerializerConfigSnapshot<?>> serializerConfigSnapshots = new ArrayList<>(numFields);
-
-		TypeSerializerConfigSnapshotSerializationProxy proxy;
-		for (int i = 0; i < numFields; i++) {
-			proxy = new TypeSerializerConfigSnapshotSerializationProxy(userCodeClassLoader);
-			proxy.read(in);
-			serializerConfigSnapshots.add(proxy.getSerializerConfigSnapshot());
-		}
-
-		return serializerConfigSnapshots;
 	}
 
 	/**
@@ -106,14 +79,17 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 	 */
 	static final class TypeSerializerConfigSnapshotSerializationProxy<T> extends VersionedIOReadableWritable {
 
-		private static final int VERSION = 1;
+		private static final int VERSION = 2;
 
 		private ClassLoader userCodeClassLoader;
 		private TypeSerializerConfigSnapshot<T> serializerConfigSnapshot;
 		private TypeSerializer<T> serializer;
 
-		TypeSerializerConfigSnapshotSerializationProxy(ClassLoader userCodeClassLoader) {
+		TypeSerializerConfigSnapshotSerializationProxy(
+			ClassLoader userCodeClassLoader,
+			@Nullable TypeSerializer<T> existingPriorSerializer) {
 			this.userCodeClassLoader = Preconditions.checkNotNull(userCodeClassLoader);
+			this.serializer = existingPriorSerializer;
 		}
 
 		TypeSerializerConfigSnapshotSerializationProxy(
@@ -131,9 +107,12 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 			// correct type of config snapshot instance when deserializing
 			out.writeUTF(serializerConfigSnapshot.getClass().getName());
 
-			// TODO this is a temporary workaround until all serializer config snapshot classes in Flink
-			// TODO have properly implemented the restore serializer factory methods
-			serializerConfigSnapshot.setSerializer(serializer);
+			boolean needsPriorSerializerPersisted = serializerConfigSnapshot.needsPriorSerializerPersisted();
+			out.writeBoolean(needsPriorSerializerPersisted);
+
+			if (needsPriorSerializerPersisted) {
+				TypeSerializerSerializationUtil.writeSerializer(out, serializer);
+			}
 
 			// the actual configuration parameters
 			serializerConfigSnapshot.write(out);
@@ -157,6 +136,24 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 
 			serializerConfigSnapshot = InstantiationUtil.instantiate(serializerConfigSnapshotClass);
 			serializerConfigSnapshot.setUserCodeClassLoader(userCodeClassLoader);
+
+			if (getReadVersion() >= 2) {
+				boolean needsPriorSerializerPersisted = in.readBoolean();
+
+				if (!needsPriorSerializerPersisted && serializerConfigSnapshot.needsPriorSerializerPersisted()) {
+					throw new IllegalStateException();
+				} else if (needsPriorSerializerPersisted) {
+					TypeSerializer<T> serializedSerializer = TypeSerializerSerializationUtil.tryReadSerializer(
+						in, userCodeClassLoader, true);
+
+					if (serializerConfigSnapshot.needsPriorSerializerPersisted()) {
+						serializerConfigSnapshot.setPriorSerializer(serializedSerializer);
+					}
+				}
+			} else {
+				serializerConfigSnapshot.setPriorSerializer(this.serializer);
+			}
+
 			serializerConfigSnapshot.read(in);
 		}
 
@@ -165,7 +162,12 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 			return VERSION;
 		}
 
-		TypeSerializerConfigSnapshot getSerializerConfigSnapshot() {
+		@Override
+		public int[] getCompatibleVersions() {
+			return new int[]{VERSION, 1};
+		}
+
+		TypeSerializerConfigSnapshot<T> getSerializerConfigSnapshot() {
 			return serializerConfigSnapshot;
 		}
 	}
