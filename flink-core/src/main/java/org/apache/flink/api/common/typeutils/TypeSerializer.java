@@ -224,4 +224,24 @@ public abstract class TypeSerializer<T> implements Serializable {
 				"Once you change to directly use TypeSerializerSnapshot, then you can safely remove the implementation " +
 				"of this method.");
 	}
+
+	public final CompatibilityResult<T> ensureCompatibility(TypeSerializerSnapshot<?> configSnapshot) {
+		if (configSnapshot instanceof TypeSerializerConfigSnapshot) {
+			return ensureCompatibility((TypeSerializerConfigSnapshot<?>) configSnapshot);
+		} else {
+			@SuppressWarnings("unchecked")
+			TypeSerializerSnapshot<T> casted = (TypeSerializerSnapshot<T>) configSnapshot;
+
+			TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> compat = casted.resolveSchemaCompatibility(this);
+			if (compat.isCompatibleAsIs()) {
+				return CompatibilityResult.compatible();
+			} else if (compat.isCompatibleAfterMigration()) {
+				return CompatibilityResult.requiresMigration();
+			} else if (compat.isIncompatible()) {
+				throw new IllegalStateException();
+			} else {
+				throw new IllegalStateException();
+			}
+		}
+	}
 }

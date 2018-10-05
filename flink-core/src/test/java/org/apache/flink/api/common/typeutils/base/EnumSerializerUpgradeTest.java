@@ -19,8 +19,8 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshotSerializationUtil;
+import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.util.TestLogger;
@@ -92,7 +92,7 @@ public class EnumSerializerUpgradeTest extends TestLogger {
 
 		EnumSerializer enumSerializer = new EnumSerializer(classLoader.loadClass(ENUM_NAME));
 
-		TypeSerializerConfigSnapshot snapshot = enumSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot snapshot = enumSerializer.snapshotConfiguration();
 		byte[] snapshotBytes;
 		try (
 			ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
@@ -106,7 +106,7 @@ public class EnumSerializerUpgradeTest extends TestLogger {
 		ClassLoader classLoader2 = compileAndLoadEnum(
 			temporaryFolder.newFolder(), ENUM_NAME + ".java", enumSourceB);
 
-		TypeSerializerConfigSnapshot restoredSnapshot;
+		TypeSerializerSnapshot restoredSnapshot;
 		try (
 			ByteArrayInputStream inBuffer = new ByteArrayInputStream(snapshotBytes);
 			DataInputViewStreamWrapper inputViewStreamWrapper = new DataInputViewStreamWrapper(inBuffer)) {

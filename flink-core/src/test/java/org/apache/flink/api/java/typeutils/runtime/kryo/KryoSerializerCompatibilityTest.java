@@ -21,9 +21,9 @@ package org.apache.flink.api.java.typeutils.runtime.kryo;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil;
+import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 
@@ -62,7 +62,7 @@ public class KryoSerializerCompatibilityTest {
 		KryoSerializer<TestClass> kryoSerializerForA = new KryoSerializer<>(TestClass.class, new ExecutionConfig());
 
 		// read configuration again from bytes
-		TypeSerializerConfigSnapshot kryoSerializerConfigSnapshot;
+		TypeSerializerSnapshot kryoSerializerConfigSnapshot;
 		try (InputStream in = getClass().getResourceAsStream("/kryo-serializer-flink1.3-snapshot")) {
 			kryoSerializerConfigSnapshot = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), kryoSerializerForA);
@@ -95,7 +95,7 @@ public class KryoSerializerCompatibilityTest {
 		KryoSerializer<TestClassA> kryoSerializerForA = new KryoSerializer<>(TestClassA.class, new ExecutionConfig());
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerConfigSnapshot kryoSerializerConfigSnapshot = kryoSerializerForA.snapshotConfiguration();
+		TypeSerializerSnapshot kryoSerializerConfigSnapshot = kryoSerializerForA.snapshotConfiguration();
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerConfigSnapshotSerializationUtil.writeSerializerConfigSnapshot(
@@ -250,7 +250,7 @@ public class KryoSerializerCompatibilityTest {
 		int testClassBId = kryoSerializer.getKryo().getRegistration(TestClassB.class).getId();
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerConfigSnapshot kryoSerializerConfigSnapshot = kryoSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot kryoSerializerConfigSnapshot = kryoSerializer.snapshotConfiguration();
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerConfigSnapshotSerializationUtil.writeSerializerConfigSnapshot(

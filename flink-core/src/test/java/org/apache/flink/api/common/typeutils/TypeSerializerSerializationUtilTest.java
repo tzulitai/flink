@@ -162,7 +162,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 			serializedConfig = out.toByteArray();
 		}
 
-		TypeSerializerConfigSnapshot<?> restoredConfigs;
+		TypeSerializerSnapshot<?> restoredConfigs;
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedConfig)) {
 			restoredConfigs = TypeSerializerConfigSnapshotSerializationUtil.readSerializerConfigSnapshot(
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), null);
@@ -201,10 +201,10 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 	 */
 	@Test
 	public void testSerializerAndConfigPairsSerializationWithSerializerDeserializationFailures() throws Exception {
-		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigs = Arrays.asList(
-			new Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>(
+		List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> serializersAndConfigs = Arrays.asList(
+			new Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>(
 				IntSerializer.INSTANCE, IntSerializer.INSTANCE.snapshotConfiguration()),
-			new Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>(
+			new Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>(
 				DoubleSerializer.INSTANCE, DoubleSerializer.INSTANCE.snapshotConfiguration()));
 
 		byte[] serializedSerializersAndConfigs;
@@ -218,7 +218,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		cnfThrowingClassnames.add(IntSerializer.class.getName());
 		cnfThrowingClassnames.add(DoubleSerializer.class.getName());
 
-		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> restored;
+		List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> restored;
 		try (ByteArrayInputStream in = new ByteArrayInputStream(serializedSerializersAndConfigs)) {
 			restored = TypeSerializerSerializationUtil.readSerializersAndConfigsWithResilience(
 				new DataInputViewStreamWrapper(in),

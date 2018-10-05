@@ -126,11 +126,7 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 	 * @return the resolve schema compatibility result.
 	 */
 	public <NS extends TypeSerializer<T>> TypeSerializerSchemaCompatibility<T, NS> resolveSchemaCompatibility(NS newSerializer) {
-		if (newSerializer.ensureCompatibility(this).isRequiresMigration()) {
-			return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
-		} else {
-			return TypeSerializerSchemaCompatibility.compatibleAfterReconfiguration(newSerializer);
-		}
+		throw new UnsupportedOperationException();
 	}
 
 	/**

@@ -147,20 +147,20 @@ public class TypeSerializerSerializationUtil {
 	 */
 	public static void writeSerializersAndConfigsWithResilience(
 			DataOutputView out,
-			List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigs) throws IOException {
+			List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> serializersAndConfigs) throws IOException {
 
 		try (
 			ByteArrayOutputStreamWithPos bufferWithPos = new ByteArrayOutputStreamWithPos();
 			DataOutputViewStreamWrapper bufferWrapper = new DataOutputViewStreamWrapper(bufferWithPos)) {
 
 			out.writeInt(serializersAndConfigs.size());
-			for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> serAndConfSnapshot : serializersAndConfigs) {
+			for (Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>> serAndConfSnapshot : serializersAndConfigs) {
 				out.writeInt(bufferWithPos.getPosition());
 				writeSerializer(bufferWrapper, serAndConfSnapshot.f0);
 
 				out.writeInt(bufferWithPos.getPosition());
 				TypeSerializerConfigSnapshotSerializationUtil.writeSerializerConfigSnapshot(
-					bufferWrapper, serAndConfSnapshot.f1, serAndConfSnapshot.f0);
+					bufferWrapper, (TypeSerializerSnapshot) serAndConfSnapshot.f1, serAndConfSnapshot.f0);
 			}
 
 			out.writeInt(bufferWithPos.getPosition());
@@ -182,7 +182,7 @@ public class TypeSerializerSerializationUtil {
 	 *
 	 * @throws IOException
 	 */
-	public static List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> readSerializersAndConfigsWithResilience(
+	public static List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> readSerializersAndConfigsWithResilience(
 			DataInputView in,
 			ClassLoader userCodeClassLoader) throws IOException {
 
@@ -199,11 +199,11 @@ public class TypeSerializerSerializationUtil {
 		byte[] buffer = new byte[totalBytes];
 		in.readFully(buffer);
 
-		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> serializersAndConfigSnapshots =
+		List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> serializersAndConfigSnapshots =
 			new ArrayList<>(numSerializersAndConfigSnapshots);
 
 		TypeSerializer<?> serializer;
-		TypeSerializerConfigSnapshot<?> configSnapshot;
+		TypeSerializerSnapshot<?> configSnapshot;
 		try (
 			ByteArrayInputStreamWithPos bufferWithPos = new ByteArrayInputStreamWithPos(buffer);
 			DataInputViewStreamWrapper bufferWrapper = new DataInputViewStreamWrapper(bufferWithPos)) {

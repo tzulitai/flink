@@ -151,6 +151,7 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 				if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
 					if (priorSerializer != null) {
 						((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setPriorSerializer(priorSerializer);
+						((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setUserCodeClassLoader(userCodeClassLoader);
 						((TypeSerializerConfigSnapshot<T>) serializerSnapshot).read(in);
 					} else {
 						throw new IllegalStateException();
@@ -162,6 +163,7 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 			} else {
 				if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
 					((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setPriorSerializer(this.serializer);
+					((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setUserCodeClassLoader(userCodeClassLoader);
 					((TypeSerializerConfigSnapshot<T>) serializerSnapshot).read(in);
 				} else {
 					int readVersion = in.readInt();
