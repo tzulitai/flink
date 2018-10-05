@@ -53,7 +53,7 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 	 * savepoint from Flink <= 1.2.
 	 */
 	@Nullable
-	private TypeSerializerConfigSnapshot<?> wrappedConfigSnapshot;
+	private TypeSerializerConfigSnapshot<T> wrappedConfigSnapshot;
 
 	/**
 	 * The serializer instance written in savepoints.
@@ -65,7 +65,7 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 			@Nullable TypeSerializerConfigSnapshot<?> wrappedConfigSnapshot,
 			TypeSerializer<T> serializerInstance) {
 
-		this.wrappedConfigSnapshot = wrappedConfigSnapshot;
+		this.wrappedConfigSnapshot = (TypeSerializerConfigSnapshot<T>) wrappedConfigSnapshot;
 		this.serializerInstance = Preconditions.checkNotNull(serializerInstance);
 	}
 
@@ -93,10 +93,9 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public TypeSerializerSchemaCompatibility<T> resolveSchemaCompatibility(TypeSerializer<?> newSerializer) {
+	public <NS extends TypeSerializer<T>> TypeSerializerSchemaCompatibility<T, NS> resolveSchemaCompatibility(NS newSerializer) {
 		if (wrappedConfigSnapshot != null) {
-			return (TypeSerializerSchemaCompatibility<T>) wrappedConfigSnapshot.resolveSchemaCompatibility(newSerializer);
+			return wrappedConfigSnapshot.resolveSchemaCompatibility(newSerializer);
 		} else {
 			// if there is no configuration snapshot to check against,
 			// then we can only assume that the new serializer is compatible as is
