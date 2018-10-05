@@ -175,11 +175,11 @@ public abstract class TypeSerializer<T> implements Serializable {
 	 * serializer was registered to, the returned configuration snapshot can be used to ensure compatibility
 	 * of the new serializer and determine if state migration is required.
 	 *
-	 * @see TypeSerializerConfigSnapshot
+	 * @see TypeSerializerSnapshot
 	 *
 	 * @return snapshot of the serializer's current configuration (cannot be {@code null}).
 	 */
-	public abstract PersistedTypeSerializer<T> snapshotConfiguration();
+	public abstract TypeSerializerSnapshot<T> snapshotConfiguration();
 
 	/**
 	 * Ensure compatibility of this serializer with a preceding serializer that was registered for serialization of
@@ -218,5 +218,10 @@ public abstract class TypeSerializer<T> implements Serializable {
 	 * @deprecated TODO this method will be removed in later follow-up commits (see FLINK-9377).
 	 */
 	@Deprecated
-	public abstract CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot);
+	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+		throw new IllegalStateException(
+			"Seems like that you are still using TypeSerializerConfigSnapshot; if so, this method must be implemented. " +
+				"Once you change to directly use TypeSerializerSnapshot, then you can safely remove the implementation " +
+				"of this method.");
+	}
 }

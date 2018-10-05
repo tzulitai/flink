@@ -21,7 +21,10 @@ package org.apache.flink.api.common.typeutils;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.core.io.VersionedIOReadableWritable;
+import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.util.Preconditions;
+
+import java.io.IOException;
 
 /**
  * A {@code TypeSerializerConfigSnapshot} is a point-in-time view of a {@link TypeSerializer's} configuration.
@@ -73,7 +76,7 @@ import org.apache.flink.util.Preconditions;
  */
 @PublicEvolving
 @Deprecated
-public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadableWritable implements PersistedTypeSerializer {
+public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadableWritable implements TypeSerializerSnapshot<T> {
 
 	/** The user code class loader; only relevant if this configuration instance was deserialized from binary form. */
 	private ClassLoader userCodeClassLoader;
@@ -101,11 +104,6 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 		} else {
 			throw new IllegalStateException("Trying to return ");
 		}
-	}
-
-	@Internal
-	public boolean needsPriorSerializerPersisted() {
-		return true;
 	}
 
 	/**
@@ -162,4 +160,9 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 	public abstract boolean equals(Object obj);
 
 	public abstract int hashCode();
+
+	@Override
+	public final void read(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
+		throw new UnsupportedOperationException();
+	}
 }

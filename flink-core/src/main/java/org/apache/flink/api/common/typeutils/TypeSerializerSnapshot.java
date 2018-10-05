@@ -1,81 +1,21 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.flink.api.common.typeutils;
 
-import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
+import java.io.IOException;
+
 /**
- * A {@code TypeSerializerSnapshot} is a point-in-time view of a {@link TypeSerializer's} configuration.
- * The snapshot of a serializer is persisted within checkpoints
- * as a single source of meta information about the schema of serialized data in the checkpoint.
- * This serves three purposes:
- *
- * <ul>
- *   <li><strong>Capturing serializer configuration:</strong> a serializer's snapshot
- *   represents information about the parameters, state, and schema of a serializer.
- *   This is explained in more detail below.</li>
- *
- *   <li><strong>Compatibility checks for new serializers:</strong> when new serializers are available,
- *   they need to be checked whether or not they are compatible to read the data written by the previous serializer.
- *   This is performed by providing the new serializer to the corresponding serializer snapshots in checkpoints.</li>
- *
- *   <li><strong>Factory for a read serializer when schema conversion is required:<strong> in the case that new
- *   serializers are not compatible to read previous data, a schema conversion process executed across all data
- *   is required before the new serializer can be continued to be used. This conversion process requires a compatible
- *   read serializer to restore serialized bytes as objects, and then written back again using the new serializer.
- *   In this scenario, the serializer snapshots in checkpoints doubles as a factory for the read
- *   serializer of the conversion process.</li>
- * </ul>
- *
- * <h2>Serializer Configuration and Schema</h2>
- *
- * <p>Since serializer snapshots needs to be used to ensure serialization compatibility
- * for the same managed state as well as serving as a factory for compatible read serializers, the configuration
- * snapshot should encode sufficient information about:
- *
- * <ul>
- *   <li><strong>Parameter settings of the serializer:</strong> parameters of the serializer include settings
- *   required to setup the serializer, or the state of the serializer if it is stateful. If the serializer
- *   has nested serializers, then the configuration snapshot should also contain the parameters of the nested
- *   serializers.</li>
- *
- *   <li><strong>Serialization schema of the serializer:</strong> the binary format used by the serializer, or
- *   in other words, the schema of data written by the serializer.</li>
- * </ul>
- *
- * <p>NOTE: Implementations must contain the default empty nullary constructor. This is required to be able to
- * deserialize the snapshot from its binary form.
- *
- * @param <T> The data type that the originating serializer of this configuration serializes.
+ * Created by tzulitai on 04/10/2018.
  */
-@PublicEvolving
-public abstract class TypeSerializerSnapshot<T> implements PersistedTypeSerializer {
+@Internal
+public interface TypeSerializerSnapshot<T> {
 
-	public abstract TypeSerializer<T> restoreSerializer();
+	TypeSerializer<T> restoreSerializer();
+	TypeSerializerSchemaCompatibility<T> resolveSchemaCompatibility(TypeSerializer<?> newSerializer);
+	void write(DataOutputView out) throws IOException;
+	void read(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException;
+	int getVersion();
 
-	public abstract TypeSerializerSchemaCompatibility<T> resolveSchemaCompatibility(TypeSerializer<T> newSerializer);
-
-	public abstract int getVersion();
-
-	public abstract void write(DataOutputView out);
-
-	public abstract void read(int version, DataInputView in, ClassLoader userCodeClassLoader);
 }

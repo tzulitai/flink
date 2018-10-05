@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
- * Utility methods for serialization of {@link TypeSerializerConfigSnapshot}.
+ * Utility methods for serialization of {@link TypeSerializerSnapshot}.
  */
 public class TypeSerializerConfigSnapshotSerializationUtil {
 
@@ -45,15 +45,15 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 	 */
 	public static <T> void writeSerializerConfigSnapshot(
 		DataOutputView out,
-		PersistedTypeSerializer<T> serializerConfigSnapshot,
+		TypeSerializerSnapshot<T> serializerConfigSnapshot,
 		TypeSerializer<T> serializer) throws IOException {
 
-		new TypeSerializerConfigSnapshotSerializationProxy<>(serializerConfigSnapshot, serializer).write(out);
+		new TypeSerializerSnapshotSerializationProxy<>(serializerConfigSnapshot, serializer).write(out);
 	}
 
 	/**
 	 * Reads from a data input view a {@link TypeSerializerConfigSnapshot} that was previously
-	 * written using {@link TypeSerializerConfigSnapshotSerializationUtil#writeSerializerConfigSnapshot(DataOutputView, TypeSerializerConfigSnapshot, TypeSerializer)}.
+	 * written using {@link TypeSerializerConfigSnapshotSerializationUtil#writeSerializerConfigSnapshot(DataOutputView, TypeSerializerSnapshot, TypeSerializer)}.
 	 *
 	 * @param in the data input view
 	 * @param userCodeClassLoader the user code class loader to use
@@ -62,40 +62,40 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 	 *
 	 * @throws IOException
 	 */
-	public static <T> PersistedTypeSerializer<T> readSerializerConfigSnapshot(
+	public static <T> TypeSerializerSnapshot<T> readSerializerConfigSnapshot(
 			DataInputView in,
 			ClassLoader userCodeClassLoader,
 			@Nullable TypeSerializer<T> existingPriorSerializer) throws IOException {
 
-		final TypeSerializerConfigSnapshotSerializationProxy<T> proxy =
-			new TypeSerializerConfigSnapshotSerializationProxy<>(userCodeClassLoader, existingPriorSerializer);
+		final TypeSerializerSnapshotSerializationProxy<T> proxy =
+			new TypeSerializerSnapshotSerializationProxy<>(userCodeClassLoader, existingPriorSerializer);
 		proxy.read(in);
 
-		return proxy.getSerializerConfigSnapshot();
+		return proxy.getSerializerSnapshot();
 	}
 
 	/**
-	 * Utility serialization proxy for a {@link TypeSerializerConfigSnapshot}.
+	 * Utility serialization proxy for a {@link TypeSerializerSnapshot}.
 	 */
-	static final class TypeSerializerConfigSnapshotSerializationProxy<T> extends VersionedIOReadableWritable {
+	static final class TypeSerializerSnapshotSerializationProxy<T> extends VersionedIOReadableWritable {
 
 		private static final int VERSION = 2;
 
 		private ClassLoader userCodeClassLoader;
-		private PersistedTypeSerializer<T> serializerConfigSnapshot;
+		private TypeSerializerSnapshot<T> serializerSnapshot;
 		private TypeSerializer<T> serializer;
 
-		TypeSerializerConfigSnapshotSerializationProxy(
+		TypeSerializerSnapshotSerializationProxy(
 			ClassLoader userCodeClassLoader,
 			@Nullable TypeSerializer<T> existingPriorSerializer) {
 			this.userCodeClassLoader = Preconditions.checkNotNull(userCodeClassLoader);
 			this.serializer = existingPriorSerializer;
 		}
 
-		TypeSerializerConfigSnapshotSerializationProxy(
-			PersistedTypeSerializer<T> serializerConfigSnapshot,
+		TypeSerializerSnapshotSerializationProxy(
+			TypeSerializerSnapshot<T> serializerConfigSnapshot,
 			TypeSerializer<T> serializer) {
-			this.serializerConfigSnapshot = Preconditions.checkNotNull(serializerConfigSnapshot);
+			this.serializerSnapshot = Preconditions.checkNotNull(serializerConfigSnapshot);
 			this.serializer = Preconditions.checkNotNull(serializer);
 		}
 
@@ -105,26 +105,21 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 
 			// config snapshot class, so that we can re-instantiate the
 			// correct type of config snapshot instance when deserializing
-			out.writeUTF(serializerConfigSnapshot.getClass().getName());
+			out.writeUTF(serializerSnapshot.getClass().getName());
 
-			if (serializerConfigSnapshot instanceof TypeSerializerSnapshot) {
+			if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
+				out.writeBoolean(true); //flag indicating that no serializer is present
+
+				@SuppressWarnings("unchecked")
+				TypeSerializerConfigSnapshot<T> legacySerializerSnapshot = (TypeSerializerConfigSnapshot<T>) serializerSnapshot;
+				TypeSerializerSerializationUtil.writeSerializer(out, serializer);
+				legacySerializerSnapshot.write(out);
+			} else {
 				out.writeBoolean(false); //flag indicating that no serializer is present
-
-				TypeSerializerSnapshot<T> serializerSnapshot = (TypeSerializerSnapshot<T>) serializerConfigSnapshot;
 
 				// write version
 				out.writeInt(serializerSnapshot.getVersion());
 				serializerSnapshot.write(out);
-			} else if (serializerConfigSnapshot instanceof TypeSerializerConfigSnapshot) {
-				out.writeBoolean(true); //flag indicating that no serializer is present
-
-				@SuppressWarnings("unchecked")
-				TypeSerializerConfigSnapshot<T> legacySerializerSnapshot = (TypeSerializerConfigSnapshot<T>) serializerConfigSnapshot;
-
-				TypeSerializerSerializationUtil.writeSerializer(out, serializer);
-				legacySerializerSnapshot.write(out);
-			} else {
-				throw new IllegalStateException();
 			}
 		}
 
@@ -134,9 +129,9 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 			super.read(in);
 
 			String serializerConfigClassname = in.readUTF();
-			Class<? extends PersistedTypeSerializer> serializerConfigSnapshotClass;
+			Class<? extends TypeSerializerSnapshot> serializerConfigSnapshotClass;
 			try {
-				serializerConfigSnapshotClass = (Class<? extends PersistedTypeSerializer>)
+				serializerConfigSnapshotClass = (Class<? extends TypeSerializerSnapshot>)
 					Class.forName(serializerConfigClassname, true, userCodeClassLoader);
 			} catch (ClassNotFoundException e) {
 				throw new IOException(
@@ -144,7 +139,7 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 						+ serializerConfigClassname +  " in classpath.", e);
 			}
 
-			serializerConfigSnapshot = InstantiationUtil.instantiate(serializerConfigSnapshotClass);
+			serializerSnapshot = InstantiationUtil.instantiate(serializerConfigSnapshotClass);
 
 			if (getReadVersion() >= 2) {
 				boolean containsPriorSerializer = in.readBoolean();
@@ -153,27 +148,22 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 					? TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader, true)
 					: null;
 
-				if (serializerConfigSnapshot instanceof TypeSerializerSnapshot) {
-					TypeSerializerSnapshot<T> restoredSerializerSnapshot = (TypeSerializerSnapshot<T>) serializerConfigSnapshot;
-
-
-				} else if (serializerConfigSnapshot instanceof TypeSerializerConfigSnapshot) {
+				if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
 					if (priorSerializer != null) {
-
+						((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setPriorSerializer(priorSerializer);
+						((TypeSerializerConfigSnapshot<T>) serializerSnapshot).read(in);
 					} else {
-
+						throw new IllegalStateException();
 					}
 				} else {
-					throw new IllegalStateException();
+					int readVersion = in.readInt();
+					serializerSnapshot.read(readVersion, in, userCodeClassLoader);
 				}
 			} else {
-				if (serializerConfigSnapshot instanceof TypeSerializerConfigSnapshot) {
-					TypeSerializerConfigSnapshot<T> legacySerializerSnapshot = (TypeSerializerConfigSnapshot<T>) serializerConfigSnapshot;
-					legacySerializerSnapshot.setPriorSerializer(this.serializer);
-					legacySerializerSnapshot.read(in);
-				} else if (serializerConfigSnapshot instanceof TypeSerializerSnapshot) {
-					TypeSerializerSnapshot<T> serializerSnapshot = (TypeSerializerSnapshot<T>) serializerConfigSnapshot;
-
+				if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
+					((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setPriorSerializer(this.serializer);
+					((TypeSerializerConfigSnapshot<T>) serializerSnapshot).read(in);
+				} else {
 					int readVersion = in.readInt();
 					serializerSnapshot.read(readVersion, in, userCodeClassLoader);
 				}
@@ -190,8 +180,8 @@ public class TypeSerializerConfigSnapshotSerializationUtil {
 			return new int[]{VERSION, 1};
 		}
 
-		TypeSerializerConfigSnapshot<T> getSerializerConfigSnapshot() {
-			return serializerConfigSnapshot;
+		TypeSerializerSnapshot<T> getSerializerSnapshot() {
+			return serializerSnapshot;
 		}
 	}
 }

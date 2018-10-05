@@ -43,7 +43,7 @@ import java.io.IOException;
  * @param <T> the data type that the wrapped serializer instance serializes.
  */
 @Internal
-public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSnapshot<T> {
+public class BackwardsCompatibleConfigSnapshot<T> implements TypeSerializerSnapshot<T> {
 
 	/**
 	 * The serializer instance written in savepoints.
@@ -62,7 +62,7 @@ public class BackwardsCompatibleConfigSnapshot<T> extends TypeSerializerConfigSn
 	}
 
 	@Override
-	public void read(DataInputView in) throws IOException {
+	public void read(int version, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
 		throw new UnsupportedOperationException(
 			"This is a dummy config snapshot used only for backwards compatibility.");
 	}
