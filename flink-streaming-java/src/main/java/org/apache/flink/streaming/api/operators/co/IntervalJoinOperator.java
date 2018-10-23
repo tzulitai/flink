@@ -22,13 +22,10 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
@@ -469,28 +466,23 @@ public class IntervalJoinOperator<K, T1, T2, OUT>
 		}
 
 		@Override
-		public CompatibilityResult<BufferEntry<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+		public TypeSerializerSchemaCompatibility<BufferEntry<T>, ? extends TypeSerializer<BufferEntry<T>>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 			if (configSnapshot instanceof BufferSerializerConfigSnapshot) {
+				@SuppressWarnings("unchecked")
 				Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> previousSerializerAndConfig =
 						((BufferSerializerConfigSnapshot) configSnapshot).getSingleNestedSerializerAndConfig();
 
-				CompatibilityResult<T> compatResult =
-						CompatibilityUtil.resolveCompatibilityResult(
-								previousSerializerAndConfig.f0,
-								UnloadableDummyTypeSerializer.class,
-								previousSerializerAndConfig.f1,
-								elementSerializer);
+				TypeSerializerSchemaCompatibility<T, ?> compatResult =
+					elementSerializer.ensureCompatibility(previousSerializerAndConfig.f1);
 
-				if (!compatResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
-				} else if (compatResult.getConvertDeserializer() != null) {
-					return CompatibilityResult.requiresMigration(
-							new BufferEntrySerializer<>(
-									new TypeDeserializerAdapter<>(
-											compatResult.getConvertDeserializer())));
+				if (compatResult.isCompatibleAsIs()) {
+					return TypeSerializerSchemaCompatibility.compatibleAsIs();
+				} else if (compatResult.isCompatibleAfterMigration()) {
+					return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 				}
 			}
-			return CompatibilityResult.requiresMigration();
+
+			return TypeSerializerSchemaCompatibility.incompatible();
 		}
 	}
 

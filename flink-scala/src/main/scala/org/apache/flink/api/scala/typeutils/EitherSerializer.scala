@@ -116,7 +116,9 @@ class EitherSerializer[A, B, T <: Either[A, B]](
   }
 
   override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[T] = {
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): TypeSerializerSchemaCompatibility[T, _ <: TypeSerializer[T]] =
+  {
 
     configSnapshot match {
       case eitherSerializerConfig: ScalaEitherSerializerConfigSnapshot[T, A, B] =>
@@ -128,34 +130,29 @@ class EitherSerializer[A, B, T <: Either[A, B]](
       case legacyConfig: EitherSerializerConfigSnapshot[A, B] =>
         checkCompatibility(legacyConfig)
 
-      case _ => CompatibilityResult.requiresMigration()
+      case _ => TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 
   private def checkCompatibility(
       configSnapshot: CompositeTypeSerializerConfigSnapshot[_]
-    ): CompatibilityResult[T] = {
+    ): TypeSerializerSchemaCompatibility[T, _ <: TypeSerializer[T]] = {
 
     val previousLeftRightSerWithConfigs =
       configSnapshot.getNestedSerializersAndConfigs
 
-    val leftCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-      previousLeftRightSerWithConfigs.get(0).f0,
-      classOf[UnloadableDummyTypeSerializer[_]],
-      previousLeftRightSerWithConfigs.get(0).f1,
-      leftSerializer)
+    val leftCompatResult = leftSerializer.ensureCompatibility(
+      previousLeftRightSerWithConfigs.get(0).f1)
 
-    val rightCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-      previousLeftRightSerWithConfigs.get(1).f0,
-      classOf[UnloadableDummyTypeSerializer[_]],
-      previousLeftRightSerWithConfigs.get(1).f1,
-      rightSerializer)
+    val rightCompatResult = rightSerializer.ensureCompatibility(
+      previousLeftRightSerWithConfigs.get(1).f1)
 
-    if (leftCompatResult.isRequiresMigration
-      || rightCompatResult.isRequiresMigration) {
-      CompatibilityResult.requiresMigration()
+    if (leftCompatResult.isCompatibleAsIs && rightCompatResult.isCompatibleAsIs) {
+      TypeSerializerSchemaCompatibility.compatibleAsIs()
+    } else if (!leftCompatResult.isIncompatible && !rightCompatResult.isIncompatible) {
+      TypeSerializerSchemaCompatibility.compatibleAfterMigration()
     } else {
-      CompatibilityResult.compatible()
+      TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 }

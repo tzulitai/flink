@@ -28,10 +28,8 @@ import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
@@ -206,13 +204,10 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			StateMetaInfoSnapshot.CommonSerializerKeys serializerKey =
 				StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER;
 
-			CompatibilityResult<T> compatibilityResult = CompatibilityUtil.resolveCompatibilityResult(
-				restoredMetaInfoSnapshot.restoreTypeSerializer(serializerKey),
-				null,
-				restoredMetaInfoSnapshot.getTypeSerializerConfigSnapshot(serializerKey),
-				byteOrderedElementSerializer);
+			TypeSerializerSchemaCompatibility<T, ?> compatibilityResult =
+				byteOrderedElementSerializer.ensureCompatibility(restoredMetaInfoSnapshot.getTypeSerializerConfigSnapshot(serializerKey));
 
-			if (compatibilityResult.isRequiresMigration()) {
+			if (!compatibilityResult.isCompatibleAsIs()) {
 				throw new FlinkRuntimeException(StateMigrationException.notSupported());
 			} else {
 				registeredPQStates.put(
@@ -415,12 +410,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 				if (!keySerializerRestored) {
 					// check for key serializer compatibility; this also reconfigures the
 					// key serializer to be compatible, if it is required and is possible
-					if (CompatibilityUtil.resolveCompatibilityResult(
-							serializationProxy.restoreKeySerializer(),
-							UnloadableDummyTypeSerializer.class,
-							serializationProxy.getKeySerializerConfigSnapshot(),
-							keySerializer)
-						.isRequiresMigration()) {
+					if (!keySerializer.ensureCompatibility(serializationProxy.getKeySerializerConfigSnapshot()).isCompatibleAsIs()) {
 
 						// TODO replace with state migration; note that key hash codes need to remain the same after migration
 						throw new StateMigrationException("The new key serializer is not compatible to read previous keys. " +

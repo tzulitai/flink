@@ -20,12 +20,9 @@ package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -135,7 +132,7 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof TupleSerializerConfigSnapshot) {
 			final TupleSerializerConfigSnapshot<T> config = (TupleSerializerConfigSnapshot<T>) configSnapshot;
 
@@ -145,42 +142,31 @@ public abstract class TupleSerializerBase<T> extends TypeSerializer<T> {
 
 				if (previousFieldSerializersAndConfigs.size() == fieldSerializers.length) {
 
-					TypeSerializer<Object>[] convertFieldSerializers = new TypeSerializer[fieldSerializers.length];
 					boolean requiresMigration = false;
-					CompatibilityResult<Object> compatResult;
+					TypeSerializerSchemaCompatibility<Object, ?> compatResult;
 					int i = 0;
 					for (Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> f : previousFieldSerializersAndConfigs) {
-						compatResult = CompatibilityUtil.resolveCompatibilityResult(
-								f.f0,
-								UnloadableDummyTypeSerializer.class,
-								f.f1,
-								fieldSerializers[i]);
+						compatResult = fieldSerializers[i].ensureCompatibility(f.f1);
 
-						if (compatResult.isRequiresMigration()) {
+						if (compatResult.isIncompatible()) {
+							return TypeSerializerSchemaCompatibility.incompatible();
+						} else if (compatResult.isCompatibleAfterMigration()) {
 							requiresMigration = true;
-
-							if (compatResult.getConvertDeserializer() != null) {
-								convertFieldSerializers[i] =
-									new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer());
-							} else {
-								return CompatibilityResult.requiresMigration();
-							}
 						}
 
 						i++;
 					}
 
-					if (!requiresMigration) {
-						return CompatibilityResult.compatible();
+					if (requiresMigration) {
+						return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 					} else {
-						return CompatibilityResult.requiresMigration(
-							createSerializerInstance(tupleClass, convertFieldSerializers));
+						return TypeSerializerSchemaCompatibility.compatibleAsIs();
 					}
 				}
 			}
 		}
 
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 
 	protected abstract TupleSerializerBase<T> createSerializerInstance(Class<T> tupleClass, TypeSerializer<?>[] fieldSerializers);

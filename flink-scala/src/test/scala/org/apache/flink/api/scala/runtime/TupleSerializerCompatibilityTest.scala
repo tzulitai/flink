@@ -61,9 +61,9 @@ class TupleSerializerCompatibilityTest {
 
       val currentSerializer = createTypeInformation[TestCaseClass]
         .createSerializer(new ExecutionConfig())
-      assertFalse(currentSerializer
-        .ensureCompatibility(oldConfigSnapshot)
-        .isRequiresMigration)
+      assertTrue(currentSerializer
+              .ensureCompatibility(oldConfigSnapshot)
+        .isCompatibleAsIs)
 
       // test old data serialization
       is.close()

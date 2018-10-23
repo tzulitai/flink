@@ -19,13 +19,10 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -202,35 +199,24 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 	}
 
 	@Override
-	public CompatibilityResult<Either<L, R>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<Either<L, R>, ? extends TypeSerializer<Either<L, R>>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof EitherSerializerConfigSnapshot) {
 			List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> previousLeftRightSerializersAndConfigs =
 				((EitherSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
 
-			CompatibilityResult<L> leftCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					previousLeftRightSerializersAndConfigs.get(0).f0,
-					UnloadableDummyTypeSerializer.class,
-					previousLeftRightSerializersAndConfigs.get(0).f1,
-					leftSerializer);
+			TypeSerializerSchemaCompatibility<L, ?> leftCompatResult =
+				leftSerializer.ensureCompatibility(previousLeftRightSerializersAndConfigs.get(0).f1);
 
-			CompatibilityResult<R> rightCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-					previousLeftRightSerializersAndConfigs.get(1).f0,
-					UnloadableDummyTypeSerializer.class,
-					previousLeftRightSerializersAndConfigs.get(1).f1,
-					rightSerializer);
+			TypeSerializerSchemaCompatibility<R, ?> rightCompatResult =
+				rightSerializer.ensureCompatibility(previousLeftRightSerializersAndConfigs.get(1).f1);
 
-			if (!leftCompatResult.isRequiresMigration() && !rightCompatResult.isRequiresMigration()) {
-				return CompatibilityResult.compatible();
-			} else {
-				if (leftCompatResult.getConvertDeserializer() != null && rightCompatResult.getConvertDeserializer() != null) {
-					return CompatibilityResult.requiresMigration(
-						new EitherSerializer<>(
-							new TypeDeserializerAdapter<>(leftCompatResult.getConvertDeserializer()),
-							new TypeDeserializerAdapter<>(rightCompatResult.getConvertDeserializer())));
-				}
+			if (leftCompatResult.isCompatibleAsIs() && rightCompatResult.isCompatibleAsIs()) {
+				return TypeSerializerSchemaCompatibility.compatibleAsIs();
+			} else if (!leftCompatResult.isIncompatible() && !rightCompatResult.isIncompatible()) {
+				return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 			}
 		}
 
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 }

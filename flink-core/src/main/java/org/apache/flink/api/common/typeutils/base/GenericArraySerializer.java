@@ -22,12 +22,9 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -203,31 +200,26 @@ public final class GenericArraySerializer<C> extends TypeSerializer<C[]> {
 	}
 
 	@Override
-	public CompatibilityResult<C[]> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<C[], ? extends TypeSerializer<C[]>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof GenericArraySerializerConfigSnapshot) {
 			final GenericArraySerializerConfigSnapshot config = (GenericArraySerializerConfigSnapshot) configSnapshot;
 
 			if (componentClass.equals(config.getComponentClass())) {
+				@SuppressWarnings("unchecked")
 				Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot> previousComponentSerializerAndConfig =
 					config.getSingleNestedSerializerAndConfig();
 
-				CompatibilityResult<C> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-						previousComponentSerializerAndConfig.f0,
-						UnloadableDummyTypeSerializer.class,
-						previousComponentSerializerAndConfig.f1,
-						componentSerializer);
+				TypeSerializerSchemaCompatibility<C, ?> compatResult =
+					componentSerializer.ensureCompatibility(previousComponentSerializerAndConfig.f1);
 
-				if (!compatResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
-				} else if (compatResult.getConvertDeserializer() != null) {
-					return CompatibilityResult.requiresMigration(
-						new GenericArraySerializer<>(
-							componentClass,
-							new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer())));
+				if (compatResult.isCompatibleAsIs()) {
+					return TypeSerializerSchemaCompatibility.compatibleAsIs();
+				} else if (compatResult.isCompatibleAfterMigration()) {
+					return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 				}
 			}
 		}
 
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 }

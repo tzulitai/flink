@@ -109,7 +109,9 @@ class TrySerializer[A](
   }
 
   override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[Try[A]] = {
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): TypeSerializerSchemaCompatibility[Try[A], _ <: TypeSerializer[Try[A]]] =
+  {
 
     configSnapshot match {
       case trySerializerConfigSnapshot
@@ -118,33 +120,29 @@ class TrySerializer[A](
       case legacyTrySerializerConfigSnapshot
           : TrySerializer.TrySerializerConfigSnapshot[A] =>
         ensureCompatibilityInternal(legacyTrySerializerConfigSnapshot)
-      case _ => CompatibilityResult.requiresMigration()
+      case _ => TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 
   private def ensureCompatibilityInternal(
       compositeConfigSnapshot: CompositeTypeSerializerConfigSnapshot[Try[A]])
-        : CompatibilityResult[Try[A]] = {
+        : TypeSerializerSchemaCompatibility[Try[A], _ <: TypeSerializer[Try[A]]] = {
 
     val previousSerializersAndConfigs =
       compositeConfigSnapshot.getNestedSerializersAndConfigs
 
-    val elemCompatRes = CompatibilityUtil.resolveCompatibilityResult(
-      previousSerializersAndConfigs.get(0).f0,
-      classOf[UnloadableDummyTypeSerializer[_]],
-      previousSerializersAndConfigs.get(0).f1,
-      elemSerializer)
+    val elemCompatRes = elemSerializer
+      .ensureCompatibility(previousSerializersAndConfigs.get(0).f1)
 
-    val throwableCompatRes = CompatibilityUtil.resolveCompatibilityResult(
-      previousSerializersAndConfigs.get(1).f0,
-      classOf[UnloadableDummyTypeSerializer[_]],
-      previousSerializersAndConfigs.get(1).f1,
-      throwableSerializer)
+    val throwableCompatRes = throwableSerializer
+      .ensureCompatibility(previousSerializersAndConfigs.get(1).f1)
 
-    if (elemCompatRes.isRequiresMigration || throwableCompatRes.isRequiresMigration) {
-      CompatibilityResult.requiresMigration()
+    if (elemCompatRes.isCompatibleAsIs && throwableCompatRes.isCompatibleAsIs) {
+      TypeSerializerSchemaCompatibility.compatibleAsIs()
+    } else if (!elemCompatRes.isIncompatible && !elemCompatRes.isIncompatible) {
+      TypeSerializerSchemaCompatibility.compatibleAfterMigration()
     } else {
-      CompatibilityResult.compatible()
+      TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 }

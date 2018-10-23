@@ -19,9 +19,9 @@
 package org.apache.flink.formats.avro.typeutils;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.java.typeutils.runtime.KryoRegistrationSerializerConfigSnapshot;
 import org.apache.flink.api.java.typeutils.runtime.PojoSerializer.PojoSerializerConfigSnapshot;
@@ -179,7 +179,7 @@ public class BackwardsCompatibleAvroSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof AvroSchemaSerializerConfigSnapshot ||
 				configSnapshot instanceof AvroSerializerConfigSnapshot) {
 
@@ -212,8 +212,8 @@ public class BackwardsCompatibleAvroSerializer<T> extends TypeSerializer<T> {
 			return serializer.ensureCompatibility(configSnapshot);
 		}
 		else {
-			// completely incompatible type, needs migration
-			return CompatibilityResult.requiresMigration();
+			// completely incompatible type
+			return TypeSerializerSchemaCompatibility.incompatible();
 		}
 	}
 }

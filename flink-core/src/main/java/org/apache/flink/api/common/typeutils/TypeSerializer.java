@@ -183,41 +183,10 @@ public abstract class TypeSerializer<T> implements Serializable {
 	public abstract TypeSerializerSnapshot<T> snapshotConfiguration();
 
 	/**
-	 * Ensure compatibility of this serializer with a preceding serializer that was registered for serialization of
-	 * the same managed state (if any - this method is only relevant if this serializer is registered for
-	 * serialization of managed state).
-	 *
-	 * <p>The compatibility check in this method should be performed by inspecting the preceding serializer's configuration
-	 * snapshot. The method may reconfigure the serializer (if required and possible) so that it may be compatible,
-	 * or provide a signaling result that informs Flink that state migration is necessary before continuing to use
-	 * this serializer.
-	 *
-	 * <p>The result can be one of the following:
-	 * <ul>
-	 *     <li>{@link CompatibilityResult#compatible()}: this signals Flink that this serializer is compatible, or
-	 *     has been reconfigured to be compatible, to continue reading previous data, and that the
-	 *     serialization schema remains the same. No migration needs to be performed.</li>
-	 *
-	 *     <li>{@link CompatibilityResult#requiresMigration(TypeDeserializer)}: this signals Flink that
-	 *     migration needs to be performed, because this serializer is not compatible, or cannot be reconfigured to be
-	 *     compatible, for previous data. Furthermore, in the case that the preceding serializer cannot be found or
-	 *     restored to read the previous data to perform the migration, the provided convert deserializer can be
-	 *     used as a fallback resort.</li>
-	 *
-	 *     <li>{@link CompatibilityResult#requiresMigration()}: this signals Flink that migration needs to be
-	 *     performed, because this serializer is not compatible, or cannot be reconfigured to be compatible, for
-	 *     previous data. If the preceding serializer cannot be found (either its implementation changed or it was
-	 *     removed from the classpath) then the migration will fail due to incapability to read previous data.</li>
-	 * </ul>
-	 *
-	 * @see CompatibilityResult
-	 *
-	 * @param configSnapshot configuration snapshot of a preceding serializer for the same managed state
-	 *
-	 * @return the determined compatibility result (cannot be {@code null}).
+	 * @deprecated
 	 */
 	@Deprecated
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		throw new IllegalStateException(
 			"Seems like that you are still using TypeSerializerConfigSnapshot; if so, this method must be implemented. " +
 				"Once you change to directly use TypeSerializerSnapshot, then you can safely remove the implementation " +
@@ -225,23 +194,13 @@ public abstract class TypeSerializer<T> implements Serializable {
 	}
 
 	@Internal
-	public final CompatibilityResult<T> ensureCompatibility(TypeSerializerSnapshot<?> configSnapshot) {
+	public final TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof TypeSerializerConfigSnapshot) {
 			return ensureCompatibility((TypeSerializerConfigSnapshot<?>) configSnapshot);
 		} else {
 			@SuppressWarnings("unchecked")
 			TypeSerializerSnapshot<T> casted = (TypeSerializerSnapshot<T>) configSnapshot;
-
-			TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> compat = casted.resolveSchemaCompatibility(this);
-			if (compat.isCompatibleAsIs()) {
-				return CompatibilityResult.compatible();
-			} else if (compat.isCompatibleAfterMigration()) {
-				return CompatibilityResult.requiresMigration();
-			} else if (compat.isIncompatible()) {
-				throw new IllegalStateException("The new serializer is incompatible.");
-			} else {
-				throw new IllegalStateException("Unidentifiable schema compatibility type. This is a bug, please file a JIRA.");
-			}
+			return casted.resolveSchemaCompatibility(this);
 		}
 	}
 }

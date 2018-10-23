@@ -19,8 +19,8 @@
 package org.apache.flink.api.java.typeutils.runtime.kryo;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
@@ -67,8 +67,8 @@ public class KryoSerializerCompatibilityTest {
 			kryoSerializerConfigSnapshot = TypeSerializerSnapshotSerializationUtil.readSerializerSnapshot(
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), kryoSerializerForA);
 		}
-		CompatibilityResult<TestClass> compatResult = kryoSerializerForA.ensureCompatibility(kryoSerializerConfigSnapshot);
-		assertFalse(compatResult.isRequiresMigration());
+		TypeSerializerSchemaCompatibility<TestClass, ?> compatResult = kryoSerializerForA.ensureCompatibility(kryoSerializerConfigSnapshot);
+		assertTrue(compatResult.isCompatibleAsIs());
 	}
 
 	@Test
@@ -111,8 +111,8 @@ public class KryoSerializerCompatibilityTest {
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), kryoSerializerForB);
 		}
 
-		CompatibilityResult<TestClassB> compatResult = kryoSerializerForB.ensureCompatibility(kryoSerializerConfigSnapshot);
-		assertTrue(compatResult.isRequiresMigration());
+		TypeSerializerSchemaCompatibility<TestClassB, ?> compatResult = kryoSerializerForB.ensureCompatibility(kryoSerializerConfigSnapshot);
+		assertFalse(compatResult.isCompatibleAsIs());
 	}
 
 	@Test
@@ -272,8 +272,8 @@ public class KryoSerializerCompatibilityTest {
 		}
 
 		// reconfigure - check reconfiguration result and that registration id remains the same
-		CompatibilityResult<TestClass> compatResult = kryoSerializer.ensureCompatibility(kryoSerializerConfigSnapshot);
-		assertFalse(compatResult.isRequiresMigration());
+		TypeSerializerSchemaCompatibility<TestClass, ?> compatResult = kryoSerializer.ensureCompatibility(kryoSerializerConfigSnapshot);
+		assertTrue(compatResult.isCompatibleAsIs());
 		assertEquals(testClassId, kryoSerializer.getKryo().getRegistration(TestClass.class).getId());
 		assertEquals(testClassAId, kryoSerializer.getKryo().getRegistration(TestClassA.class).getId());
 		assertEquals(testClassBId, kryoSerializer.getKryo().getRegistration(TestClassB.class).getId());

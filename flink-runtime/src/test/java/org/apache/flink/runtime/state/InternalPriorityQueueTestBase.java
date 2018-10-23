@@ -18,9 +18,9 @@
 
 package org.apache.flink.runtime.state;
 
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.core.memory.ByteArrayOutputStreamWithPos;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -506,9 +506,10 @@ public abstract class InternalPriorityQueueTestBase extends TestLogger {
 		}
 
 		@Override
-		public CompatibilityResult<TestElement> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
-			return (configSnapshot instanceof Snapshot) && ((Snapshot) configSnapshot).revision <= getRevision() ?
-				CompatibilityResult.compatible() : CompatibilityResult.requiresMigration();
+		public TypeSerializerSchemaCompatibility<TestElement, ? extends TypeSerializer<TestElement>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+			return (configSnapshot instanceof Snapshot) && ((Snapshot) configSnapshot).revision <= getRevision()
+				? TypeSerializerSchemaCompatibility.compatibleAsIs()
+				: TypeSerializerSchemaCompatibility.incompatible();
 		}
 
 		public static class Snapshot extends TypeSerializerConfigSnapshot {

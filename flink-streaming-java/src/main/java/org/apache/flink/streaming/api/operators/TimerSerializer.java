@@ -18,13 +18,11 @@
 
 package org.apache.flink.streaming.api.operators;
 
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -214,7 +212,7 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
 	}
 
 	@Override
-	public CompatibilityResult<TimerHeapInternalTimer<K, N>> ensureCompatibility(
+	public TypeSerializerSchemaCompatibility<TimerHeapInternalTimer<K, N>, ? extends TypeSerializer<TimerHeapInternalTimer<K, N>>> ensureCompatibility(
 		TypeSerializerConfigSnapshot configSnapshot) {
 
 		if (configSnapshot instanceof TimerSerializerConfigSnapshot) {
@@ -226,25 +224,20 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
 					previousSerializersAndConfigs.get(KEY_SERIALIZER_SNAPSHOT_INDEX);
 				Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>> namespaceSerializerAndSnapshot =
 					previousSerializersAndConfigs.get(NAMESPACE_SERIALIZER_SNAPSHOT_INDEX);
-				CompatibilityResult<K> keyCompatibilityResult = CompatibilityUtil.resolveCompatibilityResult(
-					keySerializerAndSnapshot.f0,
-					UnloadableDummyTypeSerializer.class,
-					keySerializerAndSnapshot.f1,
-					keySerializer);
 
-				CompatibilityResult<N> namespaceCompatibilityResult = CompatibilityUtil.resolveCompatibilityResult(
-					namespaceSerializerAndSnapshot.f0,
-					UnloadableDummyTypeSerializer.class,
-					namespaceSerializerAndSnapshot.f1,
-					namespaceSerializer);
+				TypeSerializerSchemaCompatibility<K, ?> keyCompatibilityResult =
+					keySerializer.ensureCompatibility(keySerializerAndSnapshot.f1);
+				TypeSerializerSchemaCompatibility<N, ?> namespaceCompatibilityResult =
+					namespaceSerializer.ensureCompatibility(namespaceSerializerAndSnapshot.f1);
 
-				if (!keyCompatibilityResult.isRequiresMigration()
-					&& !namespaceCompatibilityResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
+				if (keyCompatibilityResult.isCompatibleAsIs() && namespaceCompatibilityResult.isCompatibleAsIs()) {
+					return TypeSerializerSchemaCompatibility.compatibleAsIs();
+				} else if (!keyCompatibilityResult.isIncompatible() && !namespaceCompatibilityResult.isIncompatible()) {
+					return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 				}
 			}
 		}
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 
 	@Nonnull

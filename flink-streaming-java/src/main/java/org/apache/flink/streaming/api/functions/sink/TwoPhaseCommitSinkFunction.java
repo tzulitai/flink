@@ -24,14 +24,11 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -769,37 +766,26 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT>
 		}
 
 		@Override
-		public CompatibilityResult<State<TXN, CONTEXT>> ensureCompatibility(
+		public TypeSerializerSchemaCompatibility<State<TXN, CONTEXT>, ? extends TypeSerializer<State<TXN, CONTEXT>>> ensureCompatibility(
 				TypeSerializerConfigSnapshot<?> configSnapshot) {
 			if (configSnapshot instanceof StateSerializerConfigSnapshot) {
 				List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> previousSerializersAndConfigs =
 						((StateSerializerConfigSnapshot<?, ?>) configSnapshot).getNestedSerializersAndConfigs();
 
-				CompatibilityResult<TXN> txnCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						previousSerializersAndConfigs.get(0).f0,
-						UnloadableDummyTypeSerializer.class,
-						previousSerializersAndConfigs.get(0).f1,
-						transactionSerializer);
+				TypeSerializerSchemaCompatibility<TXN, ?> txnCompatResult =
+					transactionSerializer.ensureCompatibility(previousSerializersAndConfigs.get(0).f1);
 
-				CompatibilityResult<CONTEXT> contextCompatResult = CompatibilityUtil.resolveCompatibilityResult(
-						previousSerializersAndConfigs.get(1).f0,
-						UnloadableDummyTypeSerializer.class,
-						previousSerializersAndConfigs.get(1).f1,
-						contextSerializer);
+				TypeSerializerSchemaCompatibility<CONTEXT, ?> contextCompatResult =
+					contextSerializer.ensureCompatibility(previousSerializersAndConfigs.get(1).f1);
 
-				if (!txnCompatResult.isRequiresMigration() && !contextCompatResult.isRequiresMigration()) {
-					return CompatibilityResult.compatible();
-				} else {
-					if (txnCompatResult.getConvertDeserializer() != null && contextCompatResult.getConvertDeserializer() != null) {
-						return CompatibilityResult.requiresMigration(
-								new StateSerializer<>(
-										new TypeDeserializerAdapter<>(txnCompatResult.getConvertDeserializer()),
-										new TypeDeserializerAdapter<>(contextCompatResult.getConvertDeserializer())));
-					}
+				if (txnCompatResult.isCompatibleAsIs() && contextCompatResult.isCompatibleAsIs()) {
+					return TypeSerializerSchemaCompatibility.compatibleAsIs();
+				} else if (!txnCompatResult.isIncompatible() && !contextCompatResult.isIncompatible()) {
+					return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 				}
 			}
 
-			return CompatibilityResult.requiresMigration();
+			return TypeSerializerSchemaCompatibility.incompatible();
 		}
 	}
 

@@ -210,48 +210,51 @@ public abstract class CompositeSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof ConfigSnapshot) {
+			@SuppressWarnings("unchecked")
 			List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> previousSerializersAndConfigs =
 				((CompositeTypeSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
+
 			if (previousSerializersAndConfigs.size() == fieldSerializers.length) {
 				return ensureFieldCompatibility(previousSerializersAndConfigs);
 			}
 		}
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 
 	@SuppressWarnings("unchecked")
-	private CompatibilityResult<T> ensureFieldCompatibility(
+	private TypeSerializerSchemaCompatibility<T, ?> ensureFieldCompatibility(
 		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> previousSerializersAndConfigs) {
-		TypeSerializer<Object>[] convertSerializers = new TypeSerializer[fieldSerializers.length];
-		boolean requiresMigration = false;
+
+		boolean allCompatibleAsIs = true;
+		boolean hasIncompatibleFields = false;
 		for (int index = 0; index < previousSerializersAndConfigs.size(); index++) {
-			CompatibilityResult<Object> compatResult =
+			TypeSerializerSchemaCompatibility<Object, ?> compatResult =
 				resolveFieldCompatibility(previousSerializersAndConfigs, index);
-			if (compatResult.isRequiresMigration()) {
-				requiresMigration = true;
-				if (compatResult.getConvertDeserializer() != null) {
-					convertSerializers[index] = new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer());
-				} else {
-					return CompatibilityResult.requiresMigration();
-				}
+
+			if (compatResult.isCompatibleAsIs()) {
+				allCompatibleAsIs = true;
+			} else if (compatResult.isIncompatible()) {
+				hasIncompatibleFields = true;
+				allCompatibleAsIs = false;
+			} else {
+				allCompatibleAsIs = false;
 			}
 		}
-		return requiresMigration ? createMigrationCompatResult(convertSerializers) : CompatibilityResult.compatible();
+
+		if (allCompatibleAsIs) {
+			return TypeSerializerSchemaCompatibility.compatibleAsIs();
+		} else if (hasIncompatibleFields) {
+			return TypeSerializerSchemaCompatibility.incompatible();
+		} else {
+			return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
+		}
 	}
 
-	private CompatibilityResult<Object> resolveFieldCompatibility(
+	private TypeSerializerSchemaCompatibility<Object, ?> resolveFieldCompatibility(
 		List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> previousSerializersAndConfigs, int index) {
-		return CompatibilityUtil.resolveCompatibilityResult(
-			previousSerializersAndConfigs.get(index).f0, UnloadableDummyTypeSerializer.class,
-			previousSerializersAndConfigs.get(index).f1, fieldSerializers[index]);
-	}
-
-	private CompatibilityResult<T> createMigrationCompatResult(TypeSerializer<Object>[] convertSerializers) {
-		PrecomputedParameters precomputed =
-			PrecomputedParameters.precompute(this.precomputed.immutableTargetType, convertSerializers);
-		return CompatibilityResult.requiresMigration(createSerializerInstance(precomputed, convertSerializers));
+		return fieldSerializers[index].ensureCompatibility(previousSerializersAndConfigs.get(index).f1);
 	}
 
 	/** This class holds composite serializer parameters which can be precomputed in advanced for better performance. */

@@ -19,13 +19,10 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.TypeDeserializerAdapter;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataInputView;
@@ -238,27 +235,23 @@ public class NullableSerializer<T> extends TypeSerializer<T> {
 	}
 
 	@Override
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot configSnapshot) {
 		if (configSnapshot instanceof NullableSerializerConfigSnapshot) {
+			@SuppressWarnings("unchecked")
 			List<Tuple2<TypeSerializer<?>, TypeSerializerConfigSnapshot>> previousKvSerializersAndConfigs =
 				((NullableSerializerConfigSnapshot) configSnapshot).getNestedSerializersAndConfigs();
 
-			CompatibilityResult<T> compatResult = CompatibilityUtil.resolveCompatibilityResult(
-				previousKvSerializersAndConfigs.get(0).f0,
-				UnloadableDummyTypeSerializer.class,
-				previousKvSerializersAndConfigs.get(0).f1,
-				originalSerializer);
+			TypeSerializerSchemaCompatibility<T, ?> compatResult =
+				originalSerializer.ensureCompatibility(previousKvSerializersAndConfigs.get(0).f1);
 
-			if (!compatResult.isRequiresMigration()) {
-				return CompatibilityResult.compatible();
-			} else if (compatResult.getConvertDeserializer() != null) {
-				return CompatibilityResult.requiresMigration(
-					new NullableSerializer<>(
-						new TypeDeserializerAdapter<>(compatResult.getConvertDeserializer()), padNullValue()));
+			if (compatResult.isCompatibleAsIs()) {
+				return TypeSerializerSchemaCompatibility.compatibleAsIs();
+			} else if (compatResult.isCompatibleAfterMigration()) {
+				return TypeSerializerSchemaCompatibility.compatibleAfterMigration();
 			}
 		}
 
-		return CompatibilityResult.requiresMigration();
+		return TypeSerializerSchemaCompatibility.incompatible();
 	}
 
 	/**

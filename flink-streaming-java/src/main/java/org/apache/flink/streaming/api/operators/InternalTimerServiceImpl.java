@@ -19,9 +19,8 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
-import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.runtime.state.InternalPriorityQueue;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
@@ -142,19 +141,13 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N>, 
 
 			// the following is the case where we restore
 			if (restoredTimersSnapshot != null) {
-				CompatibilityResult<K> keySerializerCompatibility = CompatibilityUtil.resolveCompatibilityResult(
-					this.keyDeserializer,
-					null,
-					restoredTimersSnapshot.getKeySerializerConfigSnapshot(),
-					keySerializer);
+				TypeSerializerSchemaCompatibility<K, ?> keySerializerCompatibility =
+					keySerializer.ensureCompatibility(restoredTimersSnapshot.getKeySerializerConfigSnapshot());
 
-				CompatibilityResult<N> namespaceSerializerCompatibility = CompatibilityUtil.resolveCompatibilityResult(
-					this.namespaceDeserializer,
-					null,
-					restoredTimersSnapshot.getNamespaceSerializerConfigSnapshot(),
-					namespaceSerializer);
+				TypeSerializerSchemaCompatibility<N, ?> namespaceSerializerCompatibility =
+					namespaceSerializer.ensureCompatibility(restoredTimersSnapshot.getNamespaceSerializerConfigSnapshot());
 
-				if (keySerializerCompatibility.isRequiresMigration() || namespaceSerializerCompatibility.isRequiresMigration()) {
+				if (!keySerializerCompatibility.isCompatibleAsIs() || !namespaceSerializerCompatibility.isCompatibleAsIs()) {
 					throw new IllegalStateException("Tried to initialize restored TimerService " +
 						"with incompatible serializers than those used to snapshot its state.");
 				}

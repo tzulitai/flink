@@ -85,30 +85,23 @@ class CRowSerializer(val rowSerializer: TypeSerializer[Row]) extends TypeSeriali
   }
 
   override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[CRow] = {
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): TypeSerializerSchemaCompatibility[CRow, _ <: TypeSerializer[CRow]] = {
 
     configSnapshot match {
       case crowSerializerConfigSnapshot: CRowSerializer.CRowSerializerConfigSnapshot =>
-        val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-          crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f0,
-          classOf[UnloadableDummyTypeSerializer[_]],
-          crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f1,
-          rowSerializer)
+        val compatResult = rowSerializer.ensureCompatibility(
+          crowSerializerConfigSnapshot.getSingleNestedSerializerAndConfig.f1)
 
-        if (compatResult.isRequiresMigration) {
-          if (compatResult.getConvertDeserializer != null) {
-            CompatibilityResult.requiresMigration(
-              new CRowSerializer(
-                new TypeDeserializerAdapter(compatResult.getConvertDeserializer))
-            )
-          } else {
-            CompatibilityResult.requiresMigration()
-          }
+        if (compatResult.isCompatibleAsIs) {
+          TypeSerializerSchemaCompatibility.compatibleAsIs()
+        } else if (compatResult.isCompatibleAfterMigration) {
+          TypeSerializerSchemaCompatibility.compatibleAfterMigration()
         } else {
-          CompatibilityResult.compatible()
+          TypeSerializerSchemaCompatibility.incompatible()
         }
 
-      case _ => CompatibilityResult.requiresMigration()
+      case _ => TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 }

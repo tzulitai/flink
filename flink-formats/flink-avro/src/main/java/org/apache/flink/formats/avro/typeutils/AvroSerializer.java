@@ -18,9 +18,9 @@
 
 package org.apache.flink.formats.avro.typeutils;
 
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.typeutils.runtime.KryoRegistrationSerializerConfigSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -274,7 +274,7 @@ public class AvroSerializer<T> extends TypeSerializer<T> {
 
 	@Override
 	@SuppressWarnings({"deprecation", "unchecked"})
-	public CompatibilityResult<T> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
+	public TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> ensureCompatibility(TypeSerializerConfigSnapshot<?> configSnapshot) {
 		if (configSnapshot instanceof AvroSchemaSerializerConfigSnapshot) {
 			// proper schema snapshot, can do the sophisticated schema-based compatibility check
 			final String schemaString = ((AvroSchemaSerializerConfigSnapshot<?>) configSnapshot).getSchemaString();
@@ -284,19 +284,21 @@ public class AvroSerializer<T> extends TypeSerializer<T> {
 			final SchemaPairCompatibility compatibility =
 					SchemaCompatibility.checkReaderWriterCompatibility(schema, lastSchema);
 
-			return compatibility.getType() == SchemaCompatibilityType.COMPATIBLE ?
-					CompatibilityResult.compatible() : CompatibilityResult.requiresMigration();
+			return compatibility.getType() == SchemaCompatibilityType.COMPATIBLE
+				? TypeSerializerSchemaCompatibility.compatibleAsIs()
+				: TypeSerializerSchemaCompatibility.incompatible();
 		}
 		else if (configSnapshot instanceof AvroSerializerConfigSnapshot) {
 			// old snapshot case, just compare the type
 			// we don't need to restore any Kryo stuff, since Kryo was never used for persistence,
 			// only for object-to-object copies.
 			final AvroSerializerConfigSnapshot<T> old = (AvroSerializerConfigSnapshot<T>) configSnapshot;
-			return type.equals(old.getTypeClass()) ?
-					CompatibilityResult.compatible() : CompatibilityResult.requiresMigration();
+			return type.equals(old.getTypeClass())
+				? TypeSerializerSchemaCompatibility.compatibleAsIs()
+				: TypeSerializerSchemaCompatibility.incompatible();
 		}
 		else {
-			return CompatibilityResult.requiresMigration();
+			return TypeSerializerSchemaCompatibility.incompatible();
 		}
 	}
 

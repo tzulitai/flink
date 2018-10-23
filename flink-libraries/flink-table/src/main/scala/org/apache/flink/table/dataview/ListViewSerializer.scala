@@ -79,23 +79,24 @@ class ListViewSerializer[T](val listSerializer: ListSerializer[T])
     new ListViewSerializerConfigSnapshot[T](listSerializer)
 
   override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[ListView[T]] = {
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): TypeSerializerSchemaCompatibility[ListView[T], _ <: TypeSerializer[ListView[T]]] =
+  {
 
     configSnapshot match {
       case snapshot: ListViewSerializerConfigSnapshot[T] =>
         val previousListSerializerAndConfig =
           snapshot.getSingleNestedSerializerAndConfig
 
-        val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-          previousListSerializerAndConfig.f0,
-          classOf[UnloadableDummyTypeSerializer[_]],
-          previousListSerializerAndConfig.f1,
-          listSerializer)
+        val compatResult =
+          listSerializer.ensureCompatibility(previousListSerializerAndConfig.f1)
 
-        if (!compatResult.isRequiresMigration) {
-          CompatibilityResult.compatible[ListView[T]]
+        if (compatResult.isCompatibleAsIs) {
+          TypeSerializerSchemaCompatibility.compatibleAsIs()
+        } else if (compatResult.isCompatibleAfterMigration) {
+          TypeSerializerSchemaCompatibility.compatibleAfterMigration()
         } else {
-          CompatibilityResult.requiresMigration[ListView[T]]
+          TypeSerializerSchemaCompatibility.incompatible()
         }
 
       // backwards compatibility path;
@@ -105,19 +106,18 @@ class ListViewSerializer[T](val listSerializer: ListSerializer[T])
         val previousListSerializerAndConfig =
           legacySnapshot.getSingleNestedSerializerAndConfig
 
-        val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-          previousListSerializerAndConfig.f0,
-          classOf[UnloadableDummyTypeSerializer[_]],
-          previousListSerializerAndConfig.f1,
-          listSerializer.getElementSerializer)
+        val compatResult = listSerializer.getElementSerializer
+          .ensureCompatibility(previousListSerializerAndConfig.f1)
 
-        if (!compatResult.isRequiresMigration) {
-          CompatibilityResult.compatible[ListView[T]]
+        if (compatResult.isCompatibleAsIs) {
+          TypeSerializerSchemaCompatibility.compatibleAsIs()
+        } else if (compatResult.isCompatibleAfterMigration) {
+          TypeSerializerSchemaCompatibility.compatibleAfterMigration()
         } else {
-          CompatibilityResult.requiresMigration[ListView[T]]
+          TypeSerializerSchemaCompatibility.incompatible()
         }
 
-      case _ => CompatibilityResult.requiresMigration[ListView[T]]
+      case _ => TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 }

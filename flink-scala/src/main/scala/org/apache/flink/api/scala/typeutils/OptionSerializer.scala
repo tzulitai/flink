@@ -106,8 +106,9 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
   }
 
   override def ensureCompatibility(
-      configSnapshot: TypeSerializerConfigSnapshot[_]): CompatibilityResult[Option[A]] = {
-
+      configSnapshot: TypeSerializerConfigSnapshot[_]
+    ): TypeSerializerSchemaCompatibility[Option[A], _ <: TypeSerializer[Option[A]]] =
+  {
     configSnapshot match {
       case optionSerializerConfigSnapshot
           : ScalaOptionSerializerConfigSnapshot[A] =>
@@ -115,30 +116,23 @@ class OptionSerializer[A](val elemSerializer: TypeSerializer[A])
       case legacyOptionSerializerConfigSnapshot
           : OptionSerializer.OptionSerializerConfigSnapshot[A] =>
         ensureCompatibilityInternal(legacyOptionSerializerConfigSnapshot)
-      case _ => CompatibilityResult.requiresMigration()
+      case _ => TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 
   private def ensureCompatibilityInternal(
       compositeConfigSnapshot: CompositeTypeSerializerConfigSnapshot[Option[A]])
-      : CompatibilityResult[Option[A]] = {
+      : TypeSerializerSchemaCompatibility[Option[A], _ <: TypeSerializer[Option[A]]] = {
 
-    val compatResult = CompatibilityUtil.resolveCompatibilityResult(
-      compositeConfigSnapshot.getSingleNestedSerializerAndConfig.f0,
-      classOf[UnloadableDummyTypeSerializer[_]],
-      compositeConfigSnapshot.getSingleNestedSerializerAndConfig.f1,
-      elemSerializer)
+    val compatResult = elemSerializer.ensureCompatibility(
+      compositeConfigSnapshot.getSingleNestedSerializerAndConfig.f1)
 
-    if (compatResult.isRequiresMigration) {
-      if (compatResult.getConvertDeserializer != null) {
-        CompatibilityResult.requiresMigration(
-          new OptionSerializer[A](
-            new TypeDeserializerAdapter(compatResult.getConvertDeserializer)))
-      } else {
-        CompatibilityResult.requiresMigration()
-      }
+    if (compatResult.isCompatibleAsIs) {
+      TypeSerializerSchemaCompatibility.compatibleAsIs()
+    } else if (compatResult.isCompatibleAfterMigration) {
+      TypeSerializerSchemaCompatibility.compatibleAfterMigration()
     } else {
-      CompatibilityResult.compatible()
+      TypeSerializerSchemaCompatibility.incompatible()
     }
   }
 }
