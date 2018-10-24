@@ -522,12 +522,12 @@ public abstract class StateBackendMigrationTestBase<B extends AbstractStateBacke
 		}
 
 		@Override
-		public void write(DataOutputView out) throws IOException {
+		public void writeSnapshot(DataOutputView out) throws IOException {
 			out.writeUTF(configPayload);
 		}
 
 		@Override
-		public void read(int readVersion, DataInputView in, ClassLoader classLoader) throws IOException {
+		public void readSnapshot(int readVersion, DataInputView in, ClassLoader classLoader) throws IOException {
 			configPayload = in.readUTF();
 		}
 
@@ -665,10 +665,10 @@ public abstract class StateBackendMigrationTestBase<B extends AbstractStateBacke
 		}
 
 		@Override
-		public void write(DataOutputView out) throws IOException {}
+		public void writeSnapshot(DataOutputView out) throws IOException {}
 
 		@Override
-		public void read(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {}
+		public void readSnapshot(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {}
 
 		@Override
 		public boolean equals(Object obj) {
