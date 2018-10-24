@@ -153,8 +153,19 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Subclasses can override this if they wish to delegate the compatibility check elsewhere.
+	 * This allows the serializer class to remove the implementation for the deprecated
+	 * ensureCompatibility method.
+	 */
 	@Override
-	public final <NS extends TypeSerializer<T>> TypeSerializerSchemaCompatibility<T, NS> resolveSchemaCompatibility(NS newSerializer) {
-		throw new UnsupportedOperationException();
+	public <NS extends TypeSerializer<T>> TypeSerializerSchemaCompatibility<T, NS> resolveSchemaCompatibility(NS newSerializer) {
+		CompatibilityResult<T> legacyCompatibilityResult = newSerializer.ensureCompatibility(this);
+
+		if (legacyCompatibilityResult.isRequiresMigration()) {
+			return TypeSerializerSchemaCompatibility.incompatible();
+		} else {
+			return TypeSerializerSchemaCompatibility.compatibleAsIs();
+		}
 	}
 }

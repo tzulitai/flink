@@ -18,11 +18,9 @@
 
 package org.apache.flink.api.common.typeutils;
 
-import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.util.StateMigrationException;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -223,27 +221,5 @@ public abstract class TypeSerializer<T> implements Serializable {
 			"Seems like that you are still using TypeSerializerConfigSnapshot; if so, this method must be implemented. " +
 				"Once you change to directly use TypeSerializerSnapshot, then you can safely remove the implementation " +
 				"of this method.");
-	}
-
-	@Internal
-	public final CompatibilityResult<T> ensureCompatibility(TypeSerializerSnapshot<?> configSnapshot) {
-		if (configSnapshot instanceof TypeSerializerConfigSnapshot) {
-			return ensureCompatibility((TypeSerializerConfigSnapshot<?>) configSnapshot);
-		} else {
-			@SuppressWarnings("unchecked")
-			TypeSerializerSnapshot<T> casted = (TypeSerializerSnapshot<T>) configSnapshot;
-
-			TypeSerializerSchemaCompatibility<T, ? extends TypeSerializer<T>> compat = casted.resolveSchemaCompatibility(this);
-			if (compat.isCompatibleAsIs()) {
-				return CompatibilityResult.compatible();
-			} else if (compat.isCompatibleAfterMigration()) {
-				return CompatibilityResult.requiresMigration();
-			} else if (compat.isIncompatible()) {
-				throw new RuntimeException(
-					new StateMigrationException("The new serializer is incompatible, meaning that the new serializer can't be used even if state migration is performed."));
-			} else {
-				throw new IllegalStateException("Unidentifiable schema compatibility type. This is a bug, please file a JIRA.");
-			}
-		}
 	}
 }

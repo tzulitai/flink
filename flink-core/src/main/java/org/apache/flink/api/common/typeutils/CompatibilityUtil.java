@@ -68,19 +68,25 @@ public class CompatibilityUtil {
 		if (precedingSerializerConfigSnapshot != null
 			&& !(precedingSerializerConfigSnapshot instanceof BackwardsCompatibleSerializerSnapshot)) {
 
-			CompatibilityResult<T> initialResult = newSerializer.ensureCompatibility(precedingSerializerConfigSnapshot);
+			TypeSerializerSchemaCompatibility<T, ?> compatibility =
+				((TypeSerializerSnapshot<T>) precedingSerializerConfigSnapshot).resolveSchemaCompatibility(newSerializer);
 
-			if (!initialResult.isRequiresMigration()) {
-				return initialResult;
+			// This method is now only used by serializers with outdated snapshots (i.e.
+			// snapshot classes that still implement the legacy TypeSerializerConfigSnapshot class);
+			// because of this, if a nested serializer's compatibility check signals that it requires migration,
+			// we can not further propagate this since CompatibilityResult does not support this.
+			// We throw an exception here to educate the fact that the serializer needs to update its
+			// snapshot class to the new interface (i.e. TypeSerializerSnapshot) to be able to properly
+			// support cases where migration is possible.
+			if (compatibility.isCompatibleAfterMigration()) {
+				throw new RuntimeException("This indicates that a serializer, which is still using " +
+					"the outdated snapshot class (i.e. TypeSerializerConfigSnapshot), needs to be upgraded.");
+			}
+
+			if (compatibility.isCompatibleAsIs()) {
+				return CompatibilityResult.compatible();
 			} else {
-				if (precedingSerializer != null && !(precedingSerializer.getClass().equals(dummySerializerClassTag))) {
-					// if the preceding serializer exists and is not a dummy, use
-					// that for converting instead of any provided convert deserializer
-					return CompatibilityResult.requiresMigration((TypeSerializer<T>) precedingSerializer);
-				} else {
-					// requires migration (may or may not have a convert deserializer)
-					return initialResult;
-				}
+				return CompatibilityResult.requiresMigration();
 			}
 		} else {
 			// if the configuration snapshot of the preceding serializer cannot be provided,

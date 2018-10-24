@@ -34,13 +34,13 @@ import java.util.Set;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.SerializerTestBase;
 import org.apache.flink.api.common.typeutils.TypeComparator;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeType.FlatFieldDescriptor;
 import org.apache.flink.api.common.operators.Keys.ExpressionKeys;
 import org.apache.flink.api.common.operators.Keys.IncompatibleKeysException;
+import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
@@ -311,8 +311,10 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer2);
 		}
 
-		CompatibilityResult<SubTestUserClassA> compatResult = pojoSerializer2.ensureCompatibility(pojoSerializerConfigSnapshot);
-		assertTrue(compatResult.isRequiresMigration());
+		@SuppressWarnings("unchecked")
+		TypeSerializerSchemaCompatibility<SubTestUserClassA, ?> compatResult =
+			pojoSerializerConfigSnapshot.resolveSchemaCompatibility(pojoSerializer2);
+		assertTrue(compatResult.isIncompatible());
 	}
 
 	/**
@@ -352,8 +354,10 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 				new DataInputViewStreamWrapper(in), Thread.currentThread().getContextClassLoader(), pojoSerializer);
 		}
 
-		CompatibilityResult<TestUserClass> compatResult = pojoSerializer.ensureCompatibility(pojoSerializerConfigSnapshot);
-		assertTrue(!compatResult.isRequiresMigration());
+		@SuppressWarnings("unchecked")
+		TypeSerializerSchemaCompatibility<TestUserClass, ?> compatResult =
+			pojoSerializerConfigSnapshot.resolveSchemaCompatibility(pojoSerializer);
+		assertTrue(compatResult.isCompatibleAsIs());
 
 		// reconfigure - check reconfiguration result and that registration ids remains the same
 		//assertEquals(ReconfigureResult.COMPATIBLE, pojoSerializer.reconfigure(pojoSerializerConfigSnapshot));
@@ -397,8 +401,10 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		}
 
 		// reconfigure - check reconfiguration result and that subclass serializer cache is repopulated
-		CompatibilityResult<TestUserClass> compatResult = pojoSerializer.ensureCompatibility(pojoSerializerConfigSnapshot);
-		assertFalse(compatResult.isRequiresMigration());
+		@SuppressWarnings("unchecked")
+		TypeSerializerSchemaCompatibility<TestUserClass, ?> compatResult =
+			pojoSerializerConfigSnapshot.resolveSchemaCompatibility(pojoSerializer);
+		assertTrue(compatResult.isCompatibleAsIs());
 		assertEquals(2, pojoSerializer.getSubclassSerializerCache().size());
 		assertTrue(pojoSerializer.getSubclassSerializerCache().containsKey(SubTestUserClassA.class));
 		assertTrue(pojoSerializer.getSubclassSerializerCache().containsKey(SubTestUserClassB.class));
@@ -460,8 +466,10 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		// reconfigure - check reconfiguration result and that
 		// 1) subclass serializer cache is repopulated
 		// 2) registrations also contain the now registered subclasses
-		CompatibilityResult<TestUserClass> compatResult = pojoSerializer.ensureCompatibility(pojoSerializerConfigSnapshot);
-		assertFalse(compatResult.isRequiresMigration());
+		@SuppressWarnings("unchecked")
+		TypeSerializerSchemaCompatibility<TestUserClass, ?> compatResult =
+			pojoSerializerConfigSnapshot.resolveSchemaCompatibility(pojoSerializer);
+		assertTrue(compatResult.isCompatibleAsIs());
 		assertEquals(2, pojoSerializer.getSubclassSerializerCache().size());
 		assertTrue(pojoSerializer.getSubclassSerializerCache().containsKey(SubTestUserClassA.class));
 		assertTrue(pojoSerializer.getSubclassSerializerCache().containsKey(SubTestUserClassB.class));
@@ -537,8 +545,9 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 				new HashMap<>()); // empty; irrelevant for this test
 
 		// reconfigure - check reconfiguration result and that fields are reordered to the previous order
-		CompatibilityResult<TestUserClass> compatResult = pojoSerializer.ensureCompatibility(mockPreviousConfigSnapshot);
-		assertFalse(compatResult.isRequiresMigration());
+		TypeSerializerSchemaCompatibility<TestUserClass, ?> compatResult =
+			mockPreviousConfigSnapshot.resolveSchemaCompatibility(pojoSerializer);
+		assertTrue(compatResult.isCompatibleAsIs());
 		int i = 0;
 		for (Field field : mockOriginalFieldOrder) {
 			assertEquals(field, pojoSerializer.getFields()[i]);
@@ -580,7 +589,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 					pojoSerializer);
 		}
 
-		Assert.assertFalse(pojoSerializer.ensureCompatibility(deserializedConfig).isRequiresMigration());
+		Assert.assertTrue(deserializedConfig.resolveSchemaCompatibility(pojoSerializer).isCompatibleAsIs());
 		verifyPojoSerializerConfigSnapshotWithSerializerSerializationFailure(config, deserializedConfig);
 	}
 
