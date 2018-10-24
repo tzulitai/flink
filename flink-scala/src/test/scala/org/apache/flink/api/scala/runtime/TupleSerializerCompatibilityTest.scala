@@ -48,8 +48,11 @@ class TupleSerializerCompatibilityTest {
 
       assertEquals(1, deserialized.size)
 
-      val oldSerializer: TypeSerializer[TestCaseClass] = deserialized.get(0).f0.asInstanceOf[TypeSerializer[TestCaseClass]]
-      val oldConfigSnapshot: TypeSerializerSnapshot[TestCaseClass] = deserialized.get(0).f1.asInstanceOf[TypeSerializerSnapshot[TestCaseClass]]
+      val oldSerializer: TypeSerializer[TestCaseClass] =
+        deserialized.get(0).f0.asInstanceOf[TypeSerializer[TestCaseClass]]
+
+      val oldConfigSnapshot: TypeSerializerSnapshot[TestCaseClass] =
+        deserialized.get(0).f1.asInstanceOf[TypeSerializerSnapshot[TestCaseClass]]
 
       // test serializer and config snapshot
       assertNotNull(oldSerializer)

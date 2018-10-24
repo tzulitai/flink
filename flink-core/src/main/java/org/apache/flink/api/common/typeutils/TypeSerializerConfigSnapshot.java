@@ -110,14 +110,7 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 			throw new IOException("Wrong/unexpected version for the TypeSerializerConfigSnapshot: " + readVersion);
 		}
 
-		try {
-			serializer = TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader);
-		}
-		catch (UnloadableTypeSerializerException e) {
-			throw new IOException("Cannot deserialize TypeSerializer while restoring checkpoint metadata in " +
-					getClass().getName() + ". Please update to the TypeSerializerSnapshot interface that removes " +
-					"Java Serialization to avoid this problem in the future.", e);
-		}
+		serializer = TypeSerializerSerializationUtil.tryReadSerializer(in, userCodeClassLoader, true);
 
 		// now delegate to the snapshots own reading code
 		setUserCodeClassLoader(userCodeClassLoader);
@@ -132,11 +125,21 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 	 */
 	@Override
 	public final TypeSerializer<T> restoreSerializer() {
-		if (serializer != null) {
-			return this.serializer;
-		} else {
-			throw new IllegalStateException("Trying to restore the prior serializer via TypeSerializerConfigSnapshot, " +
+		if (serializer == null) {
+			throw new IllegalStateException(
+					"Trying to restore the prior serializer via TypeSerializerConfigSnapshot, " +
 					"but the prior serializer has not been set.");
+		}
+		else if (serializer instanceof UnloadableDummyTypeSerializer) {
+			Throwable originalError = ((UnloadableDummyTypeSerializer<?>) serializer).getOriginalError();
+
+			throw new IllegalStateException(
+					"Could not Java-deserialize TypeSerializer while restoring checkpoint metadata for serializer " +
+					"snapshot '" + getClass().getName() + "'." +
+					"Please update to the TypeSerializerSnapshot interface that removes Java Serialization to avoid " +
+					"this problem in the future.", originalError);
+		} else {
+			return this.serializer;
 		}
 	}
 
