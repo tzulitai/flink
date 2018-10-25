@@ -23,6 +23,7 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.typeutils.UnloadableTypeSerializerException;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -32,6 +33,7 @@ import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.testutils.ArtificialCNFExceptionThrowingClassLoader;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FutureUtil;
 
 import org.junit.Assert;
@@ -146,8 +148,8 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 			operatorStateBackend.restore(StateObjectCollection.singleton(stateHandle));
 
 			fail("The operator state restore should have failed if the previous state serializer could not be loaded.");
-		} catch (IOException expected) {
-			Assert.assertTrue(expected.getMessage().contains("Unable to restore operator state"));
+		} catch (Exception expected) {
+			Assert.assertTrue(ExceptionUtils.findThrowable(expected, UnloadableTypeSerializerException.class).isPresent());
 		} finally {
 			stateHandle.discardState();
 		}
@@ -199,8 +201,8 @@ public class MemoryStateBackendTest extends StateBackendTestBase<MemoryStateBack
 						Collections.singleton(StringSerializer.class.getName()))));
 
 			fail("The keyed state restore should have failed if the previous state serializer could not be loaded.");
-		} catch (IOException expected) {
-			Assert.assertTrue(expected.getMessage().contains("Unable to restore keyed state"));
+		} catch (Exception expected) {
+			Assert.assertTrue(ExceptionUtils.findThrowable(expected, UnloadableTypeSerializerException.class).isPresent());
 		}
 	}
 
