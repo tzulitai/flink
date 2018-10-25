@@ -20,7 +20,7 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
+import org.apache.flink.api.common.typeutils.UnloadableTypeSerializerException;
 import org.apache.flink.api.common.typeutils.base.DoubleSerializer;
 import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
@@ -34,6 +34,7 @@ import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshotReadersWriters;
 import org.apache.flink.testutils.ArtificialCNFExceptionThrowingClassLoader;
 
+import org.apache.flink.util.ExceptionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -129,9 +130,15 @@ public class SerializationProxiesTest {
 		Assert.assertEquals(keySerializer.snapshotConfiguration(), serializationProxy.getKeySerializerConfigSnapshot());
 
 		for (StateMetaInfoSnapshot snapshot : serializationProxy.getStateMetaInfoSnapshots()) {
-			final RegisteredKeyValueStateBackendMetaInfo<?, ?> restoredMetaInfo = new RegisteredKeyValueStateBackendMetaInfo<>(snapshot);
-			Assert.assertTrue(restoredMetaInfo.getNamespaceSerializer() instanceof UnloadableDummyTypeSerializer);
-			Assert.assertTrue(restoredMetaInfo.getStateSerializer() instanceof UnloadableDummyTypeSerializer);
+			try {
+				// creating a registered meta info from the snapshot would fail, because the serializer snapshots
+				// cannot create a proper restore serializer
+				new RegisteredKeyValueStateBackendMetaInfo<>(snapshot);
+			} catch (Exception e) {
+				Assert.assertTrue(ExceptionUtils.findThrowable(e, UnloadableTypeSerializerException.class).isPresent());
+				Assert.assertTrue(ExceptionUtils.findThrowable(e, ClassNotFoundException.class).isPresent());
+			}
+
 			Assert.assertEquals(namespaceSerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.NAMESPACE_SERIALIZER));
 			Assert.assertEquals(stateSerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER));
 		}
@@ -165,7 +172,7 @@ public class SerializationProxiesTest {
 	}
 
 	@Test
-	public void testKeyedStateMetaInfoReadSerializerFailureResilience() throws Exception {
+	public void testKeyedStateMetaInfoReadWithSerializerSerializationFailure() throws Exception {
 		String name = "test";
 		TypeSerializer<?> namespaceSerializer = LongSerializer.INSTANCE;
 		TypeSerializer<?> stateSerializer = DoubleSerializer.INSTANCE;
@@ -195,11 +202,16 @@ public class SerializationProxiesTest {
 				new DataInputViewStreamWrapper(in), classLoader);
 		}
 
-		RegisteredKeyValueStateBackendMetaInfo<?, ?> restoredMetaInfo = new RegisteredKeyValueStateBackendMetaInfo<>(snapshot);
+		try {
+			// creating a registered meta info from the snapshot would fail, because the serializer snapshots
+			// cannot create a proper restore serializer
+			new RegisteredKeyValueStateBackendMetaInfo<>(snapshot);
+		} catch (Exception e) {
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, UnloadableTypeSerializerException.class).isPresent());
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, ClassNotFoundException.class).isPresent());
+		}
 
-		Assert.assertEquals(name, restoredMetaInfo.getName());
-		Assert.assertTrue(restoredMetaInfo.getNamespaceSerializer() instanceof UnloadableDummyTypeSerializer);
-		Assert.assertTrue(restoredMetaInfo.getStateSerializer() instanceof UnloadableDummyTypeSerializer);
+		Assert.assertEquals(name, snapshot.getName());
 		Assert.assertEquals(namespaceSerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.NAMESPACE_SERIALIZER));
 		Assert.assertEquals(stateSerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER));
 	}
@@ -317,7 +329,7 @@ public class SerializationProxiesTest {
 	}
 
 	@Test
-	public void testOperatorStateMetaInfoReadSerializerFailureResilience() throws Exception {
+	public void testOperatorStateMetaInfoReadWithSerializerSerializationFailure() throws Exception {
 		String name = "test";
 		TypeSerializer<?> stateSerializer = DoubleSerializer.INSTANCE;
 
@@ -345,18 +357,23 @@ public class SerializationProxiesTest {
 			snapshot = reader.readStateMetaInfoSnapshot(new DataInputViewStreamWrapper(in), classLoader);
 		}
 
-		RegisteredOperatorStateBackendMetaInfo<?> restoredMetaInfo =
+		try {
+			// creating a registered meta info from the snapshot would fail, because the serializer snapshots
+			// cannot create a proper restore serializer
 			new RegisteredOperatorStateBackendMetaInfo<>(snapshot);
+		} catch (Exception e) {
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, UnloadableTypeSerializerException.class).isPresent());
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, ClassNotFoundException.class).isPresent());
+		}
 
-		Assert.assertEquals(name, restoredMetaInfo.getName());
-		Assert.assertTrue(restoredMetaInfo.getPartitionStateSerializer() instanceof UnloadableDummyTypeSerializer);
+		Assert.assertEquals(name, snapshot.getName());
 		Assert.assertEquals(
 			stateSerializer.snapshotConfiguration(),
 			snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER));
 	}
 
 	@Test
-	public void testBroadcastStateMetaInfoReadSerializerFailureResilience() throws Exception {
+	public void testBroadcastStateMetaInfoReadWithSerializerSerializationFailure() throws Exception {
 		String broadcastName = "broadcastTest";
 		TypeSerializer<?> keySerializer = DoubleSerializer.INSTANCE;
 		TypeSerializer<?> valueSerializer = StringSerializer.INSTANCE;
@@ -390,14 +407,18 @@ public class SerializationProxiesTest {
 			snapshot = reader.readStateMetaInfoSnapshot(new DataInputViewStreamWrapper(in), classLoader);
 		}
 
-		RegisteredBroadcastStateBackendMetaInfo<?, ?> restoredMetaInfo =
+		try {
+			// creating a registered meta info from the snapshot would fail, because the serializer snapshots
+			// cannot create a proper restore serializer
 			new RegisteredBroadcastStateBackendMetaInfo<>(snapshot);
+		} catch (Exception e) {
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, UnloadableTypeSerializerException.class).isPresent());
+			Assert.assertTrue(ExceptionUtils.findThrowable(e, ClassNotFoundException.class).isPresent());
+		}
 
-		Assert.assertEquals(broadcastName, restoredMetaInfo.getName());
-		Assert.assertEquals(OperatorStateHandle.Mode.BROADCAST, restoredMetaInfo.getAssignmentMode());
-		Assert.assertTrue(restoredMetaInfo.getKeySerializer() instanceof UnloadableDummyTypeSerializer);
+		Assert.assertEquals(broadcastName, snapshot.getName());
+		Assert.assertEquals(OperatorStateHandle.Mode.BROADCAST.toString(), snapshot.getOption(StateMetaInfoSnapshot.CommonOptionsKeys.OPERATOR_STATE_DISTRIBUTION_MODE));
 		Assert.assertEquals(keySerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.KEY_SERIALIZER));
-		Assert.assertTrue(restoredMetaInfo.getValueSerializer() instanceof UnloadableDummyTypeSerializer);
 		Assert.assertEquals(valueSerializer.snapshotConfiguration(), snapshot.getTypeSerializerConfigSnapshot(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER));
 	}
 
