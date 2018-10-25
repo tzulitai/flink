@@ -40,7 +40,6 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.concurrent.RunnableFuture;
