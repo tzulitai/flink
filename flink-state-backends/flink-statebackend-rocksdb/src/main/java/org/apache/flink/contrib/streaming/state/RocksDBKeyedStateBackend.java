@@ -1344,6 +1344,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 				newMetaInfo,
 				stateDesc,
 				namespaceSerializer,
+				stateSerializer,
 				stateInfo);
 
 			stateInfo.f1 = newMetaInfo;
@@ -1361,6 +1362,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			RegisteredKeyValueStateBackendMetaInfo<N, SV> newMetaInfo,
 			StateDescriptor<S, SV> stateDesc,
 			TypeSerializer<N> namespaceSerializer,
+			TypeSerializer<SV> stateSerializer,
 			Tuple2<ColumnFamilyHandle, RegisteredStateMetaInfoBase> stateInfo) throws Exception {
 
 		StateMetaInfoSnapshot restoredMetaInfoSnapshot = restoredKvStateMetaInfos.get(stateDesc.getName());
@@ -1383,9 +1385,8 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 			(TypeSerializerSnapshot<SV>) restoredMetaInfoSnapshot.getTypeSerializerConfigSnapshot(
 				StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER.toString()));
 
-		TypeSerializer<SV> newStateSerializer = stateDesc.getSerializer();
 		TypeSerializerSchemaCompatibility<SV, ?> stateCompatibility =
-			stateSerializerSnapshot.resolveSchemaCompatibility(newStateSerializer);
+			stateSerializerSnapshot.resolveSchemaCompatibility(stateSerializer);
 
 		if (stateCompatibility.isCompatibleAfterMigration()) {
 			migrateStateValues(stateDesc, stateInfo, restoredMetaInfoSnapshot, newMetaInfo);
