@@ -60,7 +60,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class AvroSerializer<T> extends TypeSerializer<T> {
 
-	private static final long serialVersionUID = 2L;
+	private static final long serialVersionUID = 1L;
 
 	/** Logger instance.
 	 */
