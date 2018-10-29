@@ -23,7 +23,7 @@ import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.core.fs.Path;
-//import org.apache.flink.formats.avro.testjar.AvroExternalJarProgram;
+import org.apache.flink.formats.avro.testjar.AvroExternalJarProgram;
 import org.apache.flink.runtime.minicluster.LocalFlinkMiniCluster;
 import org.apache.flink.test.util.TestEnvironment;
 import org.apache.flink.util.TestLogger;

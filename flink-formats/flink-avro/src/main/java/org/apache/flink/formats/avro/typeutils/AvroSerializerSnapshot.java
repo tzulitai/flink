@@ -18,7 +18,6 @@
 
 package org.apache.flink.formats.avro.typeutils;
 
-import org.apache.avro.generic.GenericRecord;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
@@ -26,6 +25,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaCompatibility;
 import org.apache.avro.SchemaCompatibility.SchemaPairCompatibility;
@@ -34,6 +34,7 @@ import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificRecord;
 
 import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.util.Objects;
 
