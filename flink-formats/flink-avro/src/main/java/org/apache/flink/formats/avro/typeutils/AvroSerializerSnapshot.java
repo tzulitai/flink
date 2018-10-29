@@ -18,6 +18,7 @@
 
 package org.apache.flink.formats.avro.typeutils;
 
+import org.apache.avro.generic.GenericRecord;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
@@ -32,6 +33,7 @@ import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificRecord;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -92,7 +94,7 @@ public class AvroSerializerSnapshot<T> implements TypeSerializerSnapshot<T> {
 	private void readV1(DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
 		final String previousSchemaDefinition = in.readUTF();
 		this.schema = parseAvroSchema(previousSchemaDefinition);
-		this.runtimeType = findClassOrThrow(userCodeClassLoader, schema.getFullName()); // TODO: change
+		this.runtimeType = findClassOrFallbackToGeneric(userCodeClassLoader, schema.getFullName());
 		this.runtimeSchema = tryExtractAvroSchema(userCodeClassLoader, runtimeType);
 	}
 
@@ -190,6 +192,7 @@ public class AvroSerializerSnapshot<T> implements TypeSerializerSnapshot<T> {
 	}
 
 	@SuppressWarnings("unchecked")
+	@Nonnull
 	private static <T> Class<T> findClassOrThrow(ClassLoader userCodeClassLoader, String className) {
 		try {
 			Class<?> runtimeTarget = Class.forName(className, false, userCodeClassLoader);
@@ -200,6 +203,18 @@ public class AvroSerializerSnapshot<T> implements TypeSerializerSnapshot<T> {
 				+ "Unable to find the class '" + className + "' which is used to deserialize "
 				+ "the elements of this serializer. "
 				+ "Were the class was moved or renamed?", e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Nonnull
+	private static <T> Class<T> findClassOrFallbackToGeneric(ClassLoader userCodeClassLoader, String className) {
+		try {
+			Class<?> runtimeTarget = Class.forName(className, false, userCodeClassLoader);
+			return (Class<T>) runtimeTarget;
+		}
+		catch (ClassNotFoundException e) {
+			return (Class<T>) GenericRecord.class;
 		}
 	}
 
