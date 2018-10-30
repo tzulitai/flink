@@ -25,10 +25,10 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 
-import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaCompatibility;
 import org.apache.avro.SchemaCompatibility.SchemaPairCompatibility;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificRecord;
