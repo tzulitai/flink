@@ -58,6 +58,10 @@ public abstract class TypeSerializerConfigSnapshot<T> extends VersionedIOReadabl
 		this.serializer = Preconditions.checkNotNull(serializer);
 	}
 
+	final boolean isPriorSerializerSet() {
+		return this.serializer != null;
+	}
+
 	/**
 	 * Set the user code class loader.
 	 * Only relevant if this configuration instance was deserialized from binary form.

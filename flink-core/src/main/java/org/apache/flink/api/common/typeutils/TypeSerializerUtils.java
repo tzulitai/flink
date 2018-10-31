@@ -51,6 +51,11 @@ public final class TypeSerializerUtils {
 				.toArray(TypeSerializerSnapshot[]::new);
 	}
 
+	public static boolean checkConfiguredForBackwardsCompatibility(TypeSerializerSnapshot<?> snapshot) {
+		return !(snapshot instanceof TypeSerializerConfigSnapshot)
+			|| ((TypeSerializerConfigSnapshot) snapshot).isPriorSerializerSet();
+	}
+
 	/**
 	 * Utility method to bind the serializer and serializer snapshot to a common
 	 * generic type variable.

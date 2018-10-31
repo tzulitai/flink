@@ -119,7 +119,7 @@ public class KeyedBackendSerializationProxy<K> extends VersionedIOReadableWritab
 		// write the compression format used to write each key-group
 		out.writeBoolean(usingKeyGroupCompression);
 
-		TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(out, keySerializerConfigSnapshot, keySerializer);
+		TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(out, keySerializerConfigSnapshot);
 
 		// write individual registered keyed state metainfos
 		out.writeShort(stateMetaInfoSnapshots.size());

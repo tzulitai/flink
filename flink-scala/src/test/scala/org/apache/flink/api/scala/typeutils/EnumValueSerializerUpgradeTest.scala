@@ -135,7 +135,7 @@ class EnumValueSerializerUpgradeTest extends TestLogger with JUnitSuiteLike {
     val baos = new ByteArrayOutputStream()
     val output = new DataOutputViewStreamWrapper(baos)
     TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-      output, snapshot, enumValueSerializer)
+      output, snapshot)
 
     output.close()
     baos.close()

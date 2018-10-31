@@ -160,7 +160,7 @@ public class TypeSerializerSerializationUtil {
 
 				out.writeInt(bufferWithPos.getPosition());
 				TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-					bufferWrapper, (TypeSerializerSnapshot) serAndConfSnapshot.f1, serAndConfSnapshot.f0);
+					bufferWrapper, serAndConfSnapshot.f1);
 			}
 
 			out.writeInt(bufferWithPos.getPosition());

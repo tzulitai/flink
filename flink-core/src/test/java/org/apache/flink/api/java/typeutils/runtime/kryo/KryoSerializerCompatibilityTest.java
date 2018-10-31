@@ -102,7 +102,7 @@ public class KryoSerializerCompatibilityTest {
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-				new DataOutputViewStreamWrapper(out), kryoSerializerConfigSnapshot, kryoSerializerForA);
+				new DataOutputViewStreamWrapper(out), kryoSerializerConfigSnapshot);
 			serializedConfig = out.toByteArray();
 		}
 
@@ -259,7 +259,7 @@ public class KryoSerializerCompatibilityTest {
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-				new DataOutputViewStreamWrapper(out), kryoSerializerConfigSnapshot, kryoSerializer);
+				new DataOutputViewStreamWrapper(out), kryoSerializerConfigSnapshot);
 			serializedConfig = out.toByteArray();
 		}
 

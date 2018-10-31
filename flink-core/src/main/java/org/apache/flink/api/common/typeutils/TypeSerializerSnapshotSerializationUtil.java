@@ -29,8 +29,6 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 
-import static org.apache.flink.util.Preconditions.checkState;
-
 /**
  * Utility methods for serialization of {@link TypeSerializerSnapshot}.
  */
@@ -44,20 +42,24 @@ public class TypeSerializerSnapshotSerializationUtil {
 	 *
 	 * @param out the data output view
 	 * @param serializerSnapshot the serializer configuration snapshot to write
-	 * @param serializer the prior serializer. This needs to be written of the serializer snapshot
-	 *                   if the serializer snapshot is still the legacy {@link TypeSerializerConfigSnapshot}.
 	 */
 	public static <T> void writeSerializerSnapshot(
 		DataOutputView out,
-		TypeSerializerSnapshot<T> serializerSnapshot,
-		TypeSerializer<T> serializer) throws IOException {
+		TypeSerializerSnapshot<T> serializerSnapshot) throws IOException {
 
-		new TypeSerializerSnapshotSerializationProxy<>(serializerSnapshot, serializer).write(out);
+		if (!TypeSerializerUtils.checkConfiguredForBackwardsCompatibility(serializerSnapshot)) {
+			throw new IllegalStateException(
+				"Trying to write a legacy TypeSerializerConfigSnapshot (" + serializerSnapshot + "), " +
+					"but it has not been properly configured for backwards compatibility. " +
+					"Please make sure that the snapshot was extracted via the TypeSerializerUtils.snapshotBackwardsCompatible methods.");
+		}
+
+		new TypeSerializerSnapshotSerializationProxy<>(serializerSnapshot).write(out);
 	}
 
 	/**
 	 * Reads from a data input view a {@link TypeSerializerSnapshot} that was previously
-	 * written using {@link TypeSerializerSnapshotSerializationUtil#writeSerializerSnapshot(DataOutputView, TypeSerializerSnapshot, TypeSerializer)}.
+	 * written using {@link TypeSerializerSnapshotSerializationUtil#writeSerializerSnapshot(DataOutputView, TypeSerializerSnapshot)}.
 	 *
 	 * @param in the data input view
 	 * @param userCodeClassLoader the user code class loader to use
@@ -110,11 +112,8 @@ public class TypeSerializerSnapshotSerializationUtil {
 		/**
 		 * Constructor for writing out serializers.
 		 */
-		TypeSerializerSnapshotSerializationProxy(
-			TypeSerializerSnapshot<T> serializerConfigSnapshot,
-			TypeSerializer<T> serializer) {
+		TypeSerializerSnapshotSerializationProxy(TypeSerializerSnapshot<T> serializerConfigSnapshot) {
 			this.serializerSnapshot = Preconditions.checkNotNull(serializerConfigSnapshot);
-			this.serializer = Preconditions.checkNotNull(serializer);
 		}
 
 		/**
@@ -130,8 +129,6 @@ public class TypeSerializerSnapshotSerializationUtil {
 		@SuppressWarnings("deprecation")
 		@Override
 		public void write(DataOutputView out) throws IOException {
-			setSerializerForWriteIfOldPath(serializerSnapshot, serializer);
-
 			// write the format version of this utils format
 			super.write(out);
 
@@ -207,20 +204,6 @@ public class TypeSerializerSnapshotSerializationUtil {
 			}
 
 			return snapshot;
-		}
-
-		@SuppressWarnings("deprecation")
-		private static <T> void setSerializerForWriteIfOldPath(
-				TypeSerializerSnapshot<T> serializerSnapshot,
-				TypeSerializer<T> serializer) {
-
-			// for compatibility with non-upgraded serializers, put the serializer into the
-			// config snapshot if it of the old version
-			if (serializerSnapshot instanceof TypeSerializerConfigSnapshot) {
-				checkState(serializer != null);
-
-				((TypeSerializerConfigSnapshot<T>) serializerSnapshot).setPriorSerializer(serializer);
-			}
 		}
 	}
 }

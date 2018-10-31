@@ -842,7 +842,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 					out.writeInt(outWithPos.getPosition());
 					TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-						outViewWrapper, (TypeSerializerSnapshot) entry.getValue().f1, entry.getValue().f0);
+						outViewWrapper, entry.getValue().f1);
 				}
 
 				// --- write registered subclasses and their serializers, in registration order
@@ -860,7 +860,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 					out.writeInt(outWithPos.getPosition());
 					TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-						outViewWrapper, (TypeSerializerSnapshot) entry.getValue().f1, entry.getValue().f0);
+						outViewWrapper, entry.getValue().f1);
 				}
 
 				// --- write snapshot of non-registered subclass serializer cache
@@ -878,7 +878,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
 					out.writeInt(outWithPos.getPosition());
 					TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-						outViewWrapper, (TypeSerializerSnapshot) entry.getValue().f1, entry.getValue().f0);
+						outViewWrapper, entry.getValue().f1);
 				}
 
 				out.writeInt(outWithPos.getPosition());

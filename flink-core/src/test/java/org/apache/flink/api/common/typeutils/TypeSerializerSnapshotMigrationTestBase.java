@@ -103,7 +103,7 @@ public abstract class TypeSerializerSnapshotMigrationTestBase<ElementT> extends 
 		TypeSerializer<ElementT> restoredSerializer = previousSnapshot.restoreSerializer();
 
 		TypeSerializerSnapshot<ElementT> nextSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(restoredSerializer);
-		TypeSerializerSnapshot<ElementT> nextSnapshotDeserialized = writeAndThenReadTheSnapshot(restoredSerializer, nextSnapshot);
+		TypeSerializerSnapshot<ElementT> nextSnapshotDeserialized = writeAndThenReadTheSnapshot(nextSnapshot);
 
 		assertThat(nextSnapshotDeserialized, allOf(
 			notNullValue(),
@@ -116,11 +116,10 @@ public abstract class TypeSerializerSnapshotMigrationTestBase<ElementT> extends 
 	// --------------------------------------------------------------------------------------------------------------
 
 	private TypeSerializerSnapshot<ElementT> writeAndThenReadTheSnapshot(
-		TypeSerializer<ElementT> serializer,
 		TypeSerializerSnapshot<ElementT> newSnapshot) throws IOException {
 
 		DataOutputSerializer out = new DataOutputSerializer(128);
-		TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(out, newSnapshot, serializer);
+		TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(out, newSnapshot);
 
 		DataInputView in = new DataInputDeserializer(out.wrapAsByteBuffer());
 		return TypeSerializerSnapshotSerializationUtil.readSerializerSnapshot(in, Thread.currentThread().getContextClassLoader(), null);

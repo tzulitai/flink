@@ -177,11 +177,10 @@ public class StateMetaInfoSnapshotReadersWriters {
 
 			outputView.writeInt(serializerConfigSnapshotsMap.size());
 			for (Map.Entry<String, TypeSerializerSnapshot<?>> entry : serializerConfigSnapshotsMap.entrySet()) {
-				final String key = entry.getKey();
 				outputView.writeUTF(entry.getKey());
 
 				TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-					outputView, (TypeSerializerSnapshot) entry.getValue(), snapshot.getTypeSerializer(key));
+					outputView, entry.getValue());
 			}
 		}
 	}

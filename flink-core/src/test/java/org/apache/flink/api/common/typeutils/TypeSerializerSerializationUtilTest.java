@@ -156,8 +156,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
 				new DataOutputViewStreamWrapper(out),
-				configSnapshot1,
-				StringSerializer.INSTANCE);
+				configSnapshot1);
 
 			serializedConfig = out.toByteArray();
 		}
@@ -180,8 +179,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
 				new DataOutputViewStreamWrapper(out),
-				new TypeSerializerSerializationUtilTest.TestConfigSnapshot<>(123, "foobar"),
-				StringSerializer.INSTANCE);
+				new TypeSerializerSerializationUtilTest.TestConfigSnapshot<>(123, "foobar"));
 			serializedConfig = out.toByteArray();
 		}
 
