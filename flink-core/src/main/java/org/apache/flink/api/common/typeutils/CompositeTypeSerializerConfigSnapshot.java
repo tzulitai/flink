@@ -50,9 +50,10 @@ public abstract class CompositeTypeSerializerConfigSnapshot<T> extends TypeSeria
 
 		this.nestedSerializersAndConfigs = new ArrayList<>(nestedSerializers.length);
 		for (TypeSerializer<?> nestedSerializer : nestedSerializers) {
-			TypeSerializerSnapshot<?> configSnapshot = nestedSerializer.snapshotConfiguration();
 			this.nestedSerializersAndConfigs.add(
-				new Tuple2<>(nestedSerializer.duplicate(), Preconditions.checkNotNull(configSnapshot)));
+				new Tuple2<>(
+					nestedSerializer.duplicate(),
+					Preconditions.checkNotNull(TypeSerializerUtils.snapshotBackwardsCompatible(nestedSerializer))));
 		}
 	}
 

@@ -26,7 +26,19 @@ import java.util.Arrays;
 public final class TypeSerializerUtils {
 
 	/**
-	 * Takes config snapshots of the given serializers. In case where the config snapshots
+	 * Takes config snapshots of a given serializer. In case where the config snapshot
+	 * is still extending the old {@code TypeSerializerConfigSnapshot} class, the snapshot
+	 * is set up properly (with their originating serializer) such that the backwards
+	 * compatible code paths work.
+	 */
+	public static <T> TypeSerializerSnapshot<T> snapshotBackwardsCompatible(
+		TypeSerializer<T> originatingSerializer) {
+
+		return configureForBackwardsCompatibility(originatingSerializer.snapshotConfiguration(), originatingSerializer);
+	}
+
+	/**
+	 * Takes config snapshots of an array of given serializers. In case where the config snapshots
 	 * are still extending the old {@code TypeSerializerConfigSnapshot} class, the snapshots
 	 * are set up properly (with their originating serializer) such that the backwards
 	 * compatible code paths work.

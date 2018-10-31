@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.Preconditions;
 
@@ -141,7 +142,7 @@ public class RegisteredOperatorStateBackendMetaInfo<S> extends RegisteredStateMe
 		Map<String, TypeSerializer<?>> serializerMap =
 			Collections.singletonMap(valueSerializerKey, partitionStateSerializer.duplicate());
 		Map<String, TypeSerializerSnapshot<?>> serializerConfigSnapshotsMap =
-			Collections.singletonMap(valueSerializerKey, partitionStateSerializer.snapshotConfiguration());
+			Collections.singletonMap(valueSerializerKey, TypeSerializerUtils.snapshotBackwardsCompatible(partitionStateSerializer));
 
 		return new StateMetaInfoSnapshot(
 			name,

@@ -210,7 +210,7 @@ public abstract class TypeSerializer<T> implements Serializable {
 	 *
 	 * @return snapshot of the serializer's current configuration (cannot be {@code null}).
 	 */
-	public abstract TypeSerializerSnapshot<T> snapshotConfiguration();
+	protected abstract TypeSerializerSnapshot<T> snapshotConfiguration();
 
 	// --------------------------------------------------------------------------------------------
 	//  Deprecated methods for backwards compatibility

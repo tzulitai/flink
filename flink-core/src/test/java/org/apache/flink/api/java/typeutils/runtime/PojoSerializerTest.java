@@ -29,6 +29,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -284,7 +285,8 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 			TypeExtractor.getForClass(SubTestUserClassB.class).createSerializer(new ExecutionConfig());
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot pojoSerializerConfigSnapshot = pojoSerializer1.snapshotConfiguration();
+		TypeSerializerSnapshot pojoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(pojoSerializer1);
+
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
@@ -323,7 +325,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		int subClassBTag = pojoSerializer.getRegisteredClasses().get(SubTestUserClassB.class);
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot pojoSerializerConfigSnapshot = pojoSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot pojoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(pojoSerializer);
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
@@ -372,7 +374,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		assertTrue(pojoSerializer.getSubclassSerializerCache().containsKey(SubTestUserClassB.class));
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot pojoSerializerConfigSnapshot = pojoSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot pojoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(pojoSerializer);
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
@@ -433,7 +435,7 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 		assertEquals(0, pojoSerializer.getRegisteredSerializers().length);
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot pojoSerializerConfigSnapshot = pojoSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot pojoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(pojoSerializer);
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
@@ -491,32 +493,32 @@ public class PojoSerializerTest extends SerializerTestBase<PojoSerializerTest.Te
 			mockOriginalFieldOrder[0].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[3],
-				ser.getFieldSerializers()[3].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[3])));
 		mockOriginalFieldToSerializerConfigSnapshot.put(
 			mockOriginalFieldOrder[1].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[2],
-				ser.getFieldSerializers()[2].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[2])));
 		mockOriginalFieldToSerializerConfigSnapshot.put(
 			mockOriginalFieldOrder[2].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[5],
-				ser.getFieldSerializers()[5].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[5])));
 		mockOriginalFieldToSerializerConfigSnapshot.put(
 			mockOriginalFieldOrder[3].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[0],
-				ser.getFieldSerializers()[0].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[0])));
 		mockOriginalFieldToSerializerConfigSnapshot.put(
 			mockOriginalFieldOrder[4].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[1],
-				ser.getFieldSerializers()[1].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[1])));
 		mockOriginalFieldToSerializerConfigSnapshot.put(
 			mockOriginalFieldOrder[5].getName(),
 			new Tuple2<>(
 				ser.getFieldSerializers()[4],
-				ser.getFieldSerializers()[4].snapshotConfiguration()));
+				TypeSerializerUtils.snapshotBackwardsCompatible(ser.getFieldSerializers()[4])));
 
 		PojoSerializer<TestUserClass> pojoSerializer = (PojoSerializer<TestUserClass>) type.createSerializer(new ExecutionConfig());
 

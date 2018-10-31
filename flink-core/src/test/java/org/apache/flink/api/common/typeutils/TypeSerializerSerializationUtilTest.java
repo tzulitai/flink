@@ -204,7 +204,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 
 		List<Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> serializersAndConfigs = Arrays.asList(
 			new Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>(
-				serializer, serializer.snapshotConfiguration()));
+				serializer, TypeSerializerUtils.snapshotBackwardsCompatible(serializer)));
 
 		byte[] serializedSerializersAndConfigs;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -406,7 +406,7 @@ public class TypeSerializerSerializationUtilTest implements Serializable {
 
 		@Override
 		public TypeSerializerSnapshot<Integer> snapshotConfiguration() {
-			return IntSerializer.INSTANCE.snapshotConfiguration();
+			return TypeSerializerUtils.snapshotBackwardsCompatible(IntSerializer.INSTANCE);
 		}
 
 		@Override

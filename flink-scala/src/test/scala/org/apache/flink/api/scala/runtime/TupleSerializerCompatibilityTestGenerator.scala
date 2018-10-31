@@ -22,7 +22,7 @@ import java.io.FileOutputStream
 import java.util.Collections
 
 import org.apache.flink.api.common.ExecutionConfig
-import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil
+import org.apache.flink.api.common.typeutils.{TypeSerializerSerializationUtil, TypeSerializerUtils}
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper
 
 /**
@@ -58,7 +58,7 @@ object TupleSerializerCompatibilityTestGenerator {
     val typeInfo = org.apache.flink.api.scala.createTypeInformation[TestCaseClass]
 
     val serializer = typeInfo.createSerializer(new ExecutionConfig())
-    val configSnapshot = serializer.snapshotConfiguration()
+    val configSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(serializer)
 
     var fos: FileOutputStream = null
     try {

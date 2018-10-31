@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.Preconditions;
 
@@ -155,9 +156,9 @@ public class RegisteredBroadcastStateBackendMetaInfo<K, V> extends RegisteredSta
 		String keySerializerKey = StateMetaInfoSnapshot.CommonSerializerKeys.KEY_SERIALIZER.toString();
 		String valueSerializerKey = StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER.toString();
 		serializerMap.put(keySerializerKey, keySerializer.duplicate());
-		serializerConfigSnapshotsMap.put(keySerializerKey, keySerializer.snapshotConfiguration());
+		serializerConfigSnapshotsMap.put(keySerializerKey, TypeSerializerUtils.snapshotBackwardsCompatible(keySerializer));
 		serializerMap.put(valueSerializerKey, valueSerializer.duplicate());
-		serializerConfigSnapshotsMap.put(valueSerializerKey, valueSerializer.snapshotConfiguration());
+		serializerConfigSnapshotsMap.put(valueSerializerKey, TypeSerializerUtils.snapshotBackwardsCompatible(valueSerializer));
 
 		return new StateMetaInfoSnapshot(
 			name,

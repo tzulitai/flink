@@ -98,7 +98,7 @@ public abstract class SerializerTestBase<T> extends TestLogger {
 
 	@Test
 	public void testConfigSnapshotInstantiation() {
-		TypeSerializerSnapshot<T> configSnapshot = getSerializer().snapshotConfiguration();
+		TypeSerializerSnapshot<T> configSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(getSerializer());
 
 		InstantiationUtil.instantiate(configSnapshot.getClass());
 	}
@@ -106,7 +106,7 @@ public abstract class SerializerTestBase<T> extends TestLogger {
 	@Test
 	public void testSnapshotConfigurationAndReconfigure() throws Exception {
 		final TypeSerializer<T> serializer = getSerializer();
-		final TypeSerializerSnapshot<T> configSnapshot = serializer.snapshotConfiguration();
+		final TypeSerializerSnapshot<T> configSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(serializer);
 
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {

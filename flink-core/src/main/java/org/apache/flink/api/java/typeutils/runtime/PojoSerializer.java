@@ -41,6 +41,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.api.common.typeutils.UnloadableDummyTypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
@@ -1184,7 +1185,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 		for (int i = 0; i < fields.length; i++) {
 			fieldToSerializerConfigSnapshots.put(
 				fields[i].getName(),
-				new Tuple2<>(fieldSerializers[i], fieldSerializers[i].snapshotConfiguration()));
+				new Tuple2<>(fieldSerializers[i], TypeSerializerUtils.snapshotBackwardsCompatible(fieldSerializers[i])));
 		}
 
 		final LinkedHashMap<Class<?>, Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> registeredSubclassesToSerializerConfigSnapshots =
@@ -1195,7 +1196,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 					entry.getKey(),
 					new Tuple2<>(
 						registeredSubclassSerializers[entry.getValue()],
-						registeredSubclassSerializers[entry.getValue()].snapshotConfiguration()));
+						TypeSerializerUtils.snapshotBackwardsCompatible(registeredSubclassSerializers[entry.getValue()])));
 		}
 
 		final HashMap<Class<?>, Tuple2<TypeSerializer<?>, TypeSerializerSnapshot<?>>> nonRegisteredSubclassesToSerializerConfigSnapshots =
@@ -1204,7 +1205,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 		for (Map.Entry<Class<?>, TypeSerializer<?>> entry : nonRegisteredSubclassSerializerCache.entrySet()) {
 			nonRegisteredSubclassesToSerializerConfigSnapshots.put(
 				entry.getKey(),
-				new Tuple2<>(entry.getValue(), entry.getValue().snapshotConfiguration()));
+				new Tuple2<>(entry.getValue(), TypeSerializerUtils.snapshotBackwardsCompatible(entry.getValue())));
 		}
 
 		return new PojoSerializerConfigSnapshot<>(

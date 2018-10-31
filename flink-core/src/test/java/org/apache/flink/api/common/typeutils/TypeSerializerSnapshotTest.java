@@ -54,7 +54,7 @@ public class TypeSerializerSnapshotTest {
 	@Test
 	public void testSerializeConfigWhenSerializerMissing() throws Exception {
 		TestSerializer ser = new TestSerializer();
-		TypeSerializerConfigSnapshot<Object> snap = (TypeSerializerConfigSnapshot<Object>) ser.snapshotConfiguration();
+		TypeSerializerConfigSnapshot<Object> snap = (TypeSerializerConfigSnapshot<Object>) TypeSerializerUtils.snapshotBackwardsCompatible(ser);
 
 		try {
 			TypeSerializerSnapshot.writeVersionedSnapshot(new DataOutputSerializer(64), snap);
@@ -68,7 +68,7 @@ public class TypeSerializerSnapshotTest {
 	@Test
 	public void testSerializerDeserializationFailure() throws Exception {
 		TestSerializer ser = new TestSerializer();
-		TypeSerializerConfigSnapshot<Object> snap = (TypeSerializerConfigSnapshot<Object>) ser.snapshotConfiguration();
+		TypeSerializerConfigSnapshot<Object> snap = (TypeSerializerConfigSnapshot<Object>) TypeSerializerUtils.snapshotBackwardsCompatible(ser);
 		snap.setPriorSerializer(ser);
 
 		DataOutputSerializer out = new DataOutputSerializer(64);

@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 
@@ -97,7 +98,7 @@ public class KryoSerializerCompatibilityTest {
 		KryoSerializer<TestClassA> kryoSerializerForA = new KryoSerializer<>(TestClassA.class, new ExecutionConfig());
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot kryoSerializerConfigSnapshot = kryoSerializerForA.snapshotConfiguration();
+		TypeSerializerSnapshot kryoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(kryoSerializerForA);
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
@@ -254,7 +255,7 @@ public class KryoSerializerCompatibilityTest {
 		int testClassBId = kryoSerializer.getKryo().getRegistration(TestClassB.class).getId();
 
 		// snapshot configuration and serialize to bytes
-		TypeSerializerSnapshot kryoSerializerConfigSnapshot = kryoSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot kryoSerializerConfigSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(kryoSerializer);
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(

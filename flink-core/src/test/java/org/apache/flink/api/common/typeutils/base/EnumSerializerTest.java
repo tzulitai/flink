@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.SerializerTestInstance;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.util.InstantiationUtil;
@@ -97,7 +98,7 @@ public class EnumSerializerTest extends TestLogger {
 		byte[] serializedConfig;
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			TypeSerializerSnapshotSerializationUtil.writeSerializerSnapshot(
-				new DataOutputViewStreamWrapper(out), serializer.snapshotConfiguration(), serializer);
+				new DataOutputViewStreamWrapper(out), TypeSerializerUtils.snapshotBackwardsCompatible(serializer), serializer);
 			serializedConfig = out.toByteArray();
 		}
 

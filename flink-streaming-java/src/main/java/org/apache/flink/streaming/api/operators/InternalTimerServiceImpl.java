@@ -22,6 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeutils.CompatibilityResult;
 import org.apache.flink.api.common.typeutils.CompatibilityUtil;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerUtils;
 import org.apache.flink.runtime.state.InternalPriorityQueue;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
@@ -261,9 +262,9 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N>, 
 	public InternalTimersSnapshot<K, N> snapshotTimersForKeyGroup(int keyGroupIdx) {
 		return new InternalTimersSnapshot<>(
 			keySerializer,
-			keySerializer.snapshotConfiguration(),
+			TypeSerializerUtils.snapshotBackwardsCompatible(keySerializer),
 			namespaceSerializer,
-			namespaceSerializer.snapshotConfiguration(),
+			TypeSerializerUtils.snapshotBackwardsCompatible(namespaceSerializer),
 			eventTimeTimersQueue.getSubsetForKeyGroup(keyGroupIdx),
 			processingTimeTimersQueue.getSubsetForKeyGroup(keyGroupIdx));
 	}

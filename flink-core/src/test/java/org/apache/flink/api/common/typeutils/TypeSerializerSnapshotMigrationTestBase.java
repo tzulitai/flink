@@ -102,7 +102,7 @@ public abstract class TypeSerializerSnapshotMigrationTestBase<ElementT> extends 
 		TypeSerializerSnapshot<ElementT> previousSnapshot = snapshotUnderTest();
 		TypeSerializer<ElementT> restoredSerializer = previousSnapshot.restoreSerializer();
 
-		TypeSerializerSnapshot<ElementT> nextSnapshot = restoredSerializer.snapshotConfiguration();
+		TypeSerializerSnapshot<ElementT> nextSnapshot = TypeSerializerUtils.snapshotBackwardsCompatible(restoredSerializer);
 		TypeSerializerSnapshot<ElementT> nextSnapshotDeserialized = writeAndThenReadTheSnapshot(restoredSerializer, nextSnapshot);
 
 		assertThat(nextSnapshotDeserialized, allOf(

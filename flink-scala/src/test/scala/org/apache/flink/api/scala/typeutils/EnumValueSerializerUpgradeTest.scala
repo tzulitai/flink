@@ -21,7 +21,7 @@ package org.apache.flink.api.scala.typeutils
 import java.io._
 import java.net.{URL, URLClassLoader}
 
-import org.apache.flink.api.common.typeutils.{TypeSerializerSchemaCompatibility, TypeSerializerSnapshotSerializationUtil}
+import org.apache.flink.api.common.typeutils.{TypeSerializerSchemaCompatibility, TypeSerializerSnapshotSerializationUtil, TypeSerializerUtils}
 import org.apache.flink.core.memory.{DataInputViewStreamWrapper, DataOutputViewStreamWrapper}
 import org.apache.flink.util.TestLogger
 import org.junit.rules.TemporaryFolder
@@ -130,7 +130,7 @@ class EnumValueSerializerUpgradeTest extends TestLogger with JUnitSuiteLike {
     val enum = instantiateEnum[Enumeration](classLoader, enumName)
 
     val enumValueSerializer = new EnumValueSerializer(enum)
-    val snapshot = enumValueSerializer.snapshotConfiguration()
+    val snapshot = TypeSerializerUtils.snapshotBackwardsCompatible(enumValueSerializer)
 
     val baos = new ByteArrayOutputStream()
     val output = new DataOutputViewStreamWrapper(baos)
