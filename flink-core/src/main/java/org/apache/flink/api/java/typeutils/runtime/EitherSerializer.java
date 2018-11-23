@@ -19,6 +19,7 @@
 package org.apache.flink.api.java.typeutils.runtime;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ComplexTypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
@@ -36,7 +37,7 @@ import static org.apache.flink.types.Either.Right;
  * @param <R> the Right value type
  */
 @Internal
-public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
+public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> implements ComplexTypeSerializer<Either<L, R>> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -206,6 +207,11 @@ public class EitherSerializer<L, R> extends TypeSerializer<Either<L, R>> {
 
 	@Override
 	public EitherSerializerSnapshot<L, R> snapshotConfiguration() {
-		return new EitherSerializerSnapshot<>(leftSerializer, rightSerializer);
+		return new EitherSerializerSnapshot<>(this);
+	}
+
+	@Override
+	public TypeSerializer<?>[] getNestedSerializers() {
+		return new TypeSerializer<?>[] { leftSerializer, rightSerializer };
 	}
 }
