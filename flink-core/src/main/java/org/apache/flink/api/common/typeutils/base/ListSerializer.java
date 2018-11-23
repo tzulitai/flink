@@ -19,6 +19,8 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ComplexTypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.ComplexTypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputView;
@@ -40,7 +42,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> The type of element in the list.
  */
 @Internal
-public final class ListSerializer<T> extends TypeSerializer<List<T>> {
+public final class ListSerializer<T> extends TypeSerializer<List<T>> implements ComplexTypeSerializer<List<T>> {
 
 	private static final long serialVersionUID = 1119562170939152304L;
 
@@ -174,7 +176,12 @@ public final class ListSerializer<T> extends TypeSerializer<List<T>> {
 	// --------------------------------------------------------------------------------------------
 
 	@Override
-	public TypeSerializerSnapshot<List<T>> snapshotConfiguration() {
-		return new ListSerializerSnapshot<>(elementSerializer);
+	public ComplexTypeSerializerSnapshot<List<T>> snapshotConfiguration() {
+		return new ListSerializerSnapshot<>(this);
+	}
+
+	@Override
+	public TypeSerializer<?>[] getNestedSerializers() {
+		return new TypeSerializer<?>[] { elementSerializer };
 	}
 }
