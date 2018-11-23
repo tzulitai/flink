@@ -19,6 +19,7 @@
 package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeutils.ComplexTypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.core.memory.DataInputView;
@@ -41,7 +42,7 @@ import java.util.HashMap;
  * @param <V> The type of the values in the map.
  */
 @Internal
-public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
+public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> implements ComplexTypeSerializer<Map<K, V>> {
 
 	private static final long serialVersionUID = -6885593032367050078L;
 	
@@ -201,7 +202,12 @@ public final class MapSerializer<K, V> extends TypeSerializer<Map<K, V>> {
 	// --------------------------------------------------------------------------------------------
 
 	@Override
-	public TypeSerializerSnapshot<Map<K, V>> snapshotConfiguration() {
-		return new MapSerializerSnapshot<>(keySerializer, valueSerializer);
+	public MapSerializerSnapshot<K, V> snapshotConfiguration() {
+		return new MapSerializerSnapshot<>(this);
+	}
+
+	@Override
+	public TypeSerializer<?>[] getNestedSerializers() {
+		return new TypeSerializer<?>[] { keySerializer, valueSerializer };
 	}
 }
