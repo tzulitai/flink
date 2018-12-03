@@ -20,6 +20,7 @@ package org.apache.flink.api.common.typeutils.base;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.CompositeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.CompositeTypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
@@ -40,7 +41,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * @param <C> The component type.
  */
 @Internal
-public final class GenericArraySerializerConfigSnapshot<C> implements TypeSerializerSnapshot<C[]> {
+public final class GenericArraySerializerConfigSnapshot<C> extends CompositeTypeSerializerSnapshot<C[], GenericArraySerializer<C>> {
 
 	private static final int CURRENT_VERSION = 2;
 
@@ -56,7 +57,9 @@ public final class GenericArraySerializerConfigSnapshot<C> implements TypeSerial
 	 * Constructor for read instantiation.
 	 */
 	@SuppressWarnings("unused")
-	public GenericArraySerializerConfigSnapshot() {}
+	public GenericArraySerializerConfigSnapshot() {
+		super(GenericArraySerializer.class);
+	}
 
 	/**
 	 * Constructor to create the snapshot for writing.

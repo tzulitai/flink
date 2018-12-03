@@ -141,7 +141,7 @@ public final class Preconditions {
 	}
 
 	/**
-	 * Checks the given boolean condition, and throws an {@code IllegalArgumentException} if
+	 * Checks the given boolePreconditions.checkArgument(reconfiguredNestedSerializers != null);an condition, and throws an {@code IllegalArgumentException} if
 	 * the condition is not met (evaluates to {@code false}).
 	 *
 	 * @param condition The condition to check

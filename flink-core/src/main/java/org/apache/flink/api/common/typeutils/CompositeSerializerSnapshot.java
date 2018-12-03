@@ -97,6 +97,7 @@ public class CompositeSerializerSnapshot {
 	 * Resolves the compatibility of the nested serializer snapshots with the nested
 	 * serializers of the new outer serializer.
 	 */
+	@Deprecated
 	public <T> TypeSerializerSchemaCompatibility<T> resolveCompatibilityWithNested(
 			TypeSerializerSchemaCompatibility<?> outerCompatibility,
 			TypeSerializer<?>... newNestedSerializers) {
@@ -126,6 +127,10 @@ public class CompositeSerializerSnapshot {
 		return (nestedSerializerRequiresMigration || !outerCompatibility.isCompatibleAsIs()) ?
 				TypeSerializerSchemaCompatibility.compatibleAfterMigration() :
 				TypeSerializerSchemaCompatibility.compatibleAsIs();
+	}
+
+	public CompositeTypeSerializerSchemaCompatibilityBuilder getSchemaCompatibilityBuilder(TypeSerializer<?>... newNestedSerializers) {
+		return CompositeTypeSerializerSchemaCompatibilityBuilder.from(nestedSnapshots, newNestedSerializers);
 	}
 
 	// ------------------------------------------------------------------------
