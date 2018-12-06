@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class MapViewSerializerSnapshot<K, V> extends CompositeTypeSerializerSnapshot<MapView<K, V>, MapViewSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -64,5 +64,10 @@ public class MapViewSerializerSnapshot<K, V> extends CompositeTypeSerializerSnap
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(MapViewSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getMapSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

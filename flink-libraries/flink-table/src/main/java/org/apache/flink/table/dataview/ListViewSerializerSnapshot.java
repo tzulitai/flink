@@ -32,7 +32,7 @@ import java.util.List;
  */
 public final class ListViewSerializerSnapshot<T> extends CompositeTypeSerializerSnapshot<ListView<T>, ListViewSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -63,5 +63,10 @@ public final class ListViewSerializerSnapshot<T> extends CompositeTypeSerializer
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(ListViewSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getListSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

@@ -29,7 +29,7 @@ import org.apache.flink.types.Either;
 @Internal
 public final class EitherSerializerSnapshot<L, R> extends CompositeTypeSerializerSnapshot<Either<L, R>, EitherSerializer> {
 
-	private static final int CURRENT_VERSION = 2;
+	private static final int CURRENT_VERSION = 3;
 
 	/**
 	 * Constructor for read instantiation.
@@ -67,5 +67,10 @@ public final class EitherSerializerSnapshot<L, R> extends CompositeTypeSerialize
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(EitherSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getLeftSerializer(), outerSerializer.getRightSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 3;
 	}
 }

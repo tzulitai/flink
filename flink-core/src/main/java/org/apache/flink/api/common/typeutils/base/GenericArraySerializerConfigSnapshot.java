@@ -41,7 +41,7 @@ import static org.apache.flink.util.Preconditions.checkState;
 @Internal
 public final class GenericArraySerializerConfigSnapshot<C> extends CompositeTypeSerializerSnapshot<C[], GenericArraySerializer> {
 
-	private static final int CURRENT_VERSION = 2;
+	private static final int CURRENT_VERSION = 3;
 
 	/** The class of the components of the serializer's array type. */
 	@Nullable
@@ -77,13 +77,19 @@ public final class GenericArraySerializerConfigSnapshot<C> extends CompositeType
 	}
 
 	@Override
+	protected void readOuterSnapshot(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
+		componentClass = InstantiationUtil.resolveClassByName(in, userCodeClassLoader);
+	}
+
+	@Override
 	public void readSnapshot(int readVersion, DataInputView in, ClassLoader classLoader) throws IOException {
 		switch (readVersion) {
 			case 1:
 				readV1(in, classLoader);
 				break;
 			case 2:
-				readV2(in, classLoader);
+			case 3:
+				super.readSnapshot(readVersion, in, classLoader);
 				break;
 			default:
 				throw new IllegalArgumentException("Unrecognized version: " + readVersion);
@@ -101,11 +107,6 @@ public final class GenericArraySerializerConfigSnapshot<C> extends CompositeType
 		}
 	}
 
-	private void readV2(DataInputView in, ClassLoader classLoader) throws IOException {
-		componentClass = InstantiationUtil.resolveClassByName(in, classLoader);
-		nestedSerializerSnapshots = NestedSerializersSnapshotDelegate.readNestedSerializerSnapshots(in, classLoader);
-	}
-
 	@Override
 	protected GenericArraySerializer createOuterSerializerWithNestedSerializers(TypeSerializer<?>[] nestedSerializers) {
 		@SuppressWarnings("unchecked")
@@ -116,5 +117,10 @@ public final class GenericArraySerializerConfigSnapshot<C> extends CompositeType
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(GenericArraySerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getComponentSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 3;
 	}
 }

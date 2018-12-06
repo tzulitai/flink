@@ -28,7 +28,7 @@ import java.util.ArrayList;
  */
 public class ArrayListSerializerSnapshot<T> extends CompositeTypeSerializerSnapshot<ArrayList<T>, ArrayListSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -59,5 +59,10 @@ public class ArrayListSerializerSnapshot<T> extends CompositeTypeSerializerSnaps
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(ArrayListSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getElementSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

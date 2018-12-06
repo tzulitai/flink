@@ -29,7 +29,7 @@ import scala.util.Either;
  */
 public class ScalaEitherSerializerSnapshot<L, R> extends CompositeTypeSerializerSnapshot<Either<L, R>, EitherSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -64,5 +64,10 @@ public class ScalaEitherSerializerSnapshot<L, R> extends CompositeTypeSerializer
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(EitherSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getLeftSerializer(), outerSerializer.getRightSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

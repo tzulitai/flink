@@ -52,6 +52,12 @@ import java.io.IOException;
 @PublicEvolving
 public abstract class CompositeTypeSerializerSnapshot<T, S extends TypeSerializer> implements TypeSerializerSnapshot<T> {
 
+	/** Magic number for integrity checks during deserialization. */
+	private static final int MAGIC_NUMBER = 801108;
+
+	/** Current version of the serialization format of the base snapshot. */
+	private static final int VERSION = 1;
+
 	protected NestedSerializersSnapshotDelegate nestedSerializerSnapshots;
 
 	private final Class<S> correspondingSerializerClass;
@@ -79,13 +85,33 @@ public abstract class CompositeTypeSerializerSnapshot<T, S extends TypeSerialize
 
 	@Override
 	public final void writeSnapshot(DataOutputView out) throws IOException {
+		out.writeInt(MAGIC_NUMBER);
+		out.writeInt(VERSION);
+
 		writeOuterSnapshot(out);
+
 		nestedSerializerSnapshots.writeNestedSerializerSnapshots(out);
 	}
 
 	@Override
 	public void readSnapshot(int readVersion, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
+		if (!isPreVersionedCompositeTypeSerializerSnapshot(readVersion)) {
+			final int magicNumber = in.readInt();
+			if (magicNumber != MAGIC_NUMBER) {
+				throw new IOException(String.format("Corrupt data, magic number mismatch. Expected %8x, found %8x",
+					MAGIC_NUMBER, magicNumber));
+			}
+
+			// we can use this version in the future, in case the
+			// format of the base class changes
+			final int version = in.readInt();
+			if (version != VERSION) {
+				throw new IOException("Unrecognized version: " + version);
+			}
+		}
+
 		readOuterSnapshot(readVersion, in, userCodeClassLoader);
+
 		this.nestedSerializerSnapshots = NestedSerializersSnapshotDelegate.readNestedSerializerSnapshots(in, userCodeClassLoader);
 	}
 
@@ -192,6 +218,23 @@ public abstract class CompositeTypeSerializerSnapshot<T, S extends TypeSerialize
 	 */
 	protected boolean isOuterSnapshotCompatible(S newSerializer) {
 		return true;
+	}
+
+	/**
+	 * Checks whether or not this composite serializer snapshot was written with a version
+	 * that did not include versioning for the base snapshot.
+	 *
+	 * <p>NOTE: Please override this ONLY if you know what you are doing.
+	 * For new implementations of a {@link CompositeTypeSerializerSnapshot}, subclasses should
+	 * never be required to override this method.
+	 *
+	 * @param readVersion the outer snapshot version
+	 *
+	 * @return whether or not this composite serializer snapshot was written with a version
+	 *         that did not include versioning for the base snapshot.
+	 */
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return false;
 	}
 
 	// ------------------------------------------------------------------------------------------

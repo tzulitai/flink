@@ -29,7 +29,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 @Internal
 public class LockableTypeSerializerSnapshot<E> extends CompositeTypeSerializerSnapshot<Lockable<E>, Lockable.LockableTypeSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -60,5 +60,10 @@ public class LockableTypeSerializerSnapshot<E> extends CompositeTypeSerializerSn
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(Lockable.LockableTypeSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getElementSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class MapSerializerSnapshot<K, V> extends CompositeTypeSerializerSnapshot<Map<K, V>, MapSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -63,5 +63,10 @@ public class MapSerializerSnapshot<K, V> extends CompositeTypeSerializerSnapshot
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(MapSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getKeySerializer(), outerSerializer.getValueSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }

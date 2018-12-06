@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class ListSerializerSnapshot<T> extends CompositeTypeSerializerSnapshot<List<T>, ListSerializer> {
 
-	private static final int CURRENT_VERSION = 1;
+	private static final int CURRENT_VERSION = 2;
 
 	/**
 	 * Constructor for read instantiation.
@@ -58,5 +58,10 @@ public class ListSerializerSnapshot<T> extends CompositeTypeSerializerSnapshot<L
 	@Override
 	protected TypeSerializer<?>[] getNestedSerializers(ListSerializer outerSerializer) {
 		return new TypeSerializer<?>[] { outerSerializer.getElementSerializer() };
+	}
+
+	@Override
+	protected boolean isPreVersionedCompositeTypeSerializerSnapshot(int readVersion) {
+		return readVersion < 2;
 	}
 }
