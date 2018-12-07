@@ -75,14 +75,7 @@ public class CompatibilityUtil {
 			if (!initialResult.isRequiresMigration()) {
 				return initialResult;
 			} else {
-				if (precedingSerializer != null && !(precedingSerializer.getClass().equals(dummySerializerClassTag))) {
-					// if the preceding serializer exists and is not a dummy, use
-					// that for converting instead of any provided convert deserializer
-					return CompatibilityResult.requiresMigration((TypeSerializer<T>) precedingSerializer);
-				} else {
-					// requires migration (may or may not have a convert deserializer)
-					return initialResult;
-				}
+				throw new IllegalStateException("oh no!");
 			}
 		} else {
 			// if the configuration snapshot of the preceding serializer cannot be provided,
