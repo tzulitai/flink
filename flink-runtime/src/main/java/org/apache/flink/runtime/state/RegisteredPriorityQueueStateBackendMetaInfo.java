@@ -34,22 +34,32 @@ import java.util.Map;
 public class RegisteredPriorityQueueStateBackendMetaInfo<T> extends RegisteredStateMetaInfoBase {
 
 	@Nonnull
-	private final TypeSerializer<T> elementSerializer;
+	private final StateSerializerProvider<T> elementSerializerProvider;
 
 	public RegisteredPriorityQueueStateBackendMetaInfo(
 		@Nonnull String name,
 		@Nonnull TypeSerializer<T> elementSerializer) {
 
-		super(name);
-		this.elementSerializer = elementSerializer;
+		this(name, StateSerializerProvider.from(elementSerializer));
 	}
 
 	@SuppressWarnings("unchecked")
 	public RegisteredPriorityQueueStateBackendMetaInfo(StateMetaInfoSnapshot snapshot) {
-		this(snapshot.getName(),
-			(TypeSerializer<T>) Preconditions.checkNotNull(
-				snapshot.restoreTypeSerializer(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER)));
+		this(
+			snapshot.getName(),
+			StateSerializerProvider.from(
+				(TypeSerializer<T>) Preconditions.checkNotNull(
+					snapshot.restoreTypeSerializer(StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER))));
+
 		Preconditions.checkState(StateMetaInfoSnapshot.BackendStateType.PRIORITY_QUEUE == snapshot.getBackendStateType());
+	}
+
+	private RegisteredPriorityQueueStateBackendMetaInfo(
+		@Nonnull String name,
+		@Nonnull StateSerializerProvider<T> elementSerializerProvider) {
+
+		super(name);
+		this.elementSerializerProvider = elementSerializerProvider;
 	}
 
 	@Nonnull
@@ -60,10 +70,11 @@ public class RegisteredPriorityQueueStateBackendMetaInfo<T> extends RegisteredSt
 
 	@Nonnull
 	public TypeSerializer<T> getElementSerializer() {
-		return elementSerializer;
+		return elementSerializerProvider.getStateSerializer();
 	}
 
 	private StateMetaInfoSnapshot computeSnapshot() {
+		TypeSerializer<T> elementSerializer = getElementSerializer();
 		Map<String, TypeSerializer<?>> serializerMap =
 			Collections.singletonMap(
 				StateMetaInfoSnapshot.CommonSerializerKeys.VALUE_SERIALIZER.toString(),
@@ -82,6 +93,6 @@ public class RegisteredPriorityQueueStateBackendMetaInfo<T> extends RegisteredSt
 	}
 
 	public RegisteredPriorityQueueStateBackendMetaInfo deepCopy() {
-		return new RegisteredPriorityQueueStateBackendMetaInfo<>(name, elementSerializer.duplicate());
+		return new RegisteredPriorityQueueStateBackendMetaInfo<>(name, getElementSerializer().duplicate());
 	}
 }
