@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.CompositeSerializer;
 import org.apache.flink.api.common.typeutils.CompositeTypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
+import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.util.FlinkRuntimeException;
 
 import javax.annotation.Nonnull;
@@ -30,6 +31,9 @@ import java.io.Serializable;
 
 /** User state value with timestamps before and after update. */
 public class ValueWithTs<V> implements Serializable {
+
+	private static final long serialVersionUID = -8941625260587401383L;
+
 	private final V value;
 	private final long timestamp;
 
@@ -57,7 +61,19 @@ public class ValueWithTs<V> implements Serializable {
 	/** Serializer for Serializer. */
 	public static class Serializer extends CompositeSerializer<ValueWithTs<?>> {
 
-		public Serializer(TypeSerializer<?> valueSerializer, TypeSerializer<Long> timestampSerializer) {
+		private static final long serialVersionUID = -130643101595293878L;
+
+		/**
+		 * Constructor for creating a new serializer.
+		 */
+		public Serializer(TypeSerializer<?> valueSerializer) {
+			super(true, valueSerializer, LongSerializer.INSTANCE);
+		}
+
+		/**
+		 * Constructor for creating serializer from {@link ValueWithTsSerializerSnapshot}.
+		 */
+		Serializer(TypeSerializer<?> valueSerializer, TypeSerializer<Long> timestampSerializer) {
 			super(true, valueSerializer, timestampSerializer);
 		}
 
@@ -143,8 +159,8 @@ public class ValueWithTs<V> implements Serializable {
 		@Override
 		protected Serializer createOuterSerializerWithNestedSerializers(TypeSerializer<?>[] nestedSerializers) {
 			TypeSerializer<?> valueSerializer = nestedSerializers[0];
-			TypeSerializer<Long> timeSerializer = (TypeSerializer<Long>) nestedSerializers[1];
-			return new Serializer(valueSerializer, timeSerializer);
+			TypeSerializer<Long> timestampSerializer = (TypeSerializer<Long>) nestedSerializers[1];
+			return new Serializer(valueSerializer, timestampSerializer);
 		}
 	}
 }

@@ -128,7 +128,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 	@SuppressWarnings("unchecked")
 	private IS createValueState() throws Exception {
 		ValueStateDescriptor<TtlValue<SV>> ttlDescriptor = new ValueStateDescriptor<>(
-			stateDesc.getName(), new TtlSerializer<>(LongSerializer.INSTANCE, stateDesc.getSerializer()));
+			stateDesc.getName(), new TtlSerializer<>(stateDesc.getSerializer()));
 		return (IS) new TtlValueState<>(createTtlStateContext(ttlDescriptor));
 	}
 
@@ -136,7 +136,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 	private <T> IS createListState() throws Exception {
 		ListStateDescriptor<T> listStateDesc = (ListStateDescriptor<T>) stateDesc;
 		ListStateDescriptor<TtlValue<T>> ttlDescriptor = new ListStateDescriptor<>(
-			stateDesc.getName(), new TtlSerializer<>(LongSerializer.INSTANCE, listStateDesc.getElementSerializer()));
+			stateDesc.getName(), new TtlSerializer<>(listStateDesc.getElementSerializer()));
 		return (IS) new TtlListState<>(createTtlStateContext(ttlDescriptor));
 	}
 
@@ -146,7 +146,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 		MapStateDescriptor<UK, TtlValue<UV>> ttlDescriptor = new MapStateDescriptor<>(
 			stateDesc.getName(),
 			mapStateDesc.getKeySerializer(),
-			new TtlSerializer<>(LongSerializer.INSTANCE, mapStateDesc.getValueSerializer()));
+			new TtlSerializer<>(mapStateDesc.getValueSerializer()));
 		return (IS) new TtlMapState<>(createTtlStateContext(ttlDescriptor));
 	}
 
@@ -156,7 +156,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 		ReducingStateDescriptor<TtlValue<SV>> ttlDescriptor = new ReducingStateDescriptor<>(
 			stateDesc.getName(),
 			new TtlReduceFunction<>(reducingStateDesc.getReduceFunction(), ttlConfig, timeProvider),
-			new TtlSerializer<>(LongSerializer.INSTANCE, stateDesc.getSerializer()));
+			new TtlSerializer<>(stateDesc.getSerializer()));
 		return (IS) new TtlReducingState<>(createTtlStateContext(ttlDescriptor));
 	}
 
@@ -167,7 +167,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 		TtlAggregateFunction<IN, SV, OUT> ttlAggregateFunction = new TtlAggregateFunction<>(
 			aggregatingStateDescriptor.getAggregateFunction(), ttlConfig, timeProvider);
 		AggregatingStateDescriptor<IN, TtlValue<SV>, OUT> ttlDescriptor = new AggregatingStateDescriptor<>(
-			stateDesc.getName(), ttlAggregateFunction, new TtlSerializer<>(LongSerializer.INSTANCE, stateDesc.getSerializer()));
+			stateDesc.getName(), ttlAggregateFunction, new TtlSerializer<>(stateDesc.getSerializer()));
 		return (IS) new TtlAggregatingState<>(createTtlStateContext(ttlDescriptor), ttlAggregateFunction);
 	}
 
@@ -180,7 +180,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 			stateDesc.getName(),
 			ttlInitAcc,
 			new TtlFoldFunction<>(foldingStateDescriptor.getFoldFunction(), ttlConfig, timeProvider, initAcc),
-			new TtlSerializer<>(LongSerializer.INSTANCE, stateDesc.getSerializer()));
+			new TtlSerializer<>(stateDesc.getSerializer()));
 		return (IS) new TtlFoldingState<>(createTtlStateContext(ttlDescriptor));
 	}
 
@@ -238,8 +238,18 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
 	public static class TtlSerializer<T> extends CompositeSerializer<TtlValue<T>> {
 		private static final long serialVersionUID = 131020282727167064L;
 
+		/**
+		 * Constructor for creating a new instance of this serializer.
+		 */
 		@SuppressWarnings("WeakerAccess")
-		public TtlSerializer(TypeSerializer<Long> timestampSerializer, TypeSerializer<T> userValueSerializer) {
+		public TtlSerializer(TypeSerializer<T> userValueSerializer) {
+			super(true, LongSerializer.INSTANCE, userValueSerializer);
+		}
+
+		/**
+		 * Constructor for creating this serializer from {@link TtlSerializerSnapshot}.
+		 */
+		TtlSerializer(TypeSerializer<Long> timestampSerializer, TypeSerializer<T> userValueSerializer) {
 			super(true, timestampSerializer, userValueSerializer);
 		}
 

@@ -25,7 +25,6 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
@@ -144,9 +143,8 @@ class TtlVerifyUpdateFunction extends RichFlatMapFunction<TtlStateUpdate, String
 		prevUpdatesByVerifierId = TtlStateVerifier.VERIFIERS.stream()
 			.collect(Collectors.toMap(TtlStateVerifier::getId, v -> {
 				checkNotNull(v);
-				final TypeSerializer<ValueWithTs<?>> typeSerializer = new ValueWithTs.Serializer(
-					v.getUpdateSerializer(),
-					LongSerializer.INSTANCE);
+				final TypeSerializer<ValueWithTs<?>> typeSerializer =
+					new ValueWithTs.Serializer(v.getUpdateSerializer());
 
 				ListStateDescriptor<ValueWithTs<?>> stateDesc = new ListStateDescriptor<>(
 					"TtlPrevValueState_" + v.getId(), typeSerializer);

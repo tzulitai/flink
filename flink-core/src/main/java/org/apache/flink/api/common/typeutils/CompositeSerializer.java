@@ -298,7 +298,13 @@ public abstract class CompositeSerializer<T> extends TypeSerializer<T> {
 		}
 	}
 
-	/** Snapshot field serializers of composite type. */
+	/**
+	 * Snapshot field serializers of composite type.
+	 *
+	 * @deprecated this snapshot class is no longer in use by any serializers, and is only
+	 *             kept around for backwards compatibility. All subclass serializers should
+	 *             have their own serializer snapshot classes.
+	 */
 	@Deprecated
 	public static class ConfigSnapshot extends CompositeTypeSerializerConfigSnapshot {
 		private static final int VERSION = 0;
