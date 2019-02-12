@@ -22,7 +22,7 @@ import org.apache.flink.api.common.typeutils.CompositeTypeSerializerUtil.delegat
 import org.apache.flink.api.common.typeutils.TypeSerializerConfigSnapshot.SelfResolvingTypeSerializer
 import org.apache.flink.api.common.typeutils._
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializerConfigSnapshot
-import org.apache.flink.api.scala.typeutils.SpecificCaseClassSerializer.lookupConstructor
+import org.apache.flink.api.scala.typeutils.ScalaCaseClassSerializer.lookupConstructor
 
 import java.io.ObjectInputStream
 import java.lang.invoke.{MethodHandle, MethodHandles}
@@ -37,7 +37,7 @@ import scala.reflect.runtime.universe
   * anonymous [[CaseClassSerializer]].
   */
 @SerialVersionUID(1L)
-class SpecificCaseClassSerializer[T <: Product](
+class ScalaCaseClassSerializer[T <: Product](
   clazz: Class[T],
   scalaFieldSerializers: Array[TypeSerializer[_]]
 ) extends CaseClassSerializer[T](clazz, scalaFieldSerializers)
@@ -83,7 +83,7 @@ class SpecificCaseClassSerializer[T <: Product](
 
 }
 
-object SpecificCaseClassSerializer {
+object ScalaCaseClassSerializer {
 
   def lookupConstructor[T](clazz: Class[_]): MethodHandle = {
     val types = findPrimaryConstructorParameterTypes(clazz, clazz.getClassLoader)
