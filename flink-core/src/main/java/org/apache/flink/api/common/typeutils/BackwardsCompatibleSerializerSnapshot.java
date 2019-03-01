@@ -28,15 +28,16 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 
 /**
- * A utility {@link TypeSerializerConfigSnapshot} that is used for backwards compatibility purposes.
+ * A utility {@link TypeSerializerSnapshot} that is used for backwards compatibility purposes.
  *
- * <p>In older versions of Flink (<= 1.2), we only wrote serializers and not their corresponding snapshots.
- * This class serves as a wrapper around the restored serializer instances.
+ * <p>In older versions of Flink (<= 1.2.x for managed state, and <= 1.4.0 for timers),
+ * we only wrote serializers and not their corresponding snapshots. This class serves as a wrapper around the
+ * restored serializer instances.
  *
  * @param <T> the data type that the wrapped serializer instance serializes.
  */
 @Internal
-public class BackwardsCompatibleSerializerSnapshot<T> implements TypeSerializerSnapshot<T> {
+public final class BackwardsCompatibleSerializerSnapshot<T> implements TypeSerializerSnapshot<T> {
 
 	/**
 	 * The serializer instance written in savepoints.
@@ -51,50 +52,47 @@ public class BackwardsCompatibleSerializerSnapshot<T> implements TypeSerializerS
 	@Override
 	public void writeSnapshot(DataOutputView out) throws IOException {
 		throw new UnsupportedOperationException(
-			"This is a dummy config snapshot used only for backwards compatibility.");
+			"This is a dummy serializer snapshot used only for backwards compatibility.");
 	}
 
 	@Override
 	public void readSnapshot(int version, DataInputView in, ClassLoader userCodeClassLoader) throws IOException {
 		throw new UnsupportedOperationException(
-			"This is a dummy config snapshot used only for backwards compatibility.");
+			"This is a dummy serializer snapshot used only for backwards compatibility.");
 	}
 
 	@Override
 	public int getCurrentVersion() {
 		throw new UnsupportedOperationException(
-			"This is a dummy config snapshot used only for backwards compatibility.");
+			"This is a dummy serializer snapshot used only for backwards compatibility.");
 	}
 
 	@Override
 	public TypeSerializer<T> restoreSerializer() {
+		if (serializerInstance instanceof UnloadableDummyTypeSerializer) {
+			Throwable originalError = ((UnloadableDummyTypeSerializer<?>) serializerInstance).getOriginalError();
+
+			throw new IllegalStateException(
+				"Could not Java-deserialize a TypeSerializer while restoring from a checkpoint that was written " +
+					"only the TypeSerializer as metadata (i.e. Flink versions <= 1.2.x for managed state, and " +
+					"<= 1.4.0 for timers). In these cases, the TypeSerializer class must be present and compatible " +
+					"so that a restore serializer is available.", originalError);
+		}
+
 		return serializerInstance;
 	}
 
 	@Override
 	public TypeSerializerSchemaCompatibility<T> resolveSchemaCompatibility(TypeSerializer<T> newSerializer) {
-		// if there is no configuration snapshot to check against,
-		// then we can only assume that the new serializer is compatible as is
-		return TypeSerializerSchemaCompatibility.compatibleAsIs();
-	}
-
-	@Override
-	public int hashCode() {
-		return serializerInstance.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
+		if (serializerInstance instanceof UnloadableDummyTypeSerializer) {
+			// since there is no configuration snapshot to check against,
+			// in this case we can only assume that the new serializer is compatible as is and can replace
+			// whatever the previous serializer was
+			return TypeSerializerSchemaCompatibility.compatibleAsIs();
 		}
 
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-
-		BackwardsCompatibleSerializerSnapshot<?> that = (BackwardsCompatibleSerializerSnapshot<?>) o;
-
-		return that.serializerInstance.equals(serializerInstance);
+		return (serializerInstance.getClass() == newSerializer.getClass())
+			? TypeSerializerSchemaCompatibility.compatibleAsIs()
+			: TypeSerializerSchemaCompatibility.incompatible();
 	}
 }
