@@ -26,7 +26,6 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.testutils.migration.MigrationVersion;
 import org.apache.flink.util.TestLogger;
 
-import org.apache.flink.util.function.BiConsumerWithException;
 import org.hamcrest.Matcher;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -38,7 +37,6 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.flink.api.common.typeutils.ThreadContextClassLoader.runWithClassLoader;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
@@ -71,40 +69,100 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 		Matcher<TypeSerializerSchemaCompatibility<UpgradedElementT>> schemaCompatibilityMatcher();
 	}
 
+	private static class ClassLoaderSafePreUpgradeSetup<PreviousElementT> implements PreUpgradeSetup<PreviousElementT> {
+
+		private final PreUpgradeSetup<PreviousElementT> delegateSetup;
+		private final ClassLoader setupClassloader;
+
+		ClassLoaderSafePreUpgradeSetup(Class<? extends PreUpgradeSetup<PreviousElementT>> delegateSetupClass) throws Exception {
+			checkNotNull(delegateSetupClass);
+			Class<? extends PreUpgradeSetup<PreviousElementT>> relocatedDelegateSetupClass =
+				ClassRelocator.relocate(delegateSetupClass);
+
+			this.setupClassloader = relocatedDelegateSetupClass.getClassLoader();
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(setupClassloader)) {
+				this.delegateSetup = relocatedDelegateSetupClass.newInstance();
+			}
+		}
+
+		@Override
+		public TypeSerializer<PreviousElementT> createPriorSerializer() {
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(setupClassloader)) {
+				return delegateSetup.createPriorSerializer();
+			} catch (IOException e) {
+				throw new RuntimeException("Error creating prior serializer via ClassLoaderSafePreUpgradeSetup.", e);
+			}
+		}
+
+		@Override
+		public PreviousElementT createTestData() {
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(setupClassloader)) {
+				return delegateSetup.createTestData();
+			} catch (IOException e) {
+				throw new RuntimeException("Error creating test data via ThreadContextClassLoader.", e);
+			}
+		}
+	}
+
+	private static class ClassLoaderSafeUpgradeVerifier<UpgradedElementT> implements UpgradeVerifier<UpgradedElementT> {
+
+		private final UpgradeVerifier<UpgradedElementT> delegateVerifier;
+		private final ClassLoader verifierClassloader;
+
+		ClassLoaderSafeUpgradeVerifier(Class<? extends UpgradeVerifier<UpgradedElementT>> delegateVerifierClass) throws Exception {
+			checkNotNull(delegateVerifierClass);
+			Class<? extends UpgradeVerifier<UpgradedElementT>> relocatedDelegateVerifierClass =
+				ClassRelocator.relocate(delegateVerifierClass);
+
+			this.verifierClassloader = relocatedDelegateVerifierClass.getClassLoader();
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(verifierClassloader)) {
+				this.delegateVerifier = relocatedDelegateVerifierClass.newInstance();
+			}
+		}
+
+		@Override
+		public TypeSerializer<UpgradedElementT> createUpgradedSerializer() {
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(verifierClassloader)) {
+				return delegateVerifier.createUpgradedSerializer();
+			} catch (IOException e) {
+				throw new RuntimeException("Error creating upgraded serializer via ClassLoaderSafeUpgradeVerifier.", e);
+			}
+		}
+
+		@Override
+		public UpgradedElementT expectedTestData() {
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(verifierClassloader)) {
+				return delegateVerifier.expectedTestData();
+			} catch (IOException e) {
+				throw new RuntimeException("Error creating expected test data via ClassLoaderSafeUpgradeVerifier.", e);
+			}
+		}
+
+		@Override
+		public Matcher<TypeSerializerSchemaCompatibility<UpgradedElementT>> schemaCompatibilityMatcher() {
+			try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(verifierClassloader)) {
+				return delegateVerifier.schemaCompatibilityMatcher();
+			} catch (IOException e) {
+				throw new RuntimeException("Error creating schema compatibility matcher via ClassLoaderSafeUpgradeVerifier.", e);
+			}
+		}
+	}
+
 	public static class TestSpecification<PreviousElementT, UpgradedElementT> {
 		private final String name;
 		private final MigrationVersion migrationVersion;
-		private final Class<? extends PreUpgradeSetup<PreviousElementT>> setupClass;
-		private final Class<? extends UpgradeVerifier<UpgradedElementT>> verifierClass;
+		private final ClassLoaderSafePreUpgradeSetup<PreviousElementT> setup;
+		private final ClassLoaderSafeUpgradeVerifier<UpgradedElementT> verifier;
 
 		public TestSpecification(
 				String name,
 				MigrationVersion migrationVersion,
 				Class<? extends PreUpgradeSetup<PreviousElementT>> setupClass,
-				Class<? extends UpgradeVerifier<UpgradedElementT>> verifierClass) {
+				Class<? extends UpgradeVerifier<UpgradedElementT>> verifierClass) throws Exception {
 			this.name = checkNotNull(name);
 			this.migrationVersion = checkNotNull(migrationVersion);
-			this.setupClass = (ClassRelocator.hasRelocatedClasses(checkNotNull(setupClass)))
-				? ClassRelocator.relocate(setupClass)
-				: setupClass;
-			this.verifierClass = (ClassRelocator.hasRelocatedClasses(checkNotNull(verifierClass)))
-				? ClassRelocator.relocate(verifierClass)
-				: verifierClass;
-		}
-
-		private ClassLoader getSetupClassLoader() {
-			return setupClass.getClassLoader();
-		}
-
-		private PreUpgradeSetup<PreviousElementT> instantiateSetup() throws Exception {
-			return setupClass.newInstance();
-		}
-		private ClassLoader getVerifierClassLoader() throws Exception {
-			return verifierClass.getClassLoader();
-		}
-
-		private UpgradeVerifier<UpgradedElementT> instantiateVerifier() throws Exception {
-			return verifierClass.newInstance();
+			this.setup = new ClassLoaderSafePreUpgradeSetup<>(setupClass);
+			this.verifier = new ClassLoaderSafeUpgradeVerifier<>(verifierClass);
 		}
 
 		@Override
@@ -124,22 +182,17 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 	public void generateTestSetupFiles() throws Exception {
 		Files.createDirectory(getSerializerSnapshotFilePath().getParent());
 
-		runWithClassLoader(
-			testSpecification.getSetupClassLoader(),
-			() -> {
-				PreUpgradeSetup<PreviousElementT> setup = testSpecification.instantiateSetup();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.setup.setupClassloader)) {
+			TypeSerializer<PreviousElementT> priorSerializer = testSpecification.setup.createPriorSerializer();
 
-				TypeSerializer<PreviousElementT> priorSerializer = setup.createPriorSerializer();
+			DataOutputSerializer serializerSnapshotOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
+			writeSerializerSnapshot(serializerSnapshotOut, priorSerializer, testSpecification.migrationVersion);
+			writeContentsTo(getSerializerSnapshotFilePath(), serializerSnapshotOut.getCopyOfBuffer());
 
-				DataOutputSerializer serializerSnapshotOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
-				writeSerializerSnapshot(serializerSnapshotOut, priorSerializer, testSpecification.migrationVersion);
-				writeContentsTo(getSerializerSnapshotFilePath(), serializerSnapshotOut.getCopyOfBuffer());
-
-				DataOutputSerializer testDataOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
-				priorSerializer.serialize(setup.createTestData(), testDataOut);
-				writeContentsTo(getTestDataFilePath(), testDataOut.getCopyOfBuffer());
-			}
-		);
+			DataOutputSerializer testDataOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
+			priorSerializer.serialize(testSpecification.setup.createTestData(), testDataOut);
+			writeContentsTo(getTestDataFilePath(), testDataOut.getCopyOfBuffer());
+		}
 	}
 
 	// ------------------------------------------------------------------------------
@@ -148,36 +201,41 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 
 	@Test
 	public void restoreSerializerIsValid() throws Exception {
-		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.verifier.verifierClassloader)) {
 			assumeThat(
 				"This test only applies for test specifications that verify an upgraded serializer that is not incompatible.",
 				TypeSerializerSchemaCompatibility.incompatible(),
-				not(verifier.schemaCompatibilityMatcher()));
+				not(testSpecification.verifier.schemaCompatibilityMatcher()));
+
+			TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot = snapshotUnderTest();
 
 			TypeSerializer<UpgradedElementT> restoredSerializer = restoredSerializerSnapshot.restoreSerializer();
 			assertSerializerIsValid(
 				restoredSerializer,
 				dataUnderTest(),
-				verifier.expectedTestData());
-		});
+				testSpecification.verifier.expectedTestData());
+		}
 	}
 
 	@Test
 	public void upgradedSerializerHasExpectedSchemaCompatibility() throws Exception {
-		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
-			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.verifier.verifierClassloader)) {
+			TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot = snapshotUnderTest();
+			TypeSerializer<UpgradedElementT> upgradedSerializer = testSpecification.verifier.createUpgradedSerializer();
 
 			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
 				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
 
-			assertThat(upgradeCompatibility, verifier.schemaCompatibilityMatcher());
-		});
+			assertThat(upgradeCompatibility, testSpecification.verifier.schemaCompatibilityMatcher());
+		}
 	}
 
 	@Test
 	public void upgradedSerializerIsValidAfterMigration() throws Exception {
-		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
-			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.verifier.verifierClassloader)) {
+			TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot = snapshotUnderTest();
+
+			TypeSerializer<UpgradedElementT> upgradedSerializer = testSpecification.verifier.createUpgradedSerializer();
 
 			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
 				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
@@ -192,17 +250,18 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 				dataUnderTest(),
 				restoreSerializer,
 				upgradedSerializer,
-				verifier.expectedTestData());
+				testSpecification.verifier.expectedTestData());
 
 			// .. and then assert that the upgraded serializer is valid with the migrated data
-			assertSerializerIsValid(upgradedSerializer, migratedData, verifier.expectedTestData());
-		});
+			assertSerializerIsValid(upgradedSerializer, migratedData, testSpecification.verifier.expectedTestData());
+		}
 	}
 
 	@Test
 	public void upgradedSerializerIsValidAfterReconfiguration() throws Exception {
-		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
-			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.verifier.verifierClassloader)) {
+			TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot = snapshotUnderTest();
+			TypeSerializer<UpgradedElementT> upgradedSerializer = testSpecification.verifier.createUpgradedSerializer();
 
 			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
 				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
@@ -215,14 +274,15 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 			assertSerializerIsValid(
 				reconfiguredUpgradedSerializer,
 				dataUnderTest(),
-				verifier.expectedTestData());
-		});
+				testSpecification.verifier.expectedTestData());
+		}
 	}
 
 	@Test
 	public void upgradedSerializerIsValidWhenCompatibleAsIs() throws Exception {
-		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
-			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(testSpecification.verifier.verifierClassloader)) {
+			TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot = snapshotUnderTest();
+			TypeSerializer<UpgradedElementT> upgradedSerializer = testSpecification.verifier.createUpgradedSerializer();
 
 			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
 				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
@@ -234,8 +294,8 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 			assertSerializerIsValid(
 				upgradedSerializer,
 				dataUnderTest(),
-				verifier.expectedTestData());
-		});
+				testSpecification.verifier.expectedTestData());
+		}
 	}
 
 	/**
@@ -264,16 +324,6 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 	// ------------------------------------------------------------------------------
 	//  Utilities
 	// ------------------------------------------------------------------------------
-
-	private void runUpgradeVerification(BiConsumerWithException<UpgradeVerifier<UpgradedElementT>, TypeSerializerSnapshot<UpgradedElementT>, Exception> verificationTest) throws Exception {
-		runWithClassLoader(
-			testSpecification.getVerifierClassLoader(),
-			() -> verificationTest.accept(
-				testSpecification.instantiateVerifier(),
-				snapshotUnderTest()
-			)
-		);
-	}
 
 	private Path getSerializerSnapshotFilePath() {
 		return Paths.get(getTestResourceDirectory() + "/serializer-snapshot");
