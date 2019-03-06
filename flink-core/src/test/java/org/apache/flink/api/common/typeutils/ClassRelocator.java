@@ -45,7 +45,7 @@ public final class ClassRelocator {
 
 	@Target(ElementType.TYPE)
 	@Retention(RetentionPolicy.RUNTIME)
-	public @interface TestClass {
+	public @interface RelocateClass {
 		String value();
 	}
 
@@ -60,18 +60,18 @@ public final class ClassRelocator {
 		return (Class<? extends T>) patchClass(newClassBytes, remapping);
 	}
 
+	public static boolean hasRelocatedClasses(Class<?> originalClass) {
+		ClassRegistry remapping = new ClassRegistry(originalClass);
+		return remapping.getNumRemappings() > 0;
+	}
+
 	private static Class<?> patchClass(Map<String, byte[]> newClasses, ClassRegistry remapping) {
 		final ByteClassLoader renamingClassLoader = new ByteClassLoader(remapping.getRoot().getClassLoader(), newClasses);
-		final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-		try {
-			Thread.currentThread().setContextClassLoader(renamingClassLoader);
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(renamingClassLoader)) {
 			return renamingClassLoader.loadClass(remapping.getRootNewName());
 		}
-		catch (ClassNotFoundException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
-		}
-		finally {
-			Thread.currentThread().setContextClassLoader(originalClassLoader);
 		}
 	}
 
@@ -82,10 +82,10 @@ public final class ClassRelocator {
 		ClassRegistry(Class<?> root) {
 			this.root = root;
 			this.targetNames = definedClasses(root)
-				.filter(type -> type.getAnnotation(TestClass.class) != null)
+				.filter(type -> type.getAnnotation(RelocateClass.class) != null)
 				.collect(Collectors.toMap(
 					Function.identity(),
-					type -> type.getAnnotation(TestClass.class).value()
+					type -> type.getAnnotation(RelocateClass.class).value()
 				));
 
 			// it is also important to overwrite the top class since it is already loaded,
@@ -116,6 +116,10 @@ public final class ClassRelocator {
 				.collect(Collectors.toMap(
 					e -> pathName(e.getKey()),
 					e -> pathName(e.getValue())));
+		}
+
+		private int getNumRemappings() {
+			return targetNames.size();
 		}
 
 		private static String pathName(String className) {
