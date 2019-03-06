@@ -18,8 +18,6 @@
 
 package org.apache.flink.api.common.typeutils;
 
-import org.apache.flink.util.function.RunnableWithException;
-
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -38,11 +36,5 @@ public class ThreadContextClassLoader implements Closeable {
 	@Override
 	public void close() throws IOException {
 		Thread.currentThread().setContextClassLoader(originalThreadContextClassLoader);
-	}
-
-	public static void runWithClassLoader(ClassLoader classLoader, RunnableWithException runnable) throws Exception {
-		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
-			runnable.run();
-		}
 	}
 }

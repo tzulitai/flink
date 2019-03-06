@@ -34,6 +34,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -60,11 +61,6 @@ public final class ClassRelocator {
 		return (Class<? extends T>) patchClass(newClassBytes, remapping);
 	}
 
-	public static boolean hasRelocatedClasses(Class<?> originalClass) {
-		ClassRegistry remapping = new ClassRegistry(originalClass);
-		return remapping.getNumRemappings() > 0;
-	}
-
 	private static Class<?> patchClass(Map<String, byte[]> newClasses, ClassRegistry remapping) {
 		final ByteClassLoader renamingClassLoader = new ByteClassLoader(remapping.getRoot().getClassLoader(), newClasses);
 		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(renamingClassLoader)) {
@@ -76,6 +72,8 @@ public final class ClassRelocator {
 	}
 
 	private static final class ClassRegistry {
+		private static final AtomicInteger GENERATED_ID = new AtomicInteger(0);
+
 		private final Class<?> root;
 		private final Map<Class<?>, String> targetNames;
 
@@ -90,7 +88,7 @@ public final class ClassRelocator {
 
 			// it is also important to overwrite the top class since it is already loaded,
 			// and we need to force load it
-			targetNames.put(root, root.getName() + "$generated$");
+			targetNames.put(root, root.getName() + String.format("$generated%d$", GENERATED_ID.incrementAndGet()));
 		}
 
 		public Class<?> getRoot() {
