@@ -53,7 +53,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * A test base for verifying {@link TypeSerializerSnapshot} migration.
  *
  * @param <ElementT> the element being serialized.
+ *
+ * @deprecated This test base should no longer be used. It is fully replaced by {@link TypeSerializerUpgradeTestBase}.
+ * @see TypeSerializerUpgradeTestBase
  */
+@Deprecated
 public abstract class TypeSerializerSnapshotMigrationTestBase<ElementT> extends TestLogger {
 
 	private final TestSpecification<ElementT> testSpecification;
