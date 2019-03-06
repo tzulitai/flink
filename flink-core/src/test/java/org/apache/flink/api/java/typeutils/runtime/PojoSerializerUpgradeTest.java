@@ -47,7 +47,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 	}
 
 	@Parameterized.Parameters(name = "Test Specification = {0}")
-	public static Collection<TestSpecification<?, ?>> testSpecifications() {
+	public static Collection<TestSpecification<?, ?>> testSpecifications() throws Exception {
 		return Arrays.asList(
 			new TestSpecification<>(
 				"pojo-serializer-identical-schema",
@@ -150,54 +150,61 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 		}
 	}
 
-	public static final class ModifiedPojoSchemaSetup implements PreUpgradeSetup<ModifiedPojoSchemaSetup.PojoWithOneField> {
+	public static final class ModifiedPojoSchemaSetup implements PreUpgradeSetup<ModifiedPojoSchemaSetup.PojoBeforeSchemaUpgrade> {
 
-		@RelocateClass("TestPojo")
+		@RelocateClass("TestPojoWithModifiedSchema")
 		@SuppressWarnings("WeakerAccess")
-		public static class PojoWithOneField {
+		public static class PojoBeforeSchemaUpgrade {
 			public int id;
+			public String name;
+			public int age;
+			public double height;
 
-			public PojoWithOneField() {}
+			public PojoBeforeSchemaUpgrade() {}
 
-			public PojoWithOneField(int id) {
+			public PojoBeforeSchemaUpgrade(int id, String name, int age, double height) {
 				this.id = id;
-			}
-
-			public void setId(int id) {
-				this.id = id;
-			}
-
-			public int getId() {
-				return id;
+				this.name = name;
+				this.age = age;
+				this.height = height;
 			}
 		}
 
 		@Override
-		public TypeSerializer<PojoWithOneField> createPriorSerializer() {
-			TypeSerializer<PojoWithOneField> serializer = TypeExtractor.createTypeInfo(PojoWithOneField.class).createSerializer(new ExecutionConfig());
+		public TypeSerializer<PojoBeforeSchemaUpgrade> createPriorSerializer() {
+			TypeSerializer<PojoBeforeSchemaUpgrade> serializer = TypeExtractor.createTypeInfo(PojoBeforeSchemaUpgrade.class).createSerializer(new ExecutionConfig());
 			assertSame(serializer.getClass(), PojoSerializer.class);
 			return serializer;
 		}
 
 		@Override
-		public PojoWithOneField createTestData() {
-			return new PojoWithOneField(911108);
+		public PojoBeforeSchemaUpgrade createTestData() {
+			return new PojoBeforeSchemaUpgrade(911108, "Gordon", 27, 172.8);
 		}
 	}
 
-	public static final class ModifiedPojoSchemaVerifier implements UpgradeVerifier<ModifiedPojoSchemaVerifier.PojoWithTwoField> {
+	public static final class ModifiedPojoSchemaVerifier implements UpgradeVerifier<ModifiedPojoSchemaVerifier.PojoAfterSchemaUpgrade> {
 
-		@RelocateClass("TestPojo")
+		@RelocateClass("TestPojoWithModifiedSchema")
 		@SuppressWarnings("WeakerAccess")
-		public static class PojoWithTwoField {
-			public int id;
+		public static class PojoAfterSchemaUpgrade {
+
+			public enum Color {
+				RED, BLUE, GREEN
+			}
+
 			public String name;
+			public int age;
+			public Color favoriteColor;
+			public boolean married;
 
-			public PojoWithTwoField() {}
+			public PojoAfterSchemaUpgrade() {}
 
-			public PojoWithTwoField(int id, String name) {
-				this.id = id;
+			public PojoAfterSchemaUpgrade(String name, int age, Color favoriteColor, boolean married) {
 				this.name = name;
+				this.age = age;
+				this.favoriteColor = favoriteColor;
+				this.married = married;
 			}
 
 			@Override
@@ -206,41 +213,44 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 					return false;
 				}
 
-				if (!(obj instanceof PojoWithTwoField)) {
+				if (!(obj instanceof PojoAfterSchemaUpgrade)) {
 					return false;
 				}
 
-				PojoWithTwoField other = (PojoWithTwoField) obj;
-				return other.id == id && Objects.equals(other.name, name);
+				PojoAfterSchemaUpgrade other = (PojoAfterSchemaUpgrade) obj;
+				return Objects.equals(other.name, name)
+					&& other.age == age
+					&& other.favoriteColor == favoriteColor
+					&& other.married == married;
 			}
 
 			@Override
 			public int hashCode() {
-				return Objects.hash(id, name);
+				return Objects.hash(name, age, favoriteColor, married);
 			}
 		}
 
 		@Override
-		public TypeSerializer<PojoWithTwoField> createUpgradedSerializer() {
-			TypeSerializer<PojoWithTwoField> serializer = TypeExtractor.createTypeInfo(PojoWithTwoField.class).createSerializer(new ExecutionConfig());
+		public TypeSerializer<PojoAfterSchemaUpgrade> createUpgradedSerializer() {
+			TypeSerializer<PojoAfterSchemaUpgrade> serializer = TypeExtractor.createTypeInfo(PojoAfterSchemaUpgrade.class).createSerializer(new ExecutionConfig());
 			assertSame(serializer.getClass(), PojoSerializer.class);
 			return serializer;
 		}
 
 		@Override
-		public PojoWithTwoField expectedTestData() {
-			return new PojoWithTwoField(911108, null);
+		public PojoAfterSchemaUpgrade expectedTestData() {
+			return new PojoAfterSchemaUpgrade("Gordon", 27, null, false);
 		}
 
 		@Override
-		public Matcher<TypeSerializerSchemaCompatibility<PojoWithTwoField>> schemaCompatibilityMatcher() {
+		public Matcher<TypeSerializerSchemaCompatibility<PojoAfterSchemaUpgrade>> schemaCompatibilityMatcher() {
 			return TypeSerializerMatchers.isCompatibleAfterMigration();
 		}
 	}
 
 	public static final class DifferentFieldTypePojoSchemaSetup implements PreUpgradeSetup<DifferentFieldTypePojoSchemaSetup.PojoWithIntField> {
 
-		@RelocateClass("TestPojo")
+		@RelocateClass("TestPojoWithDifferentFieldType")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithIntField {
 
@@ -268,7 +278,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 
 	public static final class DifferentFieldTypePojoSchemaVerifier implements UpgradeVerifier<DifferentFieldTypePojoSchemaVerifier.PojoWithStringField> {
 
-		@RelocateClass("TestPojo")
+		@RelocateClass("TestPojoWithDifferentFieldType")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithStringField {
 
