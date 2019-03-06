@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 
-import static org.apache.flink.api.common.typeutils.ClassRelocator.TestClass;
+import static org.apache.flink.api.common.typeutils.ClassRelocator.RelocateClass;
 import static org.junit.Assert.assertSame;
 
 /**
@@ -152,7 +152,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 
 	public static final class ModifiedPojoSchemaSetup implements PreUpgradeSetup<ModifiedPojoSchemaSetup.PojoWithOneField> {
 
-		@TestClass("TestPojo")
+		@RelocateClass("TestPojo")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithOneField {
 			public int id;
@@ -187,7 +187,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 
 	public static final class ModifiedPojoSchemaVerifier implements UpgradeVerifier<ModifiedPojoSchemaVerifier.PojoWithTwoField> {
 
-		@TestClass("TestPojo")
+		@RelocateClass("TestPojo")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithTwoField {
 			public int id;
@@ -240,7 +240,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 
 	public static final class DifferentFieldTypePojoSchemaSetup implements PreUpgradeSetup<DifferentFieldTypePojoSchemaSetup.PojoWithIntField> {
 
-		@TestClass("TestPojo")
+		@RelocateClass("TestPojo")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithIntField {
 
@@ -268,7 +268,7 @@ public class PojoSerializerUpgradeTest extends TypeSerializerUpgradeTestBase<Obj
 
 	public static final class DifferentFieldTypePojoSchemaVerifier implements UpgradeVerifier<DifferentFieldTypePojoSchemaVerifier.PojoWithStringField> {
 
-		@TestClass("TestPojo")
+		@RelocateClass("TestPojo")
 		@SuppressWarnings("WeakerAccess")
 		public static class PojoWithStringField {
 
