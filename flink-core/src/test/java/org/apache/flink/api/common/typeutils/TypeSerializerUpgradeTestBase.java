@@ -26,9 +26,8 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.testutils.migration.MigrationVersion;
 import org.apache.flink.util.TestLogger;
 
+import org.apache.flink.util.function.BiConsumerWithException;
 import org.hamcrest.Matcher;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -39,11 +38,9 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
+import static org.apache.flink.api.common.typeutils.ThreadContextClassLoader.runWithClassLoader;
 import static org.apache.flink.util.Preconditions.checkNotNull;
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeThat;
@@ -87,8 +84,32 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 				Class<? extends UpgradeVerifier<UpgradedElementT>> verifierClass) {
 			this.name = checkNotNull(name);
 			this.migrationVersion = checkNotNull(migrationVersion);
-			this.setupClass = checkNotNull(setupClass);
-			this.verifierClass = checkNotNull(verifierClass);
+			this.setupClass = (ClassRelocator.hasRelocatedClasses(checkNotNull(setupClass)))
+				? ClassRelocator.relocate(setupClass)
+				: setupClass;
+			this.verifierClass = (ClassRelocator.hasRelocatedClasses(checkNotNull(verifierClass)))
+				? ClassRelocator.relocate(verifierClass)
+				: verifierClass;
+		}
+
+		private ClassLoader getSetupClassLoader() {
+			return setupClass.getClassLoader();
+		}
+
+		private PreUpgradeSetup<PreviousElementT> instantiateSetup() throws Exception {
+			return setupClass.newInstance();
+		}
+		private ClassLoader getVerifierClassLoader() throws Exception {
+			return verifierClass.getClassLoader();
+		}
+
+		private UpgradeVerifier<UpgradedElementT> instantiateVerifier() throws Exception {
+			return verifierClass.newInstance();
+		}
+
+		@Override
+		public String toString() {
+			return name + " / " + migrationVersion;
 		}
 	}
 
@@ -103,132 +124,118 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 	public void generateTestSetupFiles() throws Exception {
 		Files.createDirectory(getSerializerSnapshotFilePath().getParent());
 
-		Class<? extends PreUpgradeSetup<PreviousElementT>> relocatedSetupClass = ClassRelocator.relocate(testSpecification.setupClass);
-		PreUpgradeSetup<PreviousElementT> relocatedSetup = relocatedSetupClass.newInstance();
+		runWithClassLoader(
+			testSpecification.getSetupClassLoader(),
+			() -> {
+				PreUpgradeSetup<PreviousElementT> setup = testSpecification.instantiateSetup();
 
-		TypeSerializer<PreviousElementT> priorSerializer = relocatedSetup.createPriorSerializer();
+				TypeSerializer<PreviousElementT> priorSerializer = setup.createPriorSerializer();
 
-		DataOutputSerializer serializerSnapshotOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
-		writeSerializerSnapshot(serializerSnapshotOut, priorSerializer, testSpecification.migrationVersion);
-		writeContentsTo(getSerializerSnapshotFilePath(), serializerSnapshotOut.getCopyOfBuffer());
+				DataOutputSerializer serializerSnapshotOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
+				writeSerializerSnapshot(serializerSnapshotOut, priorSerializer, testSpecification.migrationVersion);
+				writeContentsTo(getSerializerSnapshotFilePath(), serializerSnapshotOut.getCopyOfBuffer());
 
-		DataOutputSerializer testDataOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
-		priorSerializer.serialize(relocatedSetup.createTestData(), testDataOut);
-		writeContentsTo(getTestDataFilePath(), testDataOut.getCopyOfBuffer());
+				DataOutputSerializer testDataOut = new DataOutputSerializer(INITIAL_OUTPUT_BUFFER_SIZE);
+				priorSerializer.serialize(setup.createTestData(), testDataOut);
+				writeContentsTo(getTestDataFilePath(), testDataOut.getCopyOfBuffer());
+			}
+		);
 	}
 
 	// ------------------------------------------------------------------------------
 	//  Tests
 	// ------------------------------------------------------------------------------
 
-	private UpgradeVerifier<UpgradedElementT> upgradeVerifier;
-	private TypeSerializerSnapshot<UpgradedElementT> restoredSerializerSnapshot;
-	private ClassLoader originalClassloader;
-
-	@Before
-	public void beforeTest() throws Exception {
-		Class<? extends UpgradeVerifier<UpgradedElementT>> relocatedUpgradeVerifierClass =
-			ClassRelocator.relocate(testSpecification.verifierClass);
-
-		upgradeVerifier = relocatedUpgradeVerifierClass.newInstance();
-		originalClassloader = Thread.currentThread().getContextClassLoader();
-		Thread.currentThread().setContextClassLoader(relocatedUpgradeVerifierClass.getClassLoader());
-
-		restoredSerializerSnapshot = readSerializerSnapshot(
-			contentsOf(getSerializerSnapshotFilePath()),
-			testSpecification.migrationVersion);
-
-		assertThat(restoredSerializerSnapshot, allOf(
-			notNullValue(),
-			instanceOf(TypeSerializerSnapshot.class)
-		));
-	}
-
-	@After
-	public void afterTest() {
-		Thread.currentThread().setContextClassLoader(originalClassloader);
-	}
-
 	@Test
 	public void restoreSerializerIsValid() throws Exception {
-		assumeThat(
-			"This test only applies for test specifications that verify an upgraded serializer that is not incompatible.",
-			TypeSerializerSchemaCompatibility.incompatible(),
-			not(upgradeVerifier.schemaCompatibilityMatcher()));
+		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+			assumeThat(
+				"This test only applies for test specifications that verify an upgraded serializer that is not incompatible.",
+				TypeSerializerSchemaCompatibility.incompatible(),
+				not(verifier.schemaCompatibilityMatcher()));
 
-		TypeSerializer<UpgradedElementT> restoredSerializer = restoredSerializerSnapshot.restoreSerializer();
-		assertSerializerIsValid(
-			restoredSerializer,
-			contentsOf(getTestDataFilePath()),
-			upgradeVerifier.expectedTestData());
+			TypeSerializer<UpgradedElementT> restoredSerializer = restoredSerializerSnapshot.restoreSerializer();
+			assertSerializerIsValid(
+				restoredSerializer,
+				dataUnderTest(),
+				verifier.expectedTestData());
+		});
 	}
 
 	@Test
 	public void upgradedSerializerHasExpectedSchemaCompatibility() throws Exception {
-		TypeSerializer<UpgradedElementT> upgradedSerializer = upgradeVerifier.createUpgradedSerializer();
+		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
 
-		TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
-			restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
+			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
+				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
 
-		assertThat(upgradeCompatibility, upgradeVerifier.schemaCompatibilityMatcher());
+			assertThat(upgradeCompatibility, verifier.schemaCompatibilityMatcher());
+		});
 	}
 
 	@Test
 	public void upgradedSerializerIsValidAfterMigration() throws Exception {
-		TypeSerializer<UpgradedElementT> upgradedSerializer = upgradeVerifier.createUpgradedSerializer();
+		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
 
-		TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
-			restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
-		assumeThat(
-			"This test only applies for test specifications that verify an upgraded serializer that requires migration to be compatible.",
-			upgradeCompatibility,
-			TypeSerializerMatchers.isCompatibleAfterMigration());
+			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
+				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
+			assumeThat(
+				"This test only applies for test specifications that verify an upgraded serializer that requires migration to be compatible.",
+				upgradeCompatibility,
+				TypeSerializerMatchers.isCompatibleAfterMigration());
 
-		// migrate the previous data schema,
-		TypeSerializer<UpgradedElementT> restoreSerializer = restoredSerializerSnapshot.restoreSerializer();
-		DataInputView migratedData = readAndThenWriteData(
-			contentsOf(getTestDataFilePath()),
-			restoreSerializer,
-			upgradedSerializer,
-			upgradeVerifier.expectedTestData());
+			// migrate the previous data schema,
+			TypeSerializer<UpgradedElementT> restoreSerializer = restoredSerializerSnapshot.restoreSerializer();
+			DataInputView migratedData = readAndThenWriteData(
+				dataUnderTest(),
+				restoreSerializer,
+				upgradedSerializer,
+				verifier.expectedTestData());
 
-		// .. and then assert that the upgraded serializer is valid with the migrated data
-		assertSerializerIsValid(upgradedSerializer, migratedData, upgradeVerifier.expectedTestData());
+			// .. and then assert that the upgraded serializer is valid with the migrated data
+			assertSerializerIsValid(upgradedSerializer, migratedData, verifier.expectedTestData());
+		});
 	}
 
 	@Test
 	public void upgradedSerializerIsValidAfterReconfiguration() throws Exception {
-		TypeSerializer<UpgradedElementT> upgradedSerializer = upgradeVerifier.createUpgradedSerializer();
+		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
 
-		TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
-			restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
-		assumeThat(
-			"This test only applies for test specifications that verify an upgraded serializer that requires reconfiguration to be compatible.",
-			upgradeCompatibility,
-			TypeSerializerMatchers.isCompatibleWithReconfiguredSerializer());
+			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
+				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
+			assumeThat(
+				"This test only applies for test specifications that verify an upgraded serializer that requires reconfiguration to be compatible.",
+				upgradeCompatibility,
+				TypeSerializerMatchers.isCompatibleWithReconfiguredSerializer());
 
-		TypeSerializer<UpgradedElementT> reconfiguredUpgradedSerializer = upgradeCompatibility.getReconfiguredSerializer();
-		assertSerializerIsValid(
-			reconfiguredUpgradedSerializer,
-			contentsOf(getTestDataFilePath()),
-			upgradeVerifier.expectedTestData());
+			TypeSerializer<UpgradedElementT> reconfiguredUpgradedSerializer = upgradeCompatibility.getReconfiguredSerializer();
+			assertSerializerIsValid(
+				reconfiguredUpgradedSerializer,
+				dataUnderTest(),
+				verifier.expectedTestData());
+		});
 	}
 
 	@Test
 	public void upgradedSerializerIsValidWhenCompatibleAsIs() throws Exception {
-		TypeSerializer<UpgradedElementT> upgradedSerializer = upgradeVerifier.createUpgradedSerializer();
+		runUpgradeVerification((verifier, restoredSerializerSnapshot) -> {
+			TypeSerializer<UpgradedElementT> upgradedSerializer = verifier.createUpgradedSerializer();
 
-		TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
-			restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
-		assumeThat(
-			"This test only applies for test specifications that verify an upgraded serializer that is compatible as is.",
-			upgradeCompatibility,
-			TypeSerializerMatchers.isCompatibleAsIs());
+			TypeSerializerSchemaCompatibility<UpgradedElementT> upgradeCompatibility =
+				restoredSerializerSnapshot.resolveSchemaCompatibility(upgradedSerializer);
+			assumeThat(
+				"This test only applies for test specifications that verify an upgraded serializer that is compatible as is.",
+				upgradeCompatibility,
+				TypeSerializerMatchers.isCompatibleAsIs());
 
-		assertSerializerIsValid(
-			upgradedSerializer,
-			contentsOf(getTestDataFilePath()),
-			upgradeVerifier.expectedTestData());
+			assertSerializerIsValid(
+				upgradedSerializer,
+				dataUnderTest(),
+				verifier.expectedTestData());
+		});
 	}
 
 	/**
@@ -258,6 +265,16 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 	//  Utilities
 	// ------------------------------------------------------------------------------
 
+	private void runUpgradeVerification(BiConsumerWithException<UpgradeVerifier<UpgradedElementT>, TypeSerializerSnapshot<UpgradedElementT>, Exception> verificationTest) throws Exception {
+		runWithClassLoader(
+			testSpecification.getVerifierClassLoader(),
+			() -> verificationTest.accept(
+				testSpecification.instantiateVerifier(),
+				snapshotUnderTest()
+			)
+		);
+	}
+
 	private Path getSerializerSnapshotFilePath() {
 		return Paths.get(getTestResourceDirectory() + "/serializer-snapshot");
 	}
@@ -268,6 +285,16 @@ public abstract class TypeSerializerUpgradeTestBase<PreviousElementT, UpgradedEl
 
 	private String getTestResourceDirectory() {
 		return System.getProperty("user.dir") + "/src/test/resources/" + testSpecification.name + "-" + testSpecification.migrationVersion;
+	}
+
+	private TypeSerializerSnapshot<UpgradedElementT> snapshotUnderTest() throws Exception {
+		return readSerializerSnapshot(
+			contentsOf(getSerializerSnapshotFilePath()),
+			testSpecification.migrationVersion);
+	}
+
+	private DataInputView dataUnderTest() throws IOException {
+		return contentsOf(getTestDataFilePath());
 	}
 
 	private static void writeContentsTo(Path path, byte[] bytes) {
