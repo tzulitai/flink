@@ -18,8 +18,8 @@
 package org.apache.flink.streaming.connectors.kinesis.proxy;
 
 import org.apache.flink.annotation.Internal;
-
 import org.apache.flink.util.Preconditions;
+
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 
 /**
