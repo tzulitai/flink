@@ -225,15 +225,17 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 			keyedStatedBackend.requiresLegacySynchronousTimerSnapshots());
 
 		// and then initialize the timer services
-		for (KeyGroupStatePartitionStreamProvider streamProvider : rawKeyedStates) {
-			int keyGroupIdx = streamProvider.getKeyGroupId();
+		if (keyedStatedBackend.requiresLegacySynchronousTimerSnapshots()) {
+			for (KeyGroupStatePartitionStreamProvider streamProvider : rawKeyedStates) {
+				int keyGroupIdx = streamProvider.getKeyGroupId();
 
-			Preconditions.checkArgument(keyGroupRange.contains(keyGroupIdx),
-				"Key Group " + keyGroupIdx + " does not belong to the local range.");
+				Preconditions.checkArgument(keyGroupRange.contains(keyGroupIdx),
+					"Key Group " + keyGroupIdx + " does not belong to the local range.");
 
-			timeServiceManager.restoreStateForKeyGroup(
-				streamProvider.getStream(),
-				keyGroupIdx, environment.getUserClassLoader());
+				timeServiceManager.restoreStateForKeyGroup(
+					streamProvider.getStream(),
+					keyGroupIdx, environment.getUserClassLoader());
+			}
 		}
 
 		return timeServiceManager;

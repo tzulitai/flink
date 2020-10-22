@@ -207,7 +207,7 @@ public class InternalTimeServiceManager<K> {
 			InputStream stream,
 			int keyGroupIdx,
 			ClassLoader userCodeClassLoader) throws IOException {
-
+		Preconditions.checkState(useLegacySynchronousSnapshots);
 		InternalTimerServiceSerializationProxy<K> serializationProxy =
 			new InternalTimerServiceSerializationProxy<>(
 				this,
