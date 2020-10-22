@@ -24,6 +24,7 @@ import org.apache.flink.util.Preconditions;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.stream.StreamSupport;
 
 
 /**
@@ -150,7 +151,7 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>> , S
 	private final class KeyGroupOffsetsIterator implements Iterator<Tuple2<Integer, Long>> {
 
 		public KeyGroupOffsetsIterator() {
-			this.keyGroupIterator = keyGroupRange.iterator();
+			this.keyGroupIterator = unsetOffsetsSkippingKeyGroupIterator();
 		}
 
 		private final Iterator<Integer> keyGroupIterator;
@@ -173,6 +174,16 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>> , S
 		public void remove() {
 			throw new UnsupportedOperationException("Unsupported by this iterator!");
 		}
+	}
+
+	/**
+	 * Creates a key group iterator that skips a key group if it doesn't have a defined offset set.
+	 */
+	private Iterator<Integer> unsetOffsetsSkippingKeyGroupIterator() {
+		final int startKeyGroup = keyGroupRange.getStartKeyGroup();
+		return StreamSupport.stream(keyGroupRange.spliterator(), false)
+			.filter(keyGroupId -> offsets[keyGroupId - startKeyGroup] != -1)
+			.iterator();
 	}
 
 	@Override
